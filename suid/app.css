@@ -1,0 +1,42 @@
+/* Shell del SUID anfitrión: se apoya en shell.css del IVC y ajusta logo, migas y avatar. */
+body { background: var(--surface-alt); font-family: var(--font-sans); }
+.main-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 28px 32px 96px; background: var(--surface); }
+.page-inner { display: flex; flex-direction: column; gap: 20px; max-width: 1480px; margin: 0 auto; }
+.page-title-block { margin-bottom: 4px; }
+.page-title { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -.5px; color: var(--text-primary); line-height: 1.2; }
+.page-subtitle { margin: 6px 0 0; font-size: 14px; color: var(--text-secondary); font-weight: 500; }
+
+.suid-logo { gap: 10px; padding: 0 20px 0 16px; }
+.suid-logo__back { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 8px; color: var(--text-primary); text-decoration: none; }
+.suid-logo__back:hover { background: rgba(0,0,0,.06); }
+.suid-logo__img { height: 54px; width: auto; display: block; margin: 0 auto; }
+
+.nav-section { font-size: 12px; letter-spacing: .3px; text-transform: uppercase; color: var(--text-secondary); font-weight: 600; padding: 0 28px; margin: 14px 0 6px; }
+.nav-row .lbl { font-weight: 600; color: #5c5e8a; }
+.nav-row.is-active .lbl { color: var(--text-primary); }
+.nav-row .icon { color: #323232; }
+.nav-row__chev { margin-left: auto; color: var(--text-secondary); display: inline-flex; }
+.nav-sub { display: block; margin: 0 10px 2px 58px; padding: 9px 12px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 500; color: var(--text-secondary); text-decoration: none; }
+.nav-sub:hover { background: #f5f6fa; color: var(--text-primary); text-decoration: none; }
+.nav-sub.is-active { color: var(--accent); background: var(--accent-bg); font-weight: 600; }
+
+.suid-bc { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0; font-size: 16px; font-weight: 600; color: var(--text-primary); }
+.suid-bc a { color: var(--text-primary); text-decoration: none; } .suid-bc a:hover { color: var(--accent); }
+.suid-bc .is-current { color: var(--text-primary); font-weight: 700; }
+.suid-bc__sep { display: inline-flex; color: var(--text-secondary); margin: 0 4px; }
+.suid-bell { border: 0; background: transparent; color: var(--text-primary); width: 40px; height: 40px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.suid-bell:hover { background: #f5f6fa; }
+.suid-avatar { display: inline-flex; align-items: center; gap: 4px; color: var(--text-primary); cursor: pointer; }
+.suid-avatar__ring { width: 44px; height: 44px; border-radius: 50%; background: var(--blue-bg); color: var(--accent); font-weight: 700; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; }
+
+.suid-ph { align-items: flex-start; padding-top: 40px; }
+
+@media (max-width: 900px) {
+  .sidebar { display: none; }
+  .main-scroll { padding: 18px 16px 96px; }
+}
+
+.nav-row.is-active .icon { color: var(--accent); }
+.suid-logo__img { height: 44px; margin: 0; }
+.suid-logo { gap: 14px; }
+.suid-logo__back { margin-right: 4px; }

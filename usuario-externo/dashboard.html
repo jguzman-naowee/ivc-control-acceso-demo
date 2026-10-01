@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mis trámites · IVC Naowee</title>
+  <link rel="stylesheet" href="../shared/fonts/google-sans.css">
+
+  <!-- Naowee Design System (CDN oficial) — versión taggeada v1.8.0.
+       Provee .naowee-btn--loud/quiet/mute, .naowee-badge--positive/informative/caution/etc.,
+       .naowee-table, .naowee-modal, .naowee-textfield. Carga ANTES que shell.css y
+       components.css para que estos puedan sobreescribir IVC-specific. -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/naowee-tech/naowee-design-system@v1.8.0/dist/design-system.css">
+
+  <link rel="stylesheet" href="../shared/tokens.css">
+  <link rel="stylesheet" href="../shared/components.css">
+  <link rel="stylesheet" href="../shared/shell.css">
+  <style>
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    @media (max-width: 900px) { .stat-grid { grid-template-columns: 1fr; } }
+
+    .tramite-row__id {
+      font-weight: 700;
+      color: var(--text-primary);
+      font-family: var(--font-sans);font-variant-numeric:tabular-nums;
+      font-size: 13px;
+    }
+
+    .tramite-row__tipo {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .tramite-row__date {
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-feature-settings: 'tnum';
+    }
+
+    .tramite-row__actions {
+      display: flex;
+      gap: 6px;
+      justify-content: flex-end;
+    }
+
+    /* (v1.1.3) — Doug feedback round 2: el wrapper section-header-with-cta
+       fue reemplazado por el patrón canónico .naowee-table-card del DS
+       project v2.1 (ver components.css). El divider ahora es full-bleed
+       y el padding del head pasó de 22/28 a 16/20. */
+
+    /* Page title block (Doug fix #3 — title vive en body, no en header) */
+    .page-title-block { margin-bottom: 4px; }
+    .page-title {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -.5px;
+      color: var(--text-primary);
+      line-height: 1.2;
+    }
+    .page-subtitle {
+      margin: 6px 0 0;
+      font-size: 14px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="shell" id="app-shell"></div>
+
+  <!-- Hidden template for page content (mounted by shell.init) -->
+  <template id="page-content">
+    <div class="page-inner">
+
+      <!-- Page title (movido del header al body — Doug fix #3) -->
+      <header class="page-title-block">
+        <h1 class="page-title">Mis trámites</h1>
+        <p class="page-subtitle">Otorgamientos, renovaciones y actualizaciones del Reconocimiento Deportivo.</p>
+      </header>
+
+      <!-- Stat cards -->
+      <section class="stat-grid">
+        <div class="naowee-stat-card naowee-stat-card--accent">
+          <span class="naowee-stat-card__label">En curso</span>
+          <span class="naowee-stat-card__value" id="statEnCurso">0</span>
+          <span class="naowee-stat-card__hint">Trámites activos</span>
+        </div>
+        <div class="naowee-stat-card naowee-stat-card--success">
+          <span class="naowee-stat-card__label">Aprobados</span>
+          <span class="naowee-stat-card__value">2</span>
+          <span class="naowee-stat-card__hint">Histórico vigente</span>
+        </div>
+        <div class="naowee-stat-card naowee-stat-card--info">
+          <span class="naowee-stat-card__label">En subsanación</span>
+          <span class="naowee-stat-card__value">0</span>
+          <span class="naowee-stat-card__hint">Pendientes de responder</span>
+        </div>
+      </section>
+
+      <!-- Bandeja activa — patrón .naowee-table-card canónico (Doug v1.1.3) -->
+      <section class="naowee-table-card">
+        <div class="naowee-table-card__head">
+          <div class="naowee-table-card__head-text">
+            <h2 class="naowee-table-card__title">Mis trámites activos</h2>
+            <p class="naowee-table-card__subtitle">Otorgamientos, renovaciones y actualizaciones del Reconocimiento Deportivo.</p>
+          </div>
+          <div class="naowee-table-card__actions">
+            <button type="button" class="naowee-btn naowee-btn--loud" data-tour="nuevo-tramite" id="btnNuevoTramite">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Nuevo trámite
+            </button>
+          </div>
+        </div>
+        <hr class="naowee-table-card__divider" />
+        <div id="bandejaActiva"></div>
+      </section>
+
+      <!-- Historial — mismo patrón .naowee-table-card -->
+      <section class="naowee-table-card">
+        <div class="naowee-table-card__head">
+          <div class="naowee-table-card__head-text">
+            <h2 class="naowee-table-card__title">Histórico</h2>
+            <p class="naowee-table-card__subtitle">Trámites finalizados con reconocimiento vigente.</p>
+          </div>
+        </div>
+        <hr class="naowee-table-card__divider" />
+        <table class="naowee-table" id="historicoTable">
+          <thead>
+            <tr>
+              <th>Radicado</th>
+              <th>Tipo</th>
+              <th>Fecha</th>
+              <th>Vigencia</th>
+              <th>Estado</th>
+              <th style="text-align:right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="historicoBody"></tbody>
+        </table>
+      </section>
+
+    </div>
+  </template>
+
+  <!-- Scripts -->
+  <script src="../shared/data.js"></script>
+  <script src="../shared/shell.js"></script>
+  <script src="../shared/demo-tour.js"></script>
+  <script>
+    /* Init shell con content del template */
+    document.addEventListener('DOMContentLoaded', function () {
+      var template = document.getElementById('page-content');
+      var shellRoot = document.getElementById('app-shell');
+      shellRoot.innerHTML = template.innerHTML;
+
+      /* Header sin breadcrumb (Doug fix #2) — title vive en page-title-block (#3) */
+      window.IVCShell.init({
+        title: null,
+        activeNav: 'tramites'
+      });
+
+      renderBandeja();
+      renderHistorico();
+
+      /* Wire CTA Nuevo trámite */
+      document.getElementById('btnNuevoTramite').addEventListener('click', function () {
+        /* Inicia borrador → navega al wizard */
+        window.IVCData.initTramiteBorrador();
+        window.location.href = 'nuevo-tramite.html';
+      });
+
+      /* Wire botones Acciones de la tabla (Doug v1.1.4 #2 — eran <a>) */
+      document.addEventListener('click', function (ev) {
+        var t = ev.target.closest('[data-go-wizard]');
+        if (t) { window.location.href = 'nuevo-tramite.html'; return; }
+        var d = ev.target.closest('[data-go-detalle]');
+        if (d) { window.location.href = 'tramite-detalle.html'; }
+      });
+
+      /* Reaccionar a cambios */
+      window.addEventListener('naowee:ivc:state-change', function () {
+        renderBandeja();
+      });
+
+      /* Mount tour */
+      window.IVCTour.mount({ pageId: 'usuario-externo/dashboard.html' });
+    });
+
+    function renderBandeja() {
+      var t = window.IVCData.getTramite();
+      var container = document.getElementById('bandejaActiva');
+      var statEl = document.getElementById('statEnCurso');
+
+      if (!t) {
+        statEl.textContent = '0';
+        container.innerHTML =
+          /* v1.12.7: migrado al canónico .naowee-empty-state (icono SVG 40×40)
+             para consistencia con todas las bandejas del prototype. */
+          '<div class="naowee-empty-state">' +
+            '<div class="naowee-empty-state__icon">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>' +
+            '</div>' +
+            '<div class="naowee-empty-state__title">No tienes trámites activos</div>' +
+            '<div class="naowee-empty-state__description">Inicia un nuevo Otorgamiento de Reconocimiento Deportivo cargando los 7 documentos del Decreto 1387/1970.</div>' +
+          '</div>';
+        return;
+      }
+
+      statEl.textContent = '1';
+      var estadoBadge = badgeForEstado(t.estado);
+      var fechaTexto = t.fechaRadicacion ? formatDate(t.fechaRadicacion) : 'Borrador sin radicar';
+
+      container.innerHTML =
+        '<table class="naowee-table">' +
+          '<thead><tr>' +
+            '<th>Radicado</th>' +
+            '<th>Tipo</th>' +
+            '<th>Fecha</th>' +
+            '<th>Estado</th>' +
+            '<th style="text-align:right">Acciones</th>' +
+          '</tr></thead>' +
+          '<tbody><tr>' +
+            '<td class="tramite-row__id">' + (t.radicado ? t.id : '—') + '</td>' +
+            '<td class="tramite-row__tipo">' + t.tipo + '</td>' +
+            '<td class="tramite-row__date">' + fechaTexto + '</td>' +
+            '<td>' + estadoBadge + '</td>' +
+            '<td class="tramite-row__actions">' +
+              /* Doug v1.1.4 #2 — botón real, sin text-link underline. La
+                 CSS .naowee-table-card .naowee-table tbody a.naowee-btn
+                 también lo blinda contra el a:hover global. */
+              (t.radicado
+                ? '<button type="button" class="naowee-btn naowee-btn--quiet naowee-btn--small" data-go-detalle>Ver detalle</button>'
+                : '<button type="button" class="naowee-btn naowee-btn--quiet naowee-btn--small" data-go-wizard>Continuar wizard</button>') +
+            '</td>' +
+          '</tr></tbody>' +
+        '</table>';
+    }
+
+    function renderHistorico() {
+      var tramite = window.IVCData.getTramite();
+      var historicos = (tramite && tramite.historicos) || window.IVCData.PERFILES['usuario-externo'] && [];
+      /* Hardcode historicos del template (siempre los mismos) */
+      historicos = [
+        { id: 'IVC-2024-204', tipo: 'Renovación Reconocimiento Deportivo', fecha: '2024-11-22', vigencia: 'Vigente hasta 2028-11-22', estado: 'Finalizado' },
+        { id: 'IVC-2021-088', tipo: 'Otorgamiento Reconocimiento Deportivo', fecha: '2021-08-14', vigencia: 'Vigente hasta 2025-08-14', estado: 'Finalizado' }
+      ];
+
+      var rows = historicos.map(function (h) {
+        return '<tr>' +
+          '<td class="tramite-row__id">' + h.id + '</td>' +
+          '<td class="tramite-row__tipo">' + h.tipo + '</td>' +
+          '<td class="tramite-row__date">' + formatDate(h.fecha) + '</td>' +
+          '<td class="tramite-row__date">' + h.vigencia + '</td>' +
+          '<td><span class="naowee-badge naowee-badge--positive naowee-badge--quiet">' + h.estado + '</span></td>' +
+          '<td class="tramite-row__actions">' +
+            '<button class="naowee-btn naowee-btn--mute naowee-btn--small">Ver acto</button>' +
+          '</td>' +
+        '</tr>';
+      }).join('');
+
+      document.getElementById('historicoBody').innerHTML = rows;
+    }
+
+    function badgeForEstado(estado) {
+      /* Map IVC estado → DS badge variant (informative/positive/caution/neutral) */
+      switch (estado) {
+        case 'Borrador':       return '<span class="naowee-badge naowee-badge--neutral naowee-badge--quiet">' + estado + '</span>';
+        case 'Radicado':       return '<span class="naowee-badge naowee-badge--informative">' + estado + '</span>';
+        case 'En Validación':  return '<span class="naowee-badge naowee-badge--caution">' + estado + '</span>';
+        case 'Subsanación':    return '<span class="naowee-badge naowee-badge--caution naowee-badge--quiet">' + estado + '</span>';
+        case 'Finalizado':     return '<span class="naowee-badge naowee-badge--positive">' + estado + '</span>';
+        default:               return '<span class="naowee-badge naowee-badge--neutral naowee-badge--quiet">' + (estado || '—') + '</span>';
+      }
+    }
+
+    function formatDate(iso) {
+      if (!iso) return '—';
+      var parts = iso.split('-');
+      if (parts.length !== 3) return iso;
+      var months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      return parts[2] + ' ' + months[parseInt(parts[1], 10) - 1] + ' ' + parts[0];
+    }
+  </script>
+</body>
+</html>

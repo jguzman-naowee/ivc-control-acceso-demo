@@ -1,0 +1,1681 @@
+/* ═══════════════════════════════════════════════════════════════════
+   components.css — IVC-specific components ONLY.
+   El DS canónico naowee-design-system@v1.8.0 (cargado vía CDN ANTES
+   que este archivo) provee:
+     · .naowee-btn + variants (--loud / --quiet / --mute / --small / --large)
+     · .naowee-badge + variants (--informative / --positive / --caution /
+                                  --negative / --neutral / --brand / --quiet)
+     · .naowee-table + thead/tbody/__num/__cell-primary
+     · .naowee-modal + overlay/header/body/footer/dismiss
+     · .naowee-card + __header/__title/__subtitle/__body/__footer/__media +
+       variants (--outline / --filled / --flat / --compact / --flush /
+       --clickable / --disabled).
+     · .naowee-stepper + __step/__number/__label/__connector + variants
+       (--pulse / --distributed) y states (--active/--done).
+     · .naowee-message + __header/__icon/__title/__body/__text/__action +
+       variants (--informative / --positive / --caution / --negative).
+     · .naowee-textfield + __label/__input-wrap/__input/__check +
+       variants (--readonly/--disabled/--textarea/--error/--validated).
+     · Tokens --naowee-color-* (interactive-fill-loud-idle = #D74009, etc.)
+   Acá SOLO viven los componentes IVC-only o variants locales que el DS
+   aún no cubre:
+     · Tipología badges (`.ivc-badge-tipo-tramite/actuacion/procedimiento`)
+     · Status pill con dot animado (estados de tramite)
+     · Tabs segmented, IVC stepper (wizard nuevo-tramite), Snackbar
+     · Stat-card (dashboard hero), Empty state, Doc upload card,
+       Timeline vertical, Sectioned card (variant local sobre `.naowee-card`)
+     · Animaciones IVC y print rules.
+   v1.1.5: Removidos 12 overrides de `.naowee-card*` (DS YA expone esto).
+            `.naowee-stepper*` renombrado a `.ivc-stepper*` (sub-elementos
+            inventados que no calzan con el DS canónico).
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ───── Cards
+   v1.1.5 — ELIMINADOS los 12 overrides de `.naowee-card`/`__header`/
+   `__title`/`__subtitle`/`__body`/`__footer`/`--interactive`. El DS canónico
+   v1.8.0 YA expone estas clases (design-system.css líneas 4436-4465).
+   El override rompía la elevación y padding del DS. Si una página IVC necesita
+   sectioned-card con header + body + footer separados por dividers (patrón
+   v2.1), usar `.ivc-card-sectioned` definido más abajo.
+
+   v1.1.4 — Input primitives `.naowee-input*` REMOVIDAS (clases inventadas
+   que no existen en el DS canónico). El form usa ahora `.naowee-textfield`
+   y sub-elementos del DS. Ver nuevo-tramite.html para el patrón. */
+
+/* ───── IVC sectioned-card (variant local para detalle de trámite/timeline).
+   El DS naowee-card es solo padding tiny + header inline. Cuando IVC necesita
+   header dividido del body (con border-bottom) + footer alineado, usa esta
+   variant. Se aplica JUNTO a `.naowee-card` del DS. ───── */
+.ivc-card-sectioned {
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  padding: 0;
+  overflow: hidden;
+}
+.ivc-card-sectioned > .naowee-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 28px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.ivc-card-sectioned > .naowee-card__header .naowee-card__title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -.1px;
+}
+.ivc-card-sectioned > .naowee-card__header .naowee-card__subtitle {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.ivc-card-sectioned > .naowee-card__body { padding: 22px 28px; }
+.ivc-card-sectioned > .naowee-card__footer {
+  padding: 16px 28px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  background: var(--surface-alt);
+}
+
+/* ───── Tipología badges (IVC-only — el DS canónico no conoce tramites/actuaciones/procedimientos)
+   v1.1.4 — RENOMBRADAS de `.naowee-badge--tramite/--actuacion/--procedimiento`
+   (inventadas) a `.ivc-badge-tipo-*` para no contaminar el namespace del DS.
+   Aplican junto a `.naowee-badge` base. ───── */
+.ivc-badge-tipo-tramite {
+  background: var(--tipo-tramite-bg);
+  color: var(--tipo-tramite);
+  border: 1px solid var(--tipo-tramite-border);
+}
+
+.ivc-badge-tipo-actuacion {
+  background: var(--tipo-actuacion-bg);
+  color: var(--tipo-actuacion);
+  border: 1px solid var(--tipo-actuacion-border);
+}
+
+.ivc-badge-tipo-procedimiento {
+  background: var(--tipo-procedimiento-bg);
+  color: var(--tipo-procedimiento);
+  border: 1px solid var(--tipo-procedimiento-border);
+}
+
+.naowee-badge--xl {
+  font-size: 13px;
+  padding: 8px 14px;
+  letter-spacing: .4px;
+  height: auto;
+  min-width: 0;
+}
+
+/* ───── Status pill (variant de badge con dot animado, usado en hero del trámite) ───── */
+.naowee-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+.naowee-status-pill::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-secondary);
+}
+
+.naowee-status-pill--success::before { background: var(--green); }
+.naowee-status-pill--warning::before { background: var(--naranja); }
+.naowee-status-pill--info::before { background: var(--blue-info); }
+.naowee-status-pill--pending::before {
+  background: var(--naranja);
+  animation: pulseDot 2s ease-in-out infinite;
+}
+
+@keyframes pulseDot {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 117, 0, .6); }
+  50% { box-shadow: 0 0 0 4px rgba(255, 117, 0, 0); }
+}
+
+/* ───── Messages (info/caution/error/success banners).
+   v1.1.6 — REMOVIDO override completo. El DS YA expone `.naowee-message`,
+   `__header`, `__icon`, `__content`, `__title`, `__text`, `__body`, `__action`,
+   `__dismiss`, `__thumbnail` y variants `--informative/--positive/--caution/
+   --negative` desde design-system.css líneas 2971-3096. Igual que pasó con
+   `.naowee-card` en v1.1.5: el override peleaba contra el DS y rompía los
+   variants (informative, caution, etc). Dejar al DS hacer su trabajo. */
+
+/* ───── Tabs (segmented) ───── */
+.naowee-tabs {
+  display: inline-flex;
+  background: var(--bg);
+  padding: 4px;
+  border-radius: var(--radius-md);
+  gap: 2px;
+}
+
+.naowee-tab {
+  background: transparent;
+  border: 0;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-in-out);
+}
+
+.naowee-tab:hover { color: var(--text-primary); }
+
+.naowee-tab.is-active {
+  background: var(--surface);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ───── IVC Stepper (wizard de nuevo-tramite)
+   v1.1.5 — Renombrado de `.naowee-stepper*` (clases inventadas con sub-
+   elementos `__item`/`__circle` que NO existen en el DS) a `.ivc-stepper*`.
+   El DS sí expone `.naowee-stepper` pero con sub-elementos diferentes
+   (`__step`/`__number`/`__connector`). Mantener nombre `.ivc-stepper` para
+   no confundir con el componente canónico del DS. ───── */
+.ivc-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  margin: 0 0 28px;
+  list-style: none;
+}
+
+.ivc-stepper__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.ivc-stepper__item:not(:last-child)::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  background: var(--border);
+  margin: 0 8px;
+}
+
+.ivc-stepper__circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--border-dark);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  flex-shrink: 0;
+  transition: all var(--duration-normal) var(--ease-out);
+}
+
+.ivc-stepper__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.ivc-stepper__item.is-active .ivc-stepper__circle {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--text-inverse);
+}
+
+.ivc-stepper__item.is-active .ivc-stepper__label {
+  color: var(--text-primary);
+}
+
+.ivc-stepper__item.is-complete .ivc-stepper__circle {
+  background: var(--green);
+  border-color: var(--green);
+  color: var(--text-inverse);
+}
+
+.ivc-stepper__item.is-complete:not(:last-child)::after {
+  background: var(--green);
+}
+
+/* ───── Snackbar canónico (DS v1.8.0) ─────
+   v1.5.3 rev (25/05/2026): markup paridad con DS oficial (líneas 3172-3232).
+   Estructura: .naowee-snackbar > .__content > .__badge + .__text
+   Variants: --success (verde), --info (azul), --caution (naranja), --negative (rojo)
+   Position fixed + animación entrada/salida es page-scoped (no del DS). */
+.naowee-snackbar {
+  /* Position + entrada/salida (no del DS — paridad con Project v2.0.3) */
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  opacity: 0;
+  z-index: var(--z-snackbar);
+  /* Tokens canónicos del DS oficial */
+  background: var(--azul, #002B5B);    /* Figma: --naowee-color-blue-900 */
+  color: #fff;
+  border-radius: 12px;                  /* --naowee-border-radius-containers-compact */
+  padding: 16px;
+  box-shadow: 0 8px 12px 0 rgba(40, 40, 52, 0.1);
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  width: 600px;
+  max-width: calc(100vw - 40px);
+  font-family: var(--font-sans);
+  overflow: clip;
+  transition:
+    transform .28s cubic-bezier(.4, 0, .2, 1),
+    opacity .25s ease-out;
+  pointer-events: none;
+}
+.naowee-snackbar.is-visible {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+.naowee-snackbar__content {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+.naowee-snackbar__badge {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  background: var(--blue-info, #006AFF);  /* default = info */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+.naowee-snackbar__badge svg { width: 14px; height: 14px; }
+.naowee-snackbar__text {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: #fff;
+}
+
+/* Variants — solo el badge cambia de color (canónico) */
+.naowee-snackbar--success .naowee-snackbar__badge { background: var(--green, #1f8923); }
+.naowee-snackbar--info    .naowee-snackbar__badge { background: var(--blue-info, #006AFF); }
+.naowee-snackbar--caution .naowee-snackbar__badge { background: var(--accent, #d74009); }
+.naowee-snackbar--negative .naowee-snackbar__badge { background: #ed314a; }
+
+@media (max-width: 600px) {
+  .naowee-snackbar { width: calc(100vw - 24px); bottom: 70px; }
+}
+
+/* v1.5.3 rev: ::before legacy removido — el ícono ahora vive dentro del
+   .naowee-snackbar__badge canónico generado por JS. */
+
+/* ───── Stat card (dashboard pattern)
+   Doug v1.1.3: SIN border, CON shadow canónico project v2.1.
+   Accent color sobrevive como left-strip 4px (no como border). El strip se
+   compone via inset-inline-start usando ::before para no contar como
+   border y poder quitar el border real. ───── */
+.naowee-stat-card {
+  background: var(--surface);
+  border: 0;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+  overflow: hidden;
+  transition: transform var(--duration-normal), box-shadow var(--duration-normal);
+}
+
+.naowee-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(145, 158, 171, .18);
+}
+
+.naowee-stat-card__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+.naowee-stat-card__value {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -.5px;
+  line-height: 1.1;
+}
+
+.naowee-stat-card__hint {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+/* Accent strip — 4px de ancho en el edge izquierdo (no es border).
+   Sale del overflow:hidden del card padre para respetar el radius. */
+.naowee-stat-card--accent::before,
+.naowee-stat-card--success::before,
+.naowee-stat-card--info::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+}
+.naowee-stat-card--accent::before  { background: var(--accent); }
+.naowee-stat-card--success::before { background: var(--green); }
+.naowee-stat-card--info::before    { background: var(--blue-info); }
+
+/* ───── Animations ───── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.page-fade-in {
+  animation: fadeInUp .4s var(--ease-in-out) backwards;
+}
+
+/* ───── Empty state ───── */
+.naowee-empty {
+  padding: 56px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.naowee-empty__icon {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-full);
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  color: var(--text-muted);
+}
+
+.naowee-empty__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.naowee-empty__desc {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+  max-width: 360px;
+}
+
+/* ───── Document upload card (Decreto 1387 wizard) ───── */
+.doc-upload-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  transition: all var(--duration-normal) var(--ease-out);
+  cursor: pointer;
+}
+
+.doc-upload-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 12px rgba(215, 64, 9, .08);
+  transform: translateY(-1px);
+}
+
+.doc-upload-card.is-uploaded {
+  background: var(--green-bg);
+  border-color: var(--green-border);
+}
+
+.doc-upload-card__check {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--border-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all var(--duration-fast);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.doc-upload-card.is-uploaded .doc-upload-card__check {
+  background: var(--green);
+  border-color: var(--green);
+  color: var(--text-inverse);
+}
+
+.doc-upload-card__content { flex: 1; min-width: 0; }
+
+.doc-upload-card__title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.doc-upload-card__optional {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+
+.doc-upload-card__legal {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.45;
+}
+
+.doc-upload-card__meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+/* ───── Timeline (vertical, tramite-detalle) ───── */
+.naowee-timeline { list-style: none; padding: 0; margin: 0; }
+
+.naowee-timeline__item {
+  display: flex;
+  gap: 16px;
+  padding-bottom: 20px;
+  position: relative;
+}
+
+.naowee-timeline__item:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 14px;
+  top: 32px;
+  bottom: 0;
+  width: 2px;
+  background: var(--border);
+}
+
+.naowee-timeline__item.is-complete:not(:last-child)::before { background: var(--green); }
+.naowee-timeline__item.is-current:not(:last-child)::before {
+  background: linear-gradient(180deg, var(--naranja) 0%, var(--border) 100%);
+}
+
+.naowee-timeline__marker {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--border-dark);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  z-index: 1;
+  color: var(--text-muted);
+}
+
+.naowee-timeline__item.is-complete .naowee-timeline__marker {
+  background: var(--green);
+  border-color: var(--green);
+  color: var(--text-inverse);
+}
+
+.naowee-timeline__item.is-current .naowee-timeline__marker {
+  background: var(--naranja);
+  border-color: var(--naranja);
+  color: var(--text-inverse);
+  box-shadow: 0 0 0 4px rgba(255, 117, 0, .2);
+  animation: pulseDot 2s ease-in-out infinite;
+}
+
+.naowee-timeline__content { flex: 1; padding-top: 2px; }
+.naowee-timeline__title {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0 0 2px;
+  color: var(--text-primary);
+}
+
+.naowee-timeline__item:not(.is-complete):not(.is-current) .naowee-timeline__title {
+  color: var(--text-muted);
+}
+
+.naowee-timeline__meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.naowee-timeline__role {
+  display: inline-block;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--bg);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+/* ───── Print ───── */
+@media print {
+  .naowee-btn, .demo-role-switcher, .demo-tour-overlay { display: none !important; }
+  .naowee-card { box-shadow: none; border-color: #ccc; }
+  .sidebar { display: none !important; }
+  .top-header { border-bottom: 2px solid #000; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Table-card (Doug v1.1.3 — patrón canónico project v2.1)
+   Portado de Claude-Doug/.../project/shared/pages.css (líneas 841-925) +
+   patrón .naowee-table-card de naowee-test-sidebar-shell/sedes-list.
+   - SIN elevation (no shadow), border subtle, radius en 4 esquinas
+   - Header (title + subtitle + actions): padding 16/20 (NO 28)
+   - Divider full-bleed (margin 0, ancho 100%)
+   - thead gris (var(--bg-soft)) con 4 esquinas redondeadas
+   - Hover row: aclarado al fafbfd canónico (no fafbff oscuro)
+   ═══════════════════════════════════════════════════════════════════ */
+.naowee-table-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: none;        /* sin elevation — Doug feedback #3 */
+  /* v1.13.32 (Doug 27/05/2026): RESTORE overflow:visible — el bug
+     "clicks no funcionan globalmente" reportado en v1.13.31 NO era por
+     overflow. La causa real era una Chrome flag corrupta en el browser
+     del usuario ("Accelerated 2D canvas: Habilitado" + posiblemente
+     otros experimentos). Reset de chrome://flags resolvió el issue.
+     Restauramos overflow:visible para que el glow del botón hover en
+     la columna Acciones se vea sin clipping. */
+  overflow: visible;
+  padding: 0;
+}
+
+/* Head: title + subtitle + actions en una sola fila. Padding ajustado
+   tight (Doug v1.1.4 #3) — subtitle ~8px sobre el divider, no 24px.
+   12px top / 10px bottom / 20px horizontal.
+
+   v1.13.27 (Doug 27/05/2026): border-bottom canónico transversal.
+   El head pinta un divider edge-to-edge para separar el title block
+   del contenido siguiente (tabla / empty state). Se suprime cuando
+   el siguiente sibling YA provee su propio divider (.actos-tabs-wrap,
+   .naowee-tabs, .bandeja-toolbar) usando :has() para evitar doble
+   línea apilada. */
+.naowee-table-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 20px 10px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border, #e7e9f3);
+}
+.naowee-table-card__head:has(+ .actos-tabs-wrap),
+.naowee-table-card__head:has(+ .actos-tabs-wrap--in-card),
+.naowee-table-card__head:has(+ .naowee-tabs),
+.naowee-table-card__head:has(+ .bandeja-toolbar) {
+  border-bottom: 0;
+}
+.naowee-table-card__head-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.naowee-table-card__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -.1px;
+}
+.naowee-table-card__subtitle {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.naowee-table-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Divider full-bleed: ocupa todo el ancho del card (no contenido). */
+.naowee-table-card__divider {
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+  width: 100%;
+}
+
+/* Tabla dentro del card: respeta el radius del padre, sin border propio.
+   thead pintado de gris con border-radius en 4 esquinas (patrón project v2.1). */
+.naowee-table-card .naowee-table {
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.naowee-table-card .naowee-table thead {
+  background: transparent;
+}
+.naowee-table-card .naowee-table thead th {
+  text-align: left;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .3px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  padding: 10px 16px;
+  border: 0;
+  background: var(--bg-soft);
+}
+/* Header strip: 4 esquinas redondeadas (6px sutil — patrón project v2.1) */
+.naowee-table-card .naowee-table thead th:first-child {
+  border-top-left-radius: 6px;
+  border-bottom-left-radius: 6px;
+  padding-left: 18px;
+}
+.naowee-table-card .naowee-table thead th:last-child {
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+  padding-right: 18px;
+}
+/* Espacio antes del header strip — el strip "flota" inset del card */
+.naowee-table-card .naowee-table {
+  padding: 8px 14px 0;
+  display: table;
+  border-spacing: 0;
+  border-collapse: separate;
+}
+.naowee-table-card .naowee-table tbody td {
+  padding: 13px 16px;
+  font-size: 13px;
+  color: var(--text-primary);
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.naowee-table-card .naowee-table tbody td:first-child { padding-left: 18px; }
+.naowee-table-card .naowee-table tbody td:last-child  { padding-right: 18px; }
+.naowee-table-card .naowee-table tbody tr:last-child td { border-bottom: 0; }
+
+/* Doug v1.1.4 #2 — botones-link en columna Acciones NO deben heredar el
+   underline global de `a:hover` (tokens.css). Forzar sin underline para
+   anchors estilizados como botones DS (.naowee-btn--quiet, --small, --link). */
+.naowee-table-card .naowee-table tbody a.naowee-btn,
+.naowee-table-card .naowee-table tbody a.naowee-btn:hover,
+.naowee-table-card .naowee-table tbody a.naowee-btn:focus {
+  text-decoration: none;
+}
+
+/* Hover row — claro (fafbfd, patrón project v2.1 línea 1884), no oscuro.
+   El DS oficial usa --naowee-color-fill-secondary; acá lo aclaramos aún
+   más al fafbfd canónico que es el valor que Doug aprobó en project v2.1. */
+.naowee-table-card .naowee-table tbody tr {
+  transition: background var(--duration-fast) var(--ease-in-out);
+}
+.naowee-table-card .naowee-table tbody tr:hover {
+  background: #fafbfd;
+}
+
+/* ───── Modal layout v1.5.3 (25/05/2026) ─────
+   El DS canónico tiene padding 32px en el .naowee-modal CONTAINER + padding
+   adicional en header/body/footer → resultado: el bottom acumula 32px+padding-bottom
+   propio del footer = espacio doble vs lados. Doug pidió simetría perfecta.
+
+   Reset del padding del container a 0 y aplico padding consistente
+   (28px lados, 24px header bottom, 18px footer top/bottom) en cada sección.
+   Patrón paridad con modal-convocatoria de Project v2.0.3. */
+.naowee-modal-overlay .naowee-modal {
+  padding: 0;     /* override del 32px 0 canónico — cada sección define el suyo */
+}
+.naowee-modal-overlay .naowee-modal__header {
+  padding: 24px 28px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.naowee-modal-overlay .naowee-modal__body {
+  padding: 18px 28px;
+}
+.naowee-modal-overlay .naowee-modal__footer {
+  padding: 16px 28px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--surface, #fff); /* v1.13.57 (Vanessa bug): el footer canónico no traía background → en viewports bajos el body scrollea y el textarea cruzaba el footer transparente. */
+  gap: 10px;
+}
+
+/* ───── .naowee-modal__dismiss canónico (Project v2.0.3) ─────
+   X gris del header del modal — patrón canónico portado:
+   /naowee-test-digitacion/project/v2.0.3/shared/modal-convocatoria.js L309-316.
+   v1.5.3 rev: hover background --bg-soft (#f5f6fa) — antes usaba --bg
+   (#ffffff blanco) que era invisible sobre fondo blanco. Doug 25/05/2026. */
+.naowee-modal__dismiss {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition:
+    background var(--duration-fast) var(--ease-in-out),
+    color var(--duration-fast) var(--ease-in-out);
+}
+.naowee-modal__dismiss:hover {
+  background: var(--bg-soft);          /* gris claro #f5f6fa — paridad con Project --grey-bg */
+  color: var(--text-primary);
+}
+.naowee-modal__dismiss:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.naowee-modal__dismiss svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ───── .naowee-message: __header layout (v1.5.3) ─────
+   El DS canónico maneja __header en una row (icon + title). Doug pidió
+   que el caution también respete este patrón sin gaps excesivos con __text. */
+.naowee-message .naowee-message__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.naowee-message .naowee-message__title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+.naowee-message .naowee-message__text {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-primary);
+  margin-top: 2px;
+}
+/* v1.13.55 (Doug 27/05/2026) #5: cuando el message usa la estructura
+   __content (title + text apilados), el DS trae gap:16px → demasiado aire.
+   Lo bajamos a 3px de forma transversal. */
+.naowee-message__content { gap: 3px !important; }
+.naowee-message__content .naowee-message__title { margin: 0 0 2px !important; }
+.naowee-message__content .naowee-message__text  { margin: 0 !important; }
+
+/* v1.13.55 #1: focus canónico del textfield — borde naranja + 3px shadow
+   accent. Transversal (modales de equipo, subsanación, etc.). */
+.naowee-textfield__input-wrap:focus-within {
+  border-color: var(--accent, #d74009) !important;
+  box-shadow: 0 0 0 3px rgba(215, 64, 9, .15) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   v1.12.7 (26/05/2026): Override IVC del .naowee-empty-state canónico.
+   Doug pidió: "haz el icono más pequeño y estandariza así los empty
+   states, regula en todas las páginas icono título y contenido."
+
+   DS canónico v1.8.0 default:
+     icon       48 × 48
+     title      16px / 700
+     description 13px / 400 (max-width 320px)
+     padding    60px 24px (en el wrapper)
+
+   IVC override:
+     icon       40 × 40  ← más sutil, da más aire al título
+     título     16/700   (igual al DS)
+     descripción 13/400  (igual al DS)
+     max-width  420px    ← un poco más ancho que DS, para mensajes IVC
+                          (ej. CPACA Art 67-69) que necesitan más espacio
+     padding    60px 24px (igual al DS)
+
+   El SVG dentro del icon hereda width/height 100% del wrapper (regla
+   del DS), así que con cambiar solo el wrapper, todos los iconos del
+   prototype se reescalan automáticamente — siempre que el SVG no
+   tenga atributos width/height inline. Limpiamos esos atributos en
+   los 6 puntos donde había svg width="56" / "64".
+   ═══════════════════════════════════════════════════════════════════════ */
+/* v1.12.8: Doug pidió bajar de 40→32, color gris neutro consistente
+   (no el lavanda del DS), padding inferior generoso para que el empty
+   state respire dentro del card, y el mismo icono inbox-tray en todas
+   las páginas para que la familia visual sea coherente. */
+.naowee-empty-state {
+  padding: 72px 24px 80px !important;  /* top breathing + más aire abajo */
+}
+.naowee-empty-state__icon {
+  width: 32px !important;
+  height: 32px !important;
+  color: #c8cad8 !important;             /* gris neutro estandarizado */
+  margin-bottom: 14px !important;
+}
+.naowee-empty-state__icon svg {
+  width: 100% !important;
+  height: 100% !important;
+  stroke-width: 1.5;
+}
+.naowee-empty-state__title {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: var(--text-primary) !important;
+  margin-bottom: 4px !important;
+}
+.naowee-empty-state__description {
+  max-width: 420px;
+  font-size: 13px !important;
+  color: var(--text-secondary) !important;
+  line-height: 1.5 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   v1.13.5 (Doug 27/05/2026): semáforo de plazo. Promovido de
+   coordinador/bandeja.html → shared para que CUALQUIER tabla del prototype
+   (actos, director, modal detalle, etc) lo use sin redefinir el CSS.
+     · >5 días     → verde  (positive)
+     · 3-5 días    → naranja (caution)
+     · ≤2/vencido  → rojo   (negative)
+   ═══════════════════════════════════════════════════════════════════════ */
+.row-plazo {
+  font-size: 13px;
+  font-weight: 600;
+  font-feature-settings: 'tnum';
+}
+.row-plazo--positive { color: var(--green, #1f8923); }
+.row-plazo--caution  { color: var(--accent, #d74009); }
+.row-plazo--negative { color: #c0392b; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   v1.13.9 (Doug 27/05/2026): override del gap del tooltip canónico DS
+   de 6px → 4px. Aplica a la posición default (arriba) y al modificador
+   --bottom para mantener consistencia. */
+.naowee-tooltip__content              { bottom: calc(100% + 4px) !important; }
+.naowee-tooltip--bottom .naowee-tooltip__content { bottom: auto !important; top: calc(100% + 4px) !important; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   v1.13.10 (Doug 27/05/2026): pattern de TIMELINE COLAPSABLE — promovido
+   de coordinador/actos.html → shared para reuso global en workspace
+   (tab Historial), modal Histórico del coordinador, modal Detalle, y
+   cualquier futura ubicación con timelines de trazabilidad.
+
+   Markup esperado:
+     <div class="ivc-traza-wrap">                    ← contenedor relativo
+       <div class="ivc-traza-box" id="...">          ← max-height + scroll
+         <ol class="ivc-timeline">...</ol>
+       </div>
+       <button class="ivc-traza-toggle">             ← Ver más / Ver menos
+         <span class="ivc-traza-toggle__label">Ver más</span>
+         <svg class="ivc-traza-toggle__chev">...</svg>
+       </button>
+     </div>
+
+   Comportamiento:
+   · Default: max-height 240px, scroll auto si el contenido excede.
+   · .is-expanded: max-height 480px.
+   · Bottom fade (.has-overflow) aparece cuando hay contenido scrollable.
+   · El toggle se muestra solo cuando hay overflow (controlado en JS). */
+.ivc-traza-wrap {
+  position: relative;
+}
+.ivc-traza-wrap::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 6px;
+  bottom: 0;
+  height: 28px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--surface, #fff) 92%);
+  opacity: 0;
+  transition: opacity .15s;
+}
+.ivc-traza-wrap.has-overflow::after { opacity: 1; }
+
+.ivc-traza-box {
+  position: relative;
+  max-height: 240px;
+  overflow-y: auto;
+  transition: max-height .25s cubic-bezier(.4, 0, .2, 1);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-dark, #d0d4e6) transparent;
+  padding-right: 4px;
+}
+.ivc-traza-box::-webkit-scrollbar { width: 6px; }
+.ivc-traza-box::-webkit-scrollbar-track { background: transparent; }
+.ivc-traza-box::-webkit-scrollbar-thumb {
+  background: var(--border-dark, #d0d4e6);
+  border-radius: 3px;
+}
+.ivc-traza-box::-webkit-scrollbar-thumb:hover { background: var(--text-secondary, #646587); }
+.ivc-traza-box.is-expanded { max-height: 480px; }
+
+.ivc-traza-toggle {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-top: 12px;
+  padding: 6px 8px 6px 0;
+  background: transparent;
+  border: 0;
+  color: var(--accent, #d74009);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: opacity .15s;
+}
+.ivc-traza-toggle:hover { opacity: 0.75; }
+.ivc-traza-toggle__chev {
+  transition: transform .25s cubic-bezier(.4, 0, .2, 1);
+}
+.ivc-traza-toggle.is-expanded .ivc-traza-toggle__chev {
+  transform: rotate(180deg);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   v1.13.17 (Doug 27/05/2026): timeline canónica del IVC promovida a shared.
+   Antes vivía duplicada en workspace + coordinador. Ahora cualquier página
+   (juridica/expediente, modal Detalle del Coord, director, etc) puede usarla.
+
+   Markup esperado:
+     <ol class="ivc-timeline">
+       <li class="ivc-timeline__item ivc-timeline__item--{positive|caution|negative|info|muted}">
+         <span class="ivc-timeline__dot"></span>
+         <span class="ivc-timeline__title">Texto del evento <badge/></span>
+         <span class="ivc-timeline__meta">27 may 2026 · 10:43</span>
+         <span class="ivc-timeline__actor">María García (Profesional)</span>
+       </li>
+     </ol> */
+.ivc-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 4px 0;
+  position: relative;
+}
+.ivc-timeline::before {
+  content: '';
+  position: absolute;
+  left: 9px;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  background: var(--border, #e7e9f3);
+}
+.ivc-timeline__item {
+  position: relative;
+  padding: 0 0 18px 32px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+.ivc-timeline__item:last-child { padding-bottom: 0; }
+.ivc-timeline__dot {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent, #d74009);
+  box-shadow: 0 0 0 3px #fff, 0 0 0 4px var(--accent, #d74009);
+}
+.ivc-timeline__item--muted .ivc-timeline__dot {
+  background: var(--text-muted, #9ca3af);
+  box-shadow: 0 0 0 3px #fff, 0 0 0 4px var(--border-dark, #d0d4e6);
+}
+.ivc-timeline__item--positive .ivc-timeline__dot {
+  background: var(--green, #1f8923);
+  box-shadow: 0 0 0 3px #fff, 0 0 0 4px var(--green, #1f8923);
+}
+.ivc-timeline__item--caution .ivc-timeline__dot {
+  background: var(--accent, #d74009);
+  box-shadow: 0 0 0 3px #fff, 0 0 0 4px var(--accent, #d74009);
+}
+.ivc-timeline__item--negative .ivc-timeline__dot {
+  background: #c01818;
+  box-shadow: 0 0 0 3px #fff, 0 0 0 4px #c01818;
+}
+.ivc-timeline__item--info .ivc-timeline__dot {
+  background: var(--blue-info, #1f78d1);
+  box-shadow: 0 0 0 3px #fff, 0 0 0 4px var(--blue-info, #1f78d1);
+}
+.ivc-timeline__title {
+  display: block;
+  font-weight: 700;
+  color: var(--text-primary, #282834);
+  font-size: 13.5px;
+  margin-bottom: 2px;
+}
+.ivc-timeline__meta {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);font-variant-numeric:tabular-nums;
+  margin-top: 2px;
+}
+.ivc-timeline__actor {
+  display: block;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   v1.13.17: grid de info-boxes 2×2 — patrón usado en el modal Resolver
+   apelación de Jurídica (Doug pidió cajas con background fill claro,
+   título arriba y contenido abajo, en lugar de líneas). Reusable. */
+.ivc-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 12px 0 18px;
+}
+@media (max-width: 600px) {
+  .ivc-info-grid { grid-template-columns: 1fr; }
+}
+.ivc-info-box {
+  /* v1.13.25 (Doug 27/05/2026): "quítale el stroke a las cajas y haz el
+     gris más claro". Removed border + lifted gray fill a touch lighter
+     (#fafbfd) para una sensación más limpia y plana. */
+  background: #fafbfd;
+  border: 0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ivc-info-box__label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  color: #9a9db0;
+}
+.ivc-info-box__value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #282834);
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   v1.13.18 (Doug 27/05/2026): tabs in-card de actos (coordinador y
+   director). Promovido desde duplicación local → shared.
+
+   v1.13.24 (Doug 27/05/2026): UNIFICACIÓN CANÓNICA TRANSVERSAL —
+   "tenemos todo un rollo con los estilos de los tabs, en varios
+   lugares están diferentes, me inclino más por los implementados en
+   director/bandeja.html pero con el background hover de los otros,
+   vuélvelo transversal canónico".
+
+   Problema previo: dos sistemas de tabs convivían con diferencias
+   sutiles pero perceptibles:
+     · .naowee-tab (DS CDN) — hover #FFEDC7 (orange-100, yellower)
+     · .actos-tab (local) — hover #fff3e6 (orange-bg local, pinker)
+   Más diferencias en padding, underline color, height. Ambos cumplían
+   "underline-only en activo" pero se VEÍAN distintos.
+
+   Canonical (TRANSVERSAL — aplica a .naowee-tab Y .actos-tab):
+     · idle:                    text-primary, transparent fill, sin underline
+     · hover (idle):            peach #FFEDC7 bg + accent text
+     · selected (idle):         accent text, transparent fill, underline 2px
+     · selected (hover):        peach #FFEDC7 bg + accent text + underline 2px
+     · focus-visible:           outline 2px accent
+
+   Mismo padding (12px 14px), mismo color de hover (#FFEDC7), mismo
+   indicador underline (2px naranja accent). Para count badges, usar
+   .actos-tab__count (también canonical, funciona en cualquier tab). */
+
+/* ───── Wrapper común para ambos sistemas ───── */
+.actos-tabs-wrap {
+  margin: 0;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--border, #e7e9f3);
+  background: var(--surface, #fff);
+}
+.actos-tabs-wrap--in-card {
+  margin: 0;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--border, #e7e9f3);
+  background: var(--surface, #fff);
+}
+
+/* ───── .actos-tab — patrón local Director/coord-actos ───── */
+.actos-tab {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 14px;
+  margin-right: 4px;
+  background: transparent;
+  border: 0;
+  color: var(--text-primary, #282834);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  position: relative;
+  border-radius: 6px 6px 0 0;
+  transition: background .15s, color .15s;
+}
+.actos-tab:hover {
+  background: #FFEDC7;                          /* v1.13.24: unified hover peach (DS orange-100) */
+  color: var(--accent, #d74009);
+}
+.actos-tab:focus-visible {
+  outline: 2px solid var(--accent, #d74009);
+  outline-offset: -2px;
+}
+.actos-tab.is-selected {
+  color: var(--accent, #d74009);
+  background: transparent;
+}
+.actos-tab.is-selected:hover {
+  background: #FFEDC7;                          /* v1.13.24: unified hover peach */
+}
+.actos-tab.is-selected::after {
+  content: '';
+  position: absolute;
+  left: 14px; right: 14px;   /* alinea con el padding del tab */
+  bottom: -1px;
+  height: 2px;
+  background: var(--accent, #d74009);
+  border-radius: 1px 1px 0 0;
+}
+
+/* ───── Count badge (compartido entre .actos-tab y .naowee-tab) ───── */
+.actos-tab__count,
+.naowee-tab .actos-tab__count {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--bg-soft, #f5f6fa);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);font-variant-numeric:tabular-nums;
+  transition: background .15s, color .15s;
+}
+.actos-tab:hover .actos-tab__count,
+.naowee-tab:hover .actos-tab__count {
+  background: #fff;
+  color: var(--accent, #d74009);
+}
+.actos-tab.is-selected .actos-tab__count,
+.naowee-tab--selected .actos-tab__count {
+  background: #FFEDC7;                          /* v1.13.24: unified pill peach */
+  color: var(--accent, #d74009);
+}
+.actos-tab.is-selected:hover .actos-tab__count,
+.naowee-tab--selected:hover .actos-tab__count {
+  background: #fff;
+}
+
+/* ───── .naowee-tab DS — overrides canónicos transversales ─────
+   El DS de Naowee v1.8.0 ya implementa "selected = solo underline"
+   (no background fill); estos overrides solo sincronizan el shade del
+   hover peach al exacto #FFEDC7 y bloquean cualquier futura regresión
+   donde se añada background fill al estado --selected. */
+.naowee-tab--selected {
+  background: transparent !important;
+}
+.naowee-tab:hover,
+.naowee-tab--selected:hover {
+  background: #FFEDC7 !important;
+  color: var(--accent, #d74009);
+}
+/* Quitar el "text-secondary on unselected hover" del DS — preferimos
+   text-accent para señalizar afinidad cromática con el activo. */
+.naowee-tab:not(.naowee-tab--selected):hover {
+  color: var(--accent, #d74009);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   v1.13.19 (Doug 27/05/2026): CTA verde canónico con GLOW en hover —
+   patrón unificado para acciones positivas críticas (firmar acto,
+   aprobar acto, vigente, etc). Doug: "todos los botones verdes
+   ponles ese estilo que ya sea canónico no tenga que volver a repetirlo".
+
+   El fill verde NO cambia en hover (igual que el DS pattern para
+   botones loud); el feedback visual lo da el box-shadow ring + sombra
+   suave. Active aplica translateY(1px) para press feedback.
+
+   Aplica a 3 clases legacy del prototype (.btn-firmar, .btn-aprobar,
+   .btn-success-glow) mediante una sola regla con selectores múltiples. */
+.btn-success-glow,
+.btn-firmar,
+.btn-aprobar {
+  background: var(--green, #1f8923);
+  color: #fff;
+  border: 0;
+  padding: 10px 22px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: box-shadow .18s ease, transform .08s ease;
+}
+/* v1.13.20 (Doug 27/05/2026): glow elevation puro (sin ring spread) —
+   mirror del patrón DS canónico que usa el btn loud naranja con
+   --naowee-shadow-loud-md / xs. Es una drop-shadow soft, no un stroke
+   transparente alrededor del botón. */
+.btn-success-glow:hover,
+.btn-firmar:hover,
+.btn-aprobar:hover {
+  background: var(--green, #1f8923);
+  box-shadow: 0 6px 16px rgba(31, 137, 35, 0.22);
+}
+.btn-success-glow:focus-visible,
+.btn-firmar:focus-visible,
+.btn-aprobar:focus-visible {
+  outline: none;
+  box-shadow: 0 6px 16px rgba(31, 137, 35, 0.28);
+}
+.btn-success-glow:active,
+.btn-firmar:active,
+.btn-aprobar:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 6px rgba(31, 137, 35, 0.14);
+}
+.btn-success-glow:disabled,
+.btn-firmar:disabled,
+.btn-aprobar:disabled {
+  background: var(--border, #e7e9f3);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.btn-success-glow:disabled:hover,
+.btn-firmar:disabled:hover,
+.btn-aprobar:disabled:hover {
+  background: var(--border);
+  box-shadow: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   v1.13.12 (Doug 27/05/2026): iconos a la izquierda del label en TABS
+   (.naowee-tab y .actos-tab). El icono hereda el color del tab (gris en
+   idle, naranja en .naowee-tab--selected / .actos-tab.is-selected),
+   manteniendo la consistencia semántica del estado activo.
+   Flex-shrink:0 para que no se aplaste si el label se alarga.
+   margin-right:6px define el gap entre icono y label en tabs custom
+   (los .naowee-tab del DS ya tienen `gap`, este margen es ignorado por
+   inherit-friendly default — actúa solo en tabs flex sin gap). */
+.ivc-tab-icon {
+  flex-shrink: 0;
+  opacity: 0.85;
+  margin-right: 0;
+}
+.naowee-tab--selected .ivc-tab-icon,
+.actos-tab.is-selected .ivc-tab-icon {
+  opacity: 1;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   RESPONSIVE — mobile-first v1.13.43 (Doug 27/05/2026)
+   Aplicado transversal a todos los HTMLs vía shared CSS.
+
+   Estrategias:
+   - Modales: bottom-sheet en < 640px (90vh, slide-up)
+   - Stat-grid: 1col mobile, 2col tablet
+   - Form-grid: 1col en < 640px
+   - Tabla: horizontal scroll (overflow-x:auto ya está) + headers
+     compactos en mobile
+   - Toolbar (bandeja-toolbar / equipo-toolbar): stack vertical en mobile
+   - Page-title sizes scaling
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── < 640px (mobile) ── */
+@media (max-width: 639px) {
+  /* Page titles compact. */
+  .page-title { font-size: 20px !important; letter-spacing: -.3px !important; }
+  .page-subtitle { font-size: 12.5px !important; line-height: 1.45 !important; }
+  .page-title-block { margin-bottom: 8px !important; }
+
+  /* Stat grid → 1 columna. */
+  .stat-grid { grid-template-columns: 1fr !important; gap: 10px !important; }
+
+  /* Modales → bottom-sheet. */
+  .naowee-modal-overlay.open {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+  .naowee-modal-overlay .naowee-modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    border-radius: 16px 16px 0 0 !important;
+    max-height: 92vh !important;
+    animation: ivcMobileSheetIn .28s cubic-bezier(.32,.72,0,1);
+  }
+  @keyframes ivcMobileSheetIn {
+    from { transform: translateY(100%); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+  /* Header/footer modal: padding compact. */
+  .naowee-modal-overlay .naowee-modal__header { padding: 18px 20px 12px !important; }
+  .naowee-modal-overlay .naowee-modal__body { padding: 14px 20px !important; }
+  .naowee-modal-overlay .naowee-modal__footer { padding: 12px 20px 16px !important; }
+
+  /* Form grids 2-col → 1-col. */
+  .form-grid,
+  .ivc-info-grid,
+  .ivc-data-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* Areas grid → 1col. */
+  .areas-grid { grid-template-columns: 1fr !important; }
+  .resolucion-grid { grid-template-columns: 1fr !important; }
+
+  /* Bandeja toolbar y equipo toolbar — stack vertical. */
+  .bandeja-toolbar,
+  .equipo-toolbar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    padding: 12px !important;
+  }
+  .bandeja-toolbar__search,
+  .equipo-toolbar__search {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+  .bandeja-toolbar__filters,
+  .equipo-toolbar__filters {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 6px !important;
+    width: 100%;
+  }
+  .bandeja-toolbar .naowee-dropdown,
+  .equipo-toolbar .naowee-dropdown {
+    width: auto !important;
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+  }
+  .bandeja-toolbar__spacer,
+  .equipo-toolbar__spacer { display: none !important; }
+  /* CTA full width. */
+  .equipo-toolbar #btnInvitar,
+  .bandeja-toolbar #btnAsignacionMasiva {
+    width: 100%;
+    justify-content: center;
+  }
+  .equipo-toolbar__clear { width: 100%; justify-content: center; }
+
+  /* Table card head padding compact + STACK VERTICAL. */
+  .naowee-table-card__head {
+    padding: 12px 14px !important;
+    gap: 10px !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    flex-wrap: nowrap !important;
+  }
+  .naowee-table-card__head > * { width: 100% !important; }
+  .naowee-table-card__title { font-size: 15px !important; }
+  .naowee-table-card__subtitle { font-size: 12px !important; }
+
+  /* Tabla → stacked cards en mobile (cada row es una card vertical).
+     Specificity bumped con `html body` para vencer al DS CDN. */
+  html body .naowee-table-card { overflow: visible !important; }
+  html body .naowee-table-card .naowee-table {
+    min-width: 0 !important;
+    width: 100% !important;
+    display: block !important;
+  }
+  /* Ocultar thead — los labels viven en los datos del row */
+  .naowee-table-card .naowee-table thead,
+  .naowee-table-card .naowee-table colgroup { display: none !important; }
+  /* tbody / tr / td → block */
+  .naowee-table-card .naowee-table tbody,
+  .naowee-table-card .naowee-table tr,
+  .naowee-table-card .naowee-table td {
+    display: block !important;
+    width: 100% !important;
+  }
+  /* Cada row = card stacked */
+  .naowee-table-card .naowee-table tbody tr {
+    padding: 14px 18px !important;
+    border-bottom: 1px solid var(--border, #e7e9f3) !important;
+    border-radius: 0 !important;
+    position: relative;
+  }
+  .naowee-table-card .naowee-table tbody tr:last-child {
+    border-bottom: 0 !important;
+  }
+  .naowee-table-card .naowee-table tbody tr:hover {
+    background: rgba(0,0,0,.02);
+  }
+  /* Cada celda — limpia, sin borders */
+  .naowee-table-card .naowee-table tbody td {
+    padding: 3px 0 !important;
+    border: 0 !important;
+    text-align: left !important;
+    font-size: 13.5px !important;
+    color: var(--text-secondary, #646587);
+  }
+  .naowee-table-card .naowee-table tbody td:first-child,
+  .naowee-table-card .naowee-table tbody td:last-child {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  /* Primera celda usualmente es el radicado/identificador — destacarla */
+  .naowee-table-card .naowee-table tbody td:first-of-type {
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    color: var(--text-primary, #282834) !important;
+    margin-bottom: 2px;
+  }
+  /* Botones de acción en celdas mobile: full width */
+  .naowee-table-card .naowee-table tbody td .naowee-btn {
+    width: 100%;
+    justify-content: center;
+    margin-top: 6px;
+  }
+  /* Checkbox cells — más compactos */
+  .naowee-table-card .naowee-table tbody td input[type="checkbox"] {
+    margin: 0;
+  }
+
+  /* Stat cards DS canónicas — compactar padding + valor. */
+  .naowee-stat-card { padding: 14px 16px !important; }
+  .naowee-stat-card__label { font-size: 11px !important; letter-spacing: .4px !important; }
+  .naowee-stat-card__value { font-size: 28px !important; line-height: 1.1 !important; margin: 2px 0 4px !important; }
+  .naowee-stat-card__hint { font-size: 12px !important; line-height: 1.35 !important; }
+
+  /* Bottom card / area cards padding compact (mantener). */
+  .area-card { padding: 16px !important; }
+  .area-card__stat-value { font-size: 18px !important; }
+
+  /* Naowee floating footer: ocultar en mobile (decorativo). */
+  .naowee-floating-footer { display: none !important; }
+
+  /* Demo role switcher: ocultar en mobile (es debug tool, tapa el contenido). */
+  .demo-role-switcher,
+  #demoRoleSwitcher,
+  [class*="demo-role"],
+  [class*="demo-switcher"] { display: none !important; }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     v1.13.46 (Doug): EDGE-TO-EDGE mobile UX — cards llegan al borde para
+     aprovechar el ancho máximo, tabs scroll horizontal, acciones top-right
+     en stacked rows. ═══════════════════════════════════════════════════════ */
+
+  /* Page padding — solo vertical, lateral cero. Cada bloque controla su
+     propio padding interno con margen visual. */
+  .page-inner { padding: 16px 0 80px !important; }
+
+  /* Title/Subtitle: padding 16px lateral (texto necesita aire). */
+  .page-title-block,
+  .page-title,
+  .page-subtitle { padding-left: 16px !important; padding-right: 16px !important; }
+
+  /* Stat grid + tab nav: 12px lateral (cards "flotan" con un poco de margen). */
+  .stat-grid { padding: 0 12px !important; }
+
+  /* Table card EDGE-TO-EDGE: sin border-radius lateral, sin border-left/right,
+     full bleed con divider top/bottom. */
+  html body .naowee-table-card {
+    border-radius: 0 !important;
+    border-left: 0 !important;
+    border-right: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  /* TABS HORIZONTAL SCROLL — cuando hay 2+ tabs que no caben, scroll lateral. */
+  .equipo-tabs-wrap,
+  .actos-tabs-wrap,
+  .actos-tabs-wrap--in-card,
+  .naowee-tabs,
+  .bandeja-tabs-wrap {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;          /* Firefox */
+    flex-wrap: nowrap !important;
+    white-space: nowrap !important;
+  }
+  .equipo-tabs-wrap::-webkit-scrollbar,
+  .actos-tabs-wrap::-webkit-scrollbar,
+  .actos-tabs-wrap--in-card::-webkit-scrollbar,
+  .naowee-tabs::-webkit-scrollbar,
+  .bandeja-tabs-wrap::-webkit-scrollbar { display: none; }
+  /* Cada tab no encoge — empuja al overflow */
+  .equipo-tabs-wrap .actos-tab,
+  .actos-tabs-wrap .actos-tab,
+  .naowee-tab,
+  .actos-tab {
+    flex-shrink: 0 !important;
+  }
+
+  /* ACCIONES REPOSICIONADAS: top-right de cada row stacked.
+     - tr tiene position:relative (ya seteado arriba)
+     - td:last-child (Acciones) → absolute top-right
+     - tr padding-right ampliado para que el contenido no quede debajo */
+  .naowee-table-card .naowee-table tbody tr {
+    padding-right: 92px !important;  /* room para ~2-3 icon buttons */
+  }
+  .naowee-table-card .naowee-table tbody td:last-child {
+    position: absolute !important;
+    top: 12px !important;
+    right: 14px !important;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    gap: 4px !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+  }
+  /* Override action button full-width rule cuando está en top-right */
+  .naowee-table-card .naowee-table tbody td:last-child .naowee-btn {
+    width: auto !important;
+    margin-top: 0 !important;
+    flex: 0 0 auto;
+  }
+  /* Icon buttons compactos en mobile */
+  .naowee-table-card .naowee-table tbody td:last-child .naowee-btn--icon,
+  .naowee-table-card .naowee-table tbody td:last-child button[class*="icon"] {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    padding: 0 !important;
+  }
+
+  /* Stat cards: full-radius pero con margen 0 (gap entre cards via grid). */
+  .naowee-stat-card { border-radius: 12px !important; }
+
+  /* Snackbar position bottom-center con padding. */
+  .naowee-snackbar {
+    left: 12px !important;
+    right: 12px !important;
+    transform: none !important;
+    bottom: 16px !important;
+  }
+}
+
+/* ── 640-1023px (tablet) ── */
+@media (min-width: 640px) and (max-width: 1023px) {
+  /* Stat grid → 2 columnas. */
+  .stat-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  /* Areas grid → 2 (ya está). */
+  /* Form grids ok 2-col. */
+  /* Modales canónicos (no bottom-sheet) pero más compactos. */
+  .naowee-modal-overlay .naowee-modal { max-width: 90vw; }
+  /* Page inner padding ajustado. */
+  .page-inner { padding: 20px !important; }
+}

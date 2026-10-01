@@ -1,0 +1,892 @@
+/* ═══════════════════════════════════════════════════════════════════
+   shell.css — IVC Naowee shell (port canónico de naowee-test-sidebar-shell)
+   ─────────────────────────────────────────────────────────────────────
+   Portado 1:1 desde naowee-test-sidebar-shell/shared/shell.css (647 LOC)
+   + glow naranja del primary button (feature branch style/btn-glow-and-root-menu)
+   + adaptaciones IVC (marca "naowee IVC", path "shared/logos/", IVCShell API)
+   ═══════════════════════════════════════════════════════════════════ */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text-primary);
+  font-size: 14px;
+}
+a { color: inherit; text-decoration: none; }
+
+/* SHELL */
+.shell { display: flex; height: 100vh; overflow: hidden; }
+
+/* ═══ SIDEBAR con logos oficiales ═══ */
+.sidebar {
+  position: relative;
+  width: var(--sidebar-w); min-width: var(--sidebar-w);
+  background: var(--surface); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+  /* Apple-style smooth easing */
+  transition: width .36s cubic-bezier(.32,.72,0,1), min-width .36s cubic-bezier(.32,.72,0,1);
+  z-index: var(--z-sidebar);
+  flex-shrink: 0;
+}
+
+.sidebar-logo {
+  height: var(--header-h); display: flex; align-items: center; gap: 14px;
+  padding: 0 20px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.sidebar-logo .sb-logo-img:first-of-type { margin-left: auto; }
+.sidebar-logo .sb-logo-img:last-of-type { margin-right: auto; }
+
+.burger-btn {
+  background: none; border: none; cursor: pointer; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; flex-shrink: 0;
+  border-radius: var(--radius-sm); transition: background .15s, transform .2s;
+}
+.burger-btn:hover { background: rgba(0,0,0,.06); }
+.burger-btn:active { transform: scale(.9); }
+.burger-btn svg { transition: transform .3s cubic-bezier(.4,0,.2,1); }
+.sidebar.is-collapsed .burger-btn svg { transform: rotate(180deg); }
+
+.sb-logo-img { height: 46px; width: auto; display: block; flex-shrink: 0; }
+.sb-logo-img--pill {
+  height: 28px;
+  background: var(--orange-bg);
+  color: var(--accent);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .4px;
+  display: inline-flex;
+  align-items: center;
+}
+.logo-sep { width: 1px; height: 36px; background: var(--border); flex-shrink: 0; }
+
+/* Sidebar-nav scrollable; sidebar-bottom fijo abajo */
+.sidebar-nav {
+  flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
+  padding: 20px 0 10px; display: flex; flex-direction: column; gap: 6px;
+  scrollbar-width: thin; scrollbar-color: var(--border-dark) transparent;
+}
+.sidebar-nav::-webkit-scrollbar { width: 6px; }
+.sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: var(--border-dark); border-radius: 3px; }
+.sidebar-nav::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+
+.nav-section {
+  flex-shrink: 0;
+  font-size: 11px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase;
+  color: #b5b9d4; padding: 0 28px; line-height: 16px; margin: 10px 0 6px;
+}
+.nav-section:first-child { margin-top: 0; }
+
+.nav-row {
+  flex-shrink: 0;
+  display: flex; align-items: center; gap: 10px; height: 44px;
+  /* v1.13.8: padding-right 20→12 + icon margin-left 28→16 para liberar
+     espacio horizontal y evitar que "Aprobación de actos" se corte. */
+  padding: 0 12px 0 0; border-radius: var(--radius-sm); cursor: pointer;
+  margin: 0 10px;
+  transition: background .12s, padding .25s cubic-bezier(.4,0,.2,1), margin .28s cubic-bezier(.32,.72,0,1);
+  position: relative;
+  text-decoration: none;
+  color: var(--text-primary);
+}
+.nav-row:hover { background: #f5f6fa; text-decoration: none; }
+.nav-row .icon {
+  width: 24px; height: 24px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  margin-left: 16px;
+  color: var(--text-secondary);
+  transition: margin-left .25s cubic-bezier(.4,0,.2,1), color .25s ease;
+}
+.nav-row .lbl {
+  flex: 1; font-size: 14px; font-weight: 600; color: var(--text-primary);
+  /* v1.13.8: removida max-width 200 que truncaba "Aprobación de actos".
+     Conservamos overflow:hidden + white-space:nowrap por defensa, pero
+     el flex:1 ya garantiza que use todo el espacio disponible. */
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  min-width: 0;
+  opacity: 1;
+  transition: opacity .2s ease .18s, max-width .36s cubic-bezier(.32,.72,0,1) .04s;
+}
+
+/* ═══ Indicador activo: barra naranja con View Transition morph ═══ */
+.active-bar {
+  position: absolute; left: -6px; top: 8px; width: 4px; height: 28px;
+  background: var(--accent); border-radius: 25px;
+  transform-origin: center;
+  animation: activeBarIn .42s cubic-bezier(.16,1,.3,1) both;
+  view-transition-name: shell-active-bar;
+}
+@keyframes activeBarIn {
+  0%   { opacity: 0; transform: translateX(-8px) scaleY(.2); }
+  55%  { opacity: 1; }
+  100% { opacity: 1; transform: translateX(0) scaleY(1); }
+}
+.nav-row.is-active { background: transparent; }
+.nav-row.is-active:hover { background: transparent; }
+.nav-row.is-active .lbl {
+  color: var(--accent);
+  transition: color .25s ease, opacity .14s ease .12s, max-width .26s cubic-bezier(.4,0,.2,1) .04s;
+}
+.nav-row.is-active .icon svg path,
+.nav-row.is-active .icon svg rect,
+.nav-row.is-active .icon svg circle,
+.nav-row.is-active .icon svg line,
+.nav-row.is-active .icon svg polyline,
+.nav-row.is-active .icon svg polygon { stroke: var(--accent); transition: stroke .25s ease; }
+
+/* v1.13.8 (Doug 27/05/2026): badge en bajo contraste — fondo gris claro
+   + texto primary negro. Doug: "mejor en bajo contraste gris claro con
+   label primary negro". Reemplaza el solid orange anterior, que competía
+   visualmente con la barra activa naranja del nav. */
+.nav-row__badge {
+  flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 24px; height: 20px; padding: 0 7px;
+  background: #eef0f6;
+  color: var(--text-primary);
+  border-radius: var(--radius-full);
+  font-size: 11px; font-weight: 700;
+  font-feature-settings: 'tnum';
+  letter-spacing: .2px;
+}
+.nav-row.is-active .nav-row__badge {
+  /* Cuando el item está activo (texto naranja), el badge sube un toque
+     a fondo peach naranja muy sutil para mantener jerarquía. */
+  background: var(--orange-bg, #fff3e6);
+  color: var(--accent, #d74009);
+}
+
+.sidebar-bottom {
+  flex-shrink: 0;
+  padding: 8px 0; border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+/* ═══ Tooltip para sidebar colapsado ═══ */
+.nav-tooltip {
+  position: fixed;
+  background: var(--text-primary);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px; font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 200;
+  box-shadow: 0 4px 14px rgba(40,40,52,.18);
+  opacity: 0;
+  transform: translateY(-50%) translateX(-4px);
+  transition: opacity .15s ease, transform .15s ease;
+}
+.nav-tooltip.is-visible {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+.nav-tooltip::before {
+  content: '';
+  position: absolute;
+  right: 100%; top: 50%;
+  transform: translateY(-50%);
+  border: 5px solid transparent;
+  border-right-color: var(--text-primary);
+}
+
+/* ═══ Collapsed: fade sutil + hover/active como cuadrado del icono ═══ */
+.sidebar.is-collapsed { width: var(--sidebar-w-collapsed); min-width: var(--sidebar-w-collapsed); overflow: hidden; }
+.sidebar.is-collapsed .sb-logo-img,
+.sidebar.is-collapsed .sb-logo-img--pill,
+.sidebar.is-collapsed .logo-sep,
+.sidebar.is-collapsed .nav-section { display: none; }
+.sidebar.is-collapsed .nav-row .lbl,
+.sidebar.is-collapsed .nav-row__badge {
+  max-width: 0; opacity: 0; pointer-events: none;
+  margin-left: 0; margin-right: 0;
+  padding: 0; min-width: 0; width: 0; overflow: hidden;
+  transition: opacity .14s ease, max-width .3s cubic-bezier(.32,.72,0,1) .04s;
+}
+.sidebar.is-collapsed .sidebar-logo { justify-content: center; padding: 0; }
+.sidebar.is-collapsed .nav-row { justify-content: center; padding: 0; gap: 0; background: transparent; margin: 0 10px; }
+.sidebar.is-collapsed .nav-row:hover { background: transparent; }
+.sidebar.is-collapsed .nav-row.is-active:hover { background: transparent; }
+/* Doug fix #7 — icono centrado horizontalmente (notificaciones, etc.).
+   Zero margins en el icono Y en el badge para que justify-content:center funcione. */
+.sidebar.is-collapsed .nav-row .icon { margin: 0; }
+
+.sidebar.is-collapsed .nav-row::before {
+  content: ''; position: absolute; left: 50%; top: 50%;
+  width: 40px; height: 40px; border-radius: 8px;
+  transform: translate(-50%,-50%);
+  background: transparent; pointer-events: none;
+  transition: background .2s cubic-bezier(.32,.72,0,1);
+  z-index: 0;
+}
+.sidebar.is-collapsed .nav-row:hover::before { background: #f5f6fa; }
+.sidebar.is-collapsed .nav-row.is-active::before { background: #fff3e6; }
+.sidebar.is-collapsed .nav-row.is-active:hover::before { background: #ffe4cf; }
+.sidebar.is-collapsed .nav-row .icon { position: relative; z-index: 1; }
+.sidebar.is-collapsed .active-bar { display: none; }
+
+/* ═══ View Transitions — slide del active-bar ═══ */
+::view-transition-group(shell-active-bar) {
+  animation-duration: 360ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 5;
+}
+::view-transition-old(shell-active-bar),
+::view-transition-new(shell-active-bar) {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(shell-active-bar) { animation-duration: 1ms !important; }
+}
+
+/* MAIN */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+/* ═══ TOP HEADER ═══ */
+.top-header {
+  height: var(--header-h); background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 16px; padding: 0 24px; flex-shrink: 0;
+  position: relative; z-index: var(--z-header);
+}
+
+.top-header__title-wrap {
+  display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0;
+}
+.top-header__breadcrumb {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--text-secondary);
+}
+.top-header__breadcrumb a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color .15s;
+}
+.top-header__breadcrumb a:hover { color: var(--accent); }
+.top-header__breadcrumb-sep { color: var(--text-muted); }
+.top-header__title {
+  font-size: 22px; font-weight: 800; color: var(--text-primary);
+  letter-spacing: -.5px; line-height: 1.2; margin: 0;
+}
+.top-header__right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+
+/* ═══ Profile switcher (user chip) ═══ */
+.profile-switcher { position: relative; }
+.user-chip {
+  display: flex; align-items: center; gap: 10px;
+  border: 1px solid var(--border); border-radius: var(--radius-full);
+  padding: 6px 8px 6px 6px; cursor: pointer; background: #fff;
+  transition: border-color .15s, box-shadow .15s;
+}
+.user-chip:hover { border-color: var(--border-dark); }
+.ava { position: relative; flex-shrink: 0; }
+.ava-ring {
+  width: 34px; height: 34px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+}
+.ava-dot {
+  position: absolute; bottom: -1px; right: -1px; width: 12px; height: 12px;
+  background: var(--green); border: 2px solid #fff; border-radius: 50%;
+}
+.user-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.user-name {
+  font-size: 13px; font-weight: 700; color: var(--text-primary);
+  max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.user-role {
+  font-size: 11px; color: var(--text-secondary);
+  max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.user-chip__chevron {
+  display: flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: 6px;
+  background: transparent; border: none; cursor: pointer;
+  color: var(--text-secondary); flex-shrink: 0; margin-left: 4px;
+  transition: background .15s, color .15s;
+}
+.user-chip__chevron:hover { background: #FFEDC7; color: var(--accent); }
+.user-chip__chevron svg { width: 14px; height: 14px; transition: transform .2s ease; }
+.profile-switcher.is-open .user-chip__chevron svg { transform: rotate(180deg); }
+
+.profile-dd {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 100;
+  width: 280px; background: #fff;
+  border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(40,40,52,.12);
+  opacity: 0; transform: translateY(-6px); pointer-events: none;
+  transition: opacity .2s, transform .2s; padding: 6px;
+}
+.profile-switcher.is-open .profile-dd { opacity: 1; transform: translateY(0); pointer-events: auto; }
+.profile-dd__header {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 12px 10px;
+}
+.profile-dd__user { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.profile-dd__user strong {
+  font-size: 14px; font-weight: 700; color: var(--text-primary);
+  line-height: 1.25;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.profile-dd__user small {
+  font-size: 11.5px; color: var(--text-secondary); font-weight: 500;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  margin-bottom: 2px;
+}
+.profile-dd__current-role {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 700; letter-spacing: .2px;
+  margin-top: 2px;
+}
+.profile-dd__sep {
+  height: 1px; background: var(--border);
+  margin: 4px -6px;
+}
+.profile-dd__item {
+  display: flex; align-items: center; gap: 10px; padding: 9px 12px; cursor: pointer;
+  font-size: 13px; font-weight: 500; color: var(--text-primary);
+  transition: background .12s, color .12s; border-radius: 8px;
+  text-decoration: none;
+}
+.profile-dd__item:hover { background: #f5f6fa; text-decoration: none; }
+.profile-dd__icon {
+  width: 18px; height: 18px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-secondary);
+}
+.profile-dd__icon svg { width: 18px; height: 18px; }
+.profile-dd__item--danger { color: #d11f1f; }
+.profile-dd__item--danger:hover { background: #fff0ee; color: #a80f0f; }
+.profile-dd__item--danger .profile-dd__icon { color: #d11f1f; }
+
+/* PAGE */
+.page { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 28px 32px 72px; }
+.page-inner { display: flex; flex-direction: column; gap: 20px; max-width: 1200px; margin: 0 auto; }
+.page-fade-in { animation: fadeInUp .4s var(--ease-in-out) backwards; }
+
+/* ═══ Demo role switcher (pill flotante — solo sandbox)
+   v1.4.9 (2026-05-23): movido de right:20px a left:50%+transform para
+   centrar horizontalmente. El footer flotante canónico (naowee-floating-footer)
+   ahora ocupa bottom-right; el demo-switcher vive al centro inferior y
+   no se superponen. */
+.demo-role-switcher {
+  position: fixed;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-demo-switcher);
+}
+/* Panel del switcher: alinearlo al centro del toggle (que vive en left:50%)
+   en lugar de heredar `right:0` que era para bottom-right. Componemos
+   translateX(-50%) con el translateY de idle/open. */
+.demo-role-switcher__panel {
+  left: 50%; right: auto;
+  transform: translateX(-50%) translateY(6px);  /* idle */
+}
+.demo-role-switcher.is-open .demo-role-switcher__panel {
+  transform: translateX(-50%) translateY(0);    /* open */
+}
+.demo-role-switcher__toggle {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 12px 8px 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  box-shadow: 0 4px 12px rgba(40,40,52,.08);
+  font-family: inherit; font-size: 12px; font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: transform .2s cubic-bezier(.32,.72,0,1),
+              box-shadow .2s ease,
+              border-color .2s ease;
+}
+.demo-role-switcher__toggle:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(40,40,52,.12);
+  border-color: var(--border-dark);
+}
+.demo-role-switcher__badge {
+  font-size: 9.5px; font-weight: 800; letter-spacing: .6px;
+  background: var(--naranja); color: #fff;
+  padding: 3px 7px; border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+.demo-role-switcher__avatar {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--accent);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 800;
+}
+.demo-role-switcher__chev {
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--text-secondary);
+  transition: transform .2s ease;
+}
+.demo-role-switcher__chev svg { width: 14px; height: 14px; }
+.demo-role-switcher.is-open .demo-role-switcher__chev { transform: rotate(180deg); }
+
+.demo-role-switcher__panel {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  /* v1.12.9 (Doug 27/05/2026): centrar el panel sobre el toggle.
+     Antes tenía `right: 0` heredado del bottom-right; ahora `left: 50%`
+     con translateX(-50%) lo centra horizontalmente. */
+  left: 50%;
+  right: auto;
+  width: 340px; max-height: 72vh;
+  background: #fff;
+  border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(40,40,52,.16);
+  opacity: 0;
+  transform: translateX(-50%) translateY(6px);
+  pointer-events: none;
+  transition: opacity .2s, transform .2s;
+  padding: 8px 6px;
+  display: flex; flex-direction: column;
+}
+.demo-role-switcher.is-open .demo-role-switcher__panel {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+
+/* v1.5.2 (25/05/2026): Sección MODO DEMO en el panel del demo-switcher.
+   Patrón Project v2.0.3 — "Guiado·vacío" / "Libre·con datos" segmented. */
+.demo-role-switcher__mode-section {
+  padding: 12px 12px 4px;
+  border-top: 1px solid var(--border, #e7e9f3);
+  margin-top: 4px;
+}
+.demo-role-switcher__mode-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+  color: var(--text-secondary, #646587);
+  margin-bottom: 8px;
+}
+.demo-role-switcher__mode-switch {
+  display: flex;
+  background: var(--bg-soft, #f5f6fa);
+  border: 1px solid var(--border, #e7e9f3);
+  border-radius: 9999px;
+  padding: 3px;
+  gap: 2px;
+}
+.demo-role-switcher__mode-btn {
+  flex: 1;
+  padding: 7px 10px;
+  border: 0;
+  background: transparent;
+  border-radius: 9999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-secondary, #646587);
+  cursor: pointer;
+  transition: background .15s, color .15s, box-shadow .15s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.demo-role-switcher__mode-btn:hover { color: var(--text-primary, #282834); }
+.demo-role-switcher__mode-btn[aria-pressed="true"] {
+  background: #fff;
+  color: var(--accent, #d74009);
+  box-shadow: 0 1px 3px rgba(40,40,52,.10), 0 0 0 1px var(--accent, #d74009);
+  font-weight: 700;
+}
+.demo-role-switcher__panel-label {
+  font-size: 10px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase;
+  color: #b5b9d4; padding: 6px 12px 8px; flex-shrink: 0;
+}
+.demo-role-switcher__list {
+  overflow-y: auto;
+  scrollbar-width: thin; scrollbar-color: var(--border-dark) transparent;
+}
+.demo-role-switcher__list::-webkit-scrollbar { width: 6px; }
+.demo-role-switcher__list::-webkit-scrollbar-thumb { background: var(--border-dark); border-radius: 3px; }
+
+/* v1.12.9: group labels — separar visualmente las fases del flujo IVC
+   (Validación / Firma / Notificación / Recursos). Patrón uppercase
+   letterspaced sutil, como section markers. */
+.demo-role-switcher__group-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+  color: var(--text-secondary, #646587);
+  padding: 10px 12px 4px;
+  margin-top: 4px;
+}
+.demo-role-switcher__group-label:first-child {
+  margin-top: 0;
+  padding-top: 4px;
+}
+
+.demo-role-switcher__item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px; border-radius: 8px;
+  text-decoration: none; color: var(--text-primary);
+  transition: background .12s;
+}
+.demo-role-switcher__item:hover { background: #f5f6fa; text-decoration: none; }
+.demo-role-switcher__item.is-active { background: #fff3e6; }
+.demo-role-switcher__item.is-active:hover { background: #ffe4cf; }
+.demo-role-switcher__item.is-disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+.demo-role-switcher__item-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; flex-shrink: 0;
+}
+.demo-role-switcher__item-meta {
+  display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1;
+}
+.demo-role-switcher__item-name {
+  font-size: 13px; font-weight: 600; color: var(--text-primary);
+  line-height: 1.2;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.demo-role-switcher__item-role {
+  font-size: 11px; color: var(--text-secondary); font-weight: 500;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.demo-role-switcher__item-stage {
+  font-size: 10px; font-weight: 700;
+  color: var(--text-secondary);
+  background: var(--bg);
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.demo-role-switcher__check {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; color: var(--accent); flex-shrink: 0;
+}
+.demo-role-switcher__check svg { width: 16px; height: 16px; }
+.demo-role-switcher__panel-footer {
+  padding: 8px 12px 4px;
+  display: flex; gap: 8px; flex-wrap: wrap;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   RESPONSIVE — mobile-first overhaul v1.13.43 (Doug 27/05/2026)
+
+   Breakpoints:
+   - Desktop:  >= 1024px  → sidebar fija expandida (274px)
+                            colapsable a 72px con burger
+   - Tablet:   768-1023px → sidebar colapsada por default (72px)
+                            burger expande IN-PLACE a 274px
+   - Mobile:   < 768px    → sidebar DRAWER off-canvas (oculta)
+                            burger abre como overlay full-height
+                            click backdrop / ESC / nav-row cierra
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Tablet 768-1023px: sidebar colapsada por default ── */
+@media (max-width: 1023px) and (min-width: 768px) {
+  .sidebar:not(.is-mobile-open) {
+    width: var(--sidebar-w-collapsed);
+    min-width: var(--sidebar-w-collapsed);
+    overflow: hidden;
+  }
+  .sidebar:not(.is-collapsed):not(.is-mobile-open) .sb-logo-img,
+  .sidebar:not(.is-collapsed):not(.is-mobile-open) .sb-logo-img--pill,
+  .sidebar:not(.is-collapsed):not(.is-mobile-open) .logo-sep,
+  .sidebar:not(.is-collapsed):not(.is-mobile-open) .lbl,
+  .sidebar:not(.is-collapsed):not(.is-mobile-open) .nav-section,
+  .sidebar:not(.is-collapsed):not(.is-mobile-open) .nav-row__badge {
+    display: none;
+  }
+  .sidebar:not(.is-mobile-open) .sidebar-logo { justify-content: center; padding: 0; }
+  .sidebar:not(.is-mobile-open) .nav-row { justify-content: center; padding: 0; }
+  .sidebar:not(.is-mobile-open) .nav-row .icon { margin-left: 0; }
+  .user-info { display: none; }
+}
+
+/* ── Mobile < 768px: sidebar drawer off-canvas ── */
+@media (max-width: 767px) {
+  body { font-size: 13px; }
+
+  .shell {
+    overflow-x: hidden;
+  }
+
+  /* Sidebar oculta por default — slide-in cuando .is-mobile-open */
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: 280px;
+    min-width: 280px;
+    transform: translateX(-100%);
+    box-shadow: 0 8px 32px rgba(0,0,0,.18);
+    z-index: 9999;
+    transition: transform .3s cubic-bezier(.32,.72,0,1);
+  }
+  .sidebar.is-mobile-open {
+    transform: translateX(0);
+  }
+  /* Override is-collapsed en mobile — el sidebar siempre tiene full
+     content cuando se abre como drawer. Bump selectivity con html body para
+     vencer las reglas desktop de is-collapsed (line 199+). */
+  html body .sidebar.is-collapsed,
+  html body .sidebar.is-mobile-open { width: 280px !important; min-width: 280px !important; overflow: visible !important; }
+  html body .sidebar.is-collapsed .sb-logo-img,
+  html body .sidebar.is-collapsed .sb-logo-img--pill,
+  html body .sidebar.is-collapsed .logo-sep,
+  html body .sidebar.is-collapsed .nav-section { display: block !important; }
+  html body .sidebar.is-collapsed .nav-row .lbl,
+  html body .sidebar.is-collapsed .nav-row__badge,
+  html body .sidebar.is-mobile-open .nav-row .lbl,
+  html body .sidebar.is-mobile-open .nav-row__badge {
+    max-width: none !important;
+    opacity: 1 !important;
+    width: auto !important;
+    min-width: 0 !important;
+    pointer-events: auto !important;
+    overflow: visible !important;
+    padding: revert !important;
+    margin: revert !important;
+  }
+  html body .sidebar.is-collapsed .sidebar-logo,
+  html body .sidebar.is-mobile-open .sidebar-logo {
+    justify-content: flex-start !important;
+    padding: 0 20px !important;
+  }
+  html body .sidebar.is-collapsed .nav-row,
+  html body .sidebar.is-mobile-open .nav-row {
+    justify-content: flex-start !important;
+    padding: 0 20px !important;
+    gap: 14px !important;
+    margin: 0 !important;
+  }
+  html body .sidebar.is-collapsed .nav-row::before,
+  html body .sidebar.is-mobile-open .nav-row::before { display: none !important; }
+  html body .sidebar.is-collapsed .active-bar,
+  html body .sidebar.is-mobile-open .active-bar { display: block !important; }
+
+  /* Main toma todo el ancho. */
+  .main { width: 100%; }
+  .top-header {
+    padding-left: 56px !important; /* room for burger trigger */
+  }
+
+  /* Trigger del drawer — botón flotante en header (top-left). */
+  .mobile-drawer-trigger {
+    position: fixed;
+    top: 22px;
+    left: 16px;
+    z-index: 1000;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, #e7e9f3);
+    box-shadow: 0 2px 8px rgba(40,40,52,.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-primary);
+    transition: background .15s;
+  }
+  .mobile-drawer-trigger:hover { background: var(--bg-soft, #f5f6fa); }
+  .mobile-drawer-trigger:active { transform: scale(.92); }
+
+  /* Backdrop overlay cuando drawer está abierto. */
+  body.has-mobile-drawer-open::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: rgba(40, 40, 52, .5);
+    z-index: 9998;
+    animation: drawerBackdropIn .25s ease;
+  }
+  @keyframes drawerBackdropIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  body.has-mobile-drawer-open {
+    overflow: hidden; /* no scroll body bajo drawer */
+  }
+
+  /* User info compact. */
+  .user-info { display: none; }
+
+  /* Page inner padding compact. */
+  .page-inner {
+    padding: 14px !important;
+    max-width: 100% !important;
+    gap: 14px !important;
+  }
+}
+
+/* ── Tablets desktop entre 1024 y 1280 — sidebar siempre visible — */
+@media (min-width: 1024px) {
+  .mobile-drawer-trigger { display: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BOTÓN PRIMARIO LOUD — glow elevation naranja en hover
+   ─────────────────────────────────────────────────────────────
+   Port canónico desde style/btn-glow-and-root-menu del repo
+   naowee-test-sidebar-shell (paridad con escenarios/incentivos).
+
+   Idle: mantiene background sin oscurecer
+   Hover: lift -1px + sombra accent (naranja vibrante)
+   Active: vuelve al baseline con sombra interna sutil
+   ═══════════════════════════════════════════════════════════════ */
+.naowee-btn--loud,
+.naowee-btn--accent {
+  transition: box-shadow .25s cubic-bezier(.32,.72,0,1),
+              transform .2s ease,
+              background .15s ease;
+}
+.naowee-btn--loud:hover:not(:disabled):not([disabled]),
+.naowee-btn--accent:hover:not(:disabled):not([disabled]) {
+  box-shadow: 0 8px 22px rgba(215,64,9,.32),
+              0 2px 6px rgba(215,64,9,.18);
+  transform: translateY(-1px);
+  opacity: 1; /* override .naowee-btn:hover { opacity: .92 } */
+}
+.naowee-btn--loud:active:not(:disabled):not([disabled]),
+.naowee-btn--accent:active:not(:disabled):not([disabled]) {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(215,64,9,.22);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DEMO TOUR OVERLAY — preservado del shell.css anterior porque
+   demo-tour.js depende exclusivamente de estas clases.
+   ═══════════════════════════════════════════════════════════════ */
+.demo-tour-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-tour);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .22s ease;
+}
+.demo-tour-overlay.is-open { opacity: 1; }
+.demo-tour-overlay::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 17, 35, .25);
+  pointer-events: none;
+}
+.demo-tour-spotlight {
+  position: fixed;
+  border-radius: 14px;
+  pointer-events: none;
+  background: transparent;
+  border: 3px solid var(--accent);
+  box-shadow: 0 0 0 4px rgba(215, 64, 9, .25), 0 0 32px rgba(215, 64, 9, .4);
+  animation: demoTourPulse 1.6s ease-in-out infinite;
+  transition: top .22s ease, left .22s ease, width .22s ease, height .22s ease;
+  z-index: calc(var(--z-tour) + 1);
+}
+@keyframes demoTourPulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(215, 64, 9, .25), 0 0 32px rgba(215, 64, 9, .4); }
+  50%      { box-shadow: 0 0 0 8px rgba(215, 64, 9, .15), 0 0 48px rgba(215, 64, 9, .55); }
+}
+.demo-tour-tooltip {
+  position: fixed;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-tooltip);
+  padding: 18px 20px;
+  z-index: calc(var(--z-tour) + 2);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: demoTourTipIn .28s var(--ease-in-out);
+  pointer-events: none;
+}
+@keyframes demoTourTipIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.demo-tour-overlay.is-open .demo-tour-tooltip { pointer-events: auto; }
+.demo-tour-tooltip__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.demo-tour-tooltip__step {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .4px;
+  color: var(--accent);
+  text-transform: uppercase;
+  background: var(--orange-bg);
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+.demo-tour-tooltip__close {
+  background: transparent;
+  border: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s, color .15s;
+}
+.demo-tour-tooltip__close:hover { background: var(--orange-bg); color: var(--accent); }
+.demo-tour-tooltip__title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.3;
+}
+.demo-tour-tooltip__body {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin: 0;
+}
+.demo-tour-tooltip__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* Print: oculta sidebar, switcher, tour, snackbar */
+@media print {
+  .sidebar, .top-header__right, .demo-role-switcher,
+  .demo-tour-overlay, .naowee-snackbar { display: none !important; }
+  .page { padding: 0; overflow: visible; }
+  .shell { display: block; height: auto; overflow: visible; }
+  .main { display: block; }
+  body, .page { background: white; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ANIMATIONS reusables — fadeInUp se usa en .page-fade-in
+   ═══════════════════════════════════════════════════════════════ */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+

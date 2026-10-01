@@ -1,0 +1,2249 @@
+<!DOCTYPE html>
+<!-- ═══════════════════════════════════════════════════════════════════════
+     IVC · Pantalla pública de consulta de trámite (INS-014 del flujo V4)
+     URL: /usuario-externo/consultar.html?rad=IVC-2026-XXX
+
+     Para uso del ORGANISMO externo:
+       - Consulta el estado de su trámite por número de radicado
+       - Descarga el acto administrativo si ya hay veredicto
+       - Si veredicto es NoCumple o Parcial → puede radicar subsanación
+
+     Sin login (riesgo conocido — documentado en INS-014). Producción debería
+     usar magic link por correo o doble factor con cédula del representante.
+
+     v1.8.4 — Doug · 2026-05-26
+     ═══════════════════════════════════════════════════════════════════════ -->
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Consulta de trámite IVC · Ministerio del Deporte</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="../shared/fonts/google-sans.css">
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/naowee-tech/naowee-design-system@v1.8.0/dist/design-system.css">
+
+  <link rel="stylesheet" href="../shared/tokens.css?v=1.13.56">
+  <link rel="stylesheet" href="../shared/components.css?v=1.13.57">
+  <link rel="stylesheet" href="../shared/naowee-footer.css?v=1.13.56">
+  <style>/* FOOTER POINTER FIX INLINE — v1.12.5 defensive — Doug reportó que el cache de file:// servía CSS viejo y el footer flotante seguía bloqueando hover/click sobre las tablas. Esta regla está inline en el HTML para vencer al CSS externo cacheado. */ .naowee-floating-footer { pointer-events: none !important; } .naowee-floating-footer__version, .naowee-floating-footer__logo, .naowee-floating-footer__text, .naowee-floating-footer__sep { pointer-events: auto !important; }</style>
+
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font-sans);
+      background: var(--bg, #f5f6fa);
+      color: var(--text-primary, #282834);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header público ─────────────────────────────────────── */
+    .public-header {
+      background: var(--surface, #fff);
+      border-bottom: 1px solid var(--border, #e7e9f3);
+      flex-shrink: 0;
+    }
+    .public-header__inner {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .public-header__brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .public-header__logo {
+      width: 40px; height: 40px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--accent, #d74009), var(--naranja, #FF7500));
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800;
+      font-size: 15px;
+      letter-spacing: -0.3px;
+      flex-shrink: 0;
+    }
+    .public-header__brand-text {
+      display: flex; flex-direction: column;
+      min-width: 0;
+    }
+    .public-header__brand-name {
+      font-size: 13px; font-weight: 700; color: var(--text-primary); line-height: 1.2;
+    }
+    .public-header__brand-sub {
+      font-size: 11.5px; color: var(--text-secondary); line-height: 1.2; margin-top: 1px;
+    }
+    .public-header__title {
+      font-size: 13px; font-weight: 600; color: var(--text-secondary);
+      letter-spacing: 0.2px;
+    }
+
+    /* ── Main ───────────────────────────────────────────────── */
+    .public-main {
+      flex: 1;
+      width: 100%;
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 32px 24px 64px;
+    }
+
+    /* v1.8.6: back button "Nueva consulta" usa .naowee-btn--mute (Ghost) +
+       --small del DS. Sólo agrego margin-bottom para separar del grid. */
+    .public-main > .naowee-btn--mute {
+      margin: 0 0 16px;
+    }
+    /* v1.8.7: layout grid de 2 columnas — main (contenido) + aside (caution
+       dismissable). El aside se colapsa al cerrar el disclaimer y la columna
+       main toma el ancho completo. */
+    .public-grid {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 24px;
+      align-items: start;
+      transition: grid-template-columns .25s ease;
+    }
+    .public-grid__main { min-width: 0; }
+    .public-grid__aside {
+      position: sticky;
+      top: 24px;
+    }
+    .public-grid.is-aside-hidden {
+      grid-template-columns: 1fr;
+    }
+    .public-grid.is-aside-hidden .public-grid__aside {
+      display: none;
+    }
+    @media (max-width: 1000px) {
+      .public-grid { grid-template-columns: 1fr; }
+      .public-grid__aside { position: static; order: -1; }
+    }
+
+    /* ── Landing card (sin radicado) — v1.8.5: sin shadow ── */
+    .landing-card {
+      max-width: 560px;
+      margin: 64px auto 0;
+      background: var(--surface, #fff);
+      border-radius: var(--radius-xl, 20px);
+      border: 1px solid var(--border, #e7e9f3);
+      padding: 40px 36px;
+      text-align: center;
+    }
+    .landing-card__icon {
+      width: 64px; height: 64px;
+      margin: 0 auto 20px;
+      border-radius: 50%;
+      background: var(--orange-bg, #fff3e6);
+      color: var(--accent, #d74009);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .landing-card h1 {
+      font-size: 22px; font-weight: 700; margin: 0 0 8px;
+      color: var(--text-primary);
+    }
+    .landing-card p {
+      font-size: 14px; color: var(--text-secondary); line-height: 1.5;
+      margin: 0 0 28px;
+    }
+    .landing-form {
+      display: flex; gap: 8px; align-items: stretch;
+    }
+    .landing-form input {
+      flex: 1;
+      padding: 0 14px;
+      height: 44px;
+      border: 1px solid var(--border-dark, #d0d4e6);
+      border-radius: var(--radius-md, 8px);
+      font-size: 14px;
+      font-family: var(--font-sans);font-variant-numeric:tabular-nums;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      color: var(--text-primary);
+      background: var(--surface);
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .landing-form input::placeholder { font-weight: 400; letter-spacing: 0; color: var(--text-secondary); opacity: 0.6; }
+    .landing-form input:focus {
+      outline: none;
+      border-color: var(--accent, #d74009);
+      box-shadow: 0 0 0 3px rgba(215, 64, 9, 0.12);
+    }
+    /* v1.8.5: input error state */
+    .landing-form input.is-error {
+      border-color: #c01818;
+      box-shadow: 0 0 0 3px rgba(192, 24, 24, 0.12);
+    }
+    /* v1.8.5: glow naranja permanente cuando el botón está habilitado
+       (radicado válido en el input). DS .naowee-btn--loud sólo aplica glow
+       en :hover; acá lo dejamos visible siempre que esté activo. */
+    .landing-form button.naowee-btn--loud:not(:disabled) {
+      box-shadow: 0 4px 14px rgba(215, 64, 9, 0.35);
+    }
+    .landing-form button.naowee-btn--loud:not(:disabled):hover {
+      box-shadow: 0 6px 20px rgba(215, 64, 9, 0.5);
+    }
+    /* v1.8.6: helper error bajo el input ahora usa .naowee-message --negative
+       canónico DS. Por defecto oculto; aparece cuando se agrega .is-visible. */
+    #landingError {
+      display: none;
+      margin-top: 14px;
+      text-align: left;
+    }
+    #landingError.is-visible { display: flex; }
+    .landing-card__hints {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    .landing-card__hints strong { color: var(--text-primary); }
+    .landing-card__sample {
+      display: inline-block;
+      font-family: var(--font-sans);font-variant-numeric:tabular-nums;
+      background: var(--bg-soft, #f5f6fa);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11.5px;
+      color: var(--text-primary);
+      margin: 0 4px;
+    }
+
+    /* ── Detalle del trámite encontrado (sin .tramite-back custom; ahora
+         el back button usa .naowee-btn--mute canónico) ─────────────── */
+    .tramite-hero {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl, 20px);
+      padding: 28px 32px;
+      margin: 0 0 24px;
+      
+    }
+    /* v1.8.8: grid en lugar de flex-wrap → PLAZO siempre a la derecha
+       sin caer abajo cuando el main es estrecho (820px). */
+    .tramite-hero__top {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 24px;
+      align-items: start;
+    }
+    @media (max-width: 560px) {
+      .tramite-hero__top { grid-template-columns: 1fr; }
+      .tramite-hero__plazo { text-align: left; }
+    }
+    .tramite-hero__radicado {
+      font-family: var(--font-sans);font-variant-numeric:tabular-nums;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent, #d74009);
+      letter-spacing: 0.3px;
+      margin: 0 0 4px;
+    }
+    .tramite-hero__organismo {
+      font-size: 22px; font-weight: 700; color: var(--text-primary);
+      margin: 0 0 10px;
+      line-height: 1.25;
+    }
+    .tramite-hero__meta {
+      display: flex; gap: 18px 24px; flex-wrap: wrap;
+      font-size: 13px; color: var(--text-secondary);
+    }
+    .tramite-hero__meta strong {
+      color: var(--text-primary); font-weight: 600;
+      margin-left: 4px;
+    }
+    .tramite-hero__plazo {
+      flex-shrink: 0;
+      text-align: right;
+      min-width: 110px;
+    }
+    .tramite-hero__plazo-label {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.4px;
+      text-transform: uppercase; color: var(--text-secondary);
+      margin: 0 0 4px;
+    }
+    .tramite-hero__plazo-value {
+      font-size: 28px; font-weight: 800;
+      color: var(--text-primary);
+      letter-spacing: -0.5px;
+      line-height: 1;
+    }
+    .tramite-hero__plazo-value--alert  { color: #c01818; }
+    .tramite-hero__plazo-value--warn   { color: #c97300; }
+    .tramite-hero__plazo-value--ok     { color: var(--green, #1f8923); }
+    .tramite-hero__plazo-sub {
+      font-size: 12px; color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    /* ── Sections ───────────────────────────────────────────── */
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl, 20px);
+      padding: 24px 32px 28px;
+      margin: 0 0 20px;
+      
+    }
+    .section__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 0 0 20px;
+    }
+    .section__title {
+      font-size: 11px; font-weight: 700; letter-spacing: .6px;
+      text-transform: uppercase; color: #9a9db0;
+      margin: 0;
+    }
+
+    /* ── .naowee-message margin scoped ──────────────────────── */
+    .section .naowee-message {
+      margin: 0 0 4px;
+    }
+
+    /* v1.9.1: causales del veredicto dentro del .naowee-message */
+    .ivc-causales-inside {
+      margin-top: 12px;
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.6);
+      border-radius: 8px;
+      border-left: 3px solid currentColor;
+    }
+    .ivc-causales-inside__label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .5px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+    .ivc-causales-inside__text {
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text-primary);
+      white-space: pre-wrap;
+    }
+
+    /* ── Veredicto subgrid (profesional + fecha + acta) ─────────
+       v1.8.8: 2 cols (profesional + fecha) en la fila 1, y acto admin
+       full-width en la fila 2. Antes 3 cols a 1fr apretaban el filename
+       del acto en columnas estrechas. */
+    .veredicto-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 20px 32px;
+      margin: 24px 0 0;
+    }
+    .veredicto-grid__cell--full {
+      grid-column: 1 / -1;
+    }
+    @media (max-width: 600px) {
+      .veredicto-grid { grid-template-columns: 1fr; }
+      .veredicto-grid__cell--full { grid-column: auto; }
+    }
+    .veredicto-grid__cell { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .veredicto-grid__label {
+      font-size: 12px; font-weight: 500; color: var(--text-secondary);
+    }
+
+    /* ── Actor pill ──────────────────────────────────────────── */
+    .actor-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .actor-pill__avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700;
+      flex-shrink: 0;
+    }
+    .actor-pill__name { font-size: 14px; font-weight: 600; color: var(--text-primary); line-height: 1.2; }
+    .actor-pill__role { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
+
+    /* ── File link minimal ──────────────────────────────────── */
+    .file-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text-primary);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      line-height: 1.3;
+      max-width: 100%;
+      min-width: 0;
+    }
+    .file-link__name {
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+    }
+    .file-link__size {
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 400;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+    .file-link__download {
+      color: var(--accent);
+      flex-shrink: 0;
+      transition: opacity .15s, transform .15s;
+    }
+    .file-link:hover .file-link__download {
+      opacity: 0.7;
+      transform: translateY(1px);
+    }
+
+    /* ── Lista de docs no cumplidos (subsanación) ──────────── */
+    .docs-fail-list {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .docs-fail-item {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md, 8px);
+      border-left: 3px solid #c01818;
+      background: var(--surface);
+    }
+    .docs-fail-item--obs { border-left-color: var(--accent); }
+    .docs-fail-item__num {
+      flex-shrink: 0;
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--bg-soft);
+      font-size: 11px; font-weight: 700;
+      color: var(--text-secondary);
+    }
+    .docs-fail-item__body { flex: 1; min-width: 0; }
+    .docs-fail-item__title { font-size: 13.5px; font-weight: 600; color: var(--text-primary); }
+    .docs-fail-item__obs {
+      font-size: 12.5px; color: var(--text-secondary);
+      margin-top: 3px; line-height: 1.45;
+      font-style: italic;
+    }
+
+    /* ── Histórico timeline v1.13.23 — UX Pro Max refactor ─────────────
+       Storytelling-style timeline para la página pública. Cada evento es
+       una tarjeta con jerarquía visual clara:
+         • Punto semántico (color según tipo de evento)
+         • Título humanizado + badge cromático
+         • Descripción narrativa (cuando exista)
+         • Chip técnico de transición de estado (cuando aplique)
+         • Footer separado con fecha + actor
+       Reemplaza el diseño anterior monolítico de un solo párrafo. */
+    .ctx-timeline {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      position: relative;
+    }
+    .ctx-timeline::before {
+      content: '';
+      position: absolute;
+      left: 11px;
+      top: 14px;
+      bottom: 14px;
+      width: 2px;
+      background: linear-gradient(180deg,
+        var(--border, #e7e9f3) 0%,
+        var(--border, #e7e9f3) 92%,
+        transparent 100%);
+    }
+    .ctx-timeline__item {
+      position: relative;
+      padding: 0 0 18px 40px;
+    }
+    .ctx-timeline__item:last-child { padding-bottom: 0; }
+
+    /* Dot semántico — usa box-shadow para anillo blanco que tape el rail */
+    .ctx-timeline__dot {
+      position: absolute;
+      left: 5px;
+      top: 8px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--accent, #d74009);
+      box-shadow: 0 0 0 3px var(--surface, #fff), 0 0 0 4px var(--accent, #d74009);
+      z-index: 1;
+    }
+    .ctx-timeline__item--positive .ctx-timeline__dot {
+      background: var(--green, #1f8923);
+      box-shadow: 0 0 0 3px var(--surface, #fff), 0 0 0 4px var(--green, #1f8923);
+    }
+    .ctx-timeline__item--caution .ctx-timeline__dot {
+      background: var(--accent, #d74009);
+      box-shadow: 0 0 0 3px var(--surface, #fff), 0 0 0 4px var(--accent, #d74009);
+    }
+    .ctx-timeline__item--negative .ctx-timeline__dot {
+      background: #c01818;
+      box-shadow: 0 0 0 3px var(--surface, #fff), 0 0 0 4px #c01818;
+    }
+    .ctx-timeline__item--info .ctx-timeline__dot {
+      background: var(--blue-info, #1f78d1);
+      box-shadow: 0 0 0 3px var(--surface, #fff), 0 0 0 4px var(--blue-info, #1f78d1);
+    }
+    .ctx-timeline__item--muted .ctx-timeline__dot {
+      background: var(--text-muted, #9ca3af);
+      box-shadow: 0 0 0 3px var(--surface, #fff), 0 0 0 4px var(--border-dark, #d0d4e6);
+    }
+
+    /* Card del evento */
+    .ctx-timeline__card {
+      background: var(--surface, #fff);
+      border: 1px solid var(--border, #e7e9f3);
+      border-radius: var(--radius-lg, 12px);
+      padding: 14px 16px 12px;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .ctx-timeline__item:first-child .ctx-timeline__card {
+      box-shadow: 0 1px 3px rgba(0, 0, 0, .04);
+      border-color: var(--border-dark, #d0d4e6);
+    }
+
+    /* Header: título + badge */
+    .ctx-timeline__head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+    .ctx-timeline__title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary, #282834);
+      line-height: 1.35;
+      letter-spacing: -.005em;
+      flex: 1;
+      min-width: 0;
+    }
+    .ctx-timeline__badge {
+      flex-shrink: 0;
+      align-self: flex-start;
+    }
+
+    /* Descripción narrativa */
+    .ctx-timeline__desc {
+      font-size: 13px;
+      color: var(--text-secondary, #646587);
+      line-height: 1.5;
+      margin: 4px 0 0;
+    }
+
+    /* Chip técnico de transición de estado */
+    .ctx-timeline__transition {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+      padding: 4px 10px;
+      background: var(--bg-soft, #f5f6fa);
+      border: 1px solid var(--border, #e7e9f3);
+      border-radius: 999px;
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--text-secondary, #646587);
+      font-family: var(--font-sans);font-variant-numeric:tabular-nums;
+      line-height: 1.2;
+    }
+    .ctx-timeline__transition-from {
+      color: var(--text-secondary, #646587);
+    }
+    .ctx-timeline__transition-arrow {
+      color: var(--text-muted, #9ca3af);
+      font-size: 11px;
+    }
+    .ctx-timeline__transition-to {
+      color: var(--text-primary, #282834);
+      font-weight: 600;
+    }
+
+    /* Footer: fecha + actor */
+    .ctx-timeline__foot {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--border, #e7e9f3);
+      font-size: 11.5px;
+      color: var(--text-secondary, #646587);
+    }
+    .ctx-timeline__date {
+      font-family: var(--font-sans);font-variant-numeric:tabular-nums;
+      font-weight: 500;
+    }
+    .ctx-timeline__sep {
+      color: var(--text-muted, #9ca3af);
+    }
+    .ctx-timeline__actor {
+      font-weight: 500;
+    }
+
+    @media (max-width: 600px) {
+      .ctx-timeline__head {
+        flex-direction: column;
+      }
+      .ctx-timeline__badge {
+        order: -1;
+      }
+    }
+
+    /* ── CTA subsanar (v1.8.5: protagonismo + glow) ─────────── */
+    .subsanar-cta {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      padding: 28px 32px;
+      background: linear-gradient(135deg, var(--orange-bg, #fff3e6) 0%, #fff 100%);
+      border: 2px dashed var(--accent, #d74009);
+      border-radius: var(--radius-xl, 20px);
+      margin: 0 0 24px;
+    }
+    .subsanar-cta__icon {
+      flex-shrink: 0;
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      background: var(--accent, #d74009);
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 12px rgba(215, 64, 9, 0.3);
+    }
+    .subsanar-cta__body {
+      flex: 1;
+      min-width: 0;
+    }
+    .subsanar-cta__title {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0 0 4px;
+      line-height: 1.3;
+    }
+    .subsanar-cta__sub {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      margin: 0;
+      line-height: 1.5;
+    }
+    /* Botón "loud" con glow permanente */
+    .btn-loud-glow {
+      flex-shrink: 0;
+      height: 48px;
+      padding: 0 24px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      background: var(--accent, #d74009);
+      border: none;
+      border-radius: var(--radius-md, 8px);
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(215, 64, 9, 0.4);
+      transition: box-shadow .2s, transform .1s;
+      font-family: inherit;
+    }
+    .btn-loud-glow:hover {
+      box-shadow: 0 6px 20px rgba(215, 64, 9, 0.55);
+      transform: translateY(-1px);
+    }
+    .btn-loud-glow:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(215, 64, 9, 0.4);
+    }
+
+    /* v1.11.0: CTA Renuncia a términos — sólo aparece para NotifElectronica.
+       Layout vertical con 2 botones (No renuncio | Sí renuncio). Mirror del
+       subsanar-cta visualmente para coherencia. */
+    .renuncia-cta {
+      padding: 28px 32px;
+      background: linear-gradient(135deg, #eef5ff 0%, #fff 100%);
+      border: 2px solid #1f78d1;
+      border-radius: var(--radius-xl, 20px);
+      margin: 0 0 24px;
+    }
+    .renuncia-cta__head {
+      display: flex;
+      gap: 18px;
+      align-items: flex-start;
+    }
+    .renuncia-cta__icon {
+      flex-shrink: 0;
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: #1f78d1;
+      color: #fff;
+      padding: 10px;
+      box-shadow: 0 4px 12px rgba(31, 120, 209, 0.3);
+    }
+    .renuncia-cta__title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0 0 6px;
+      line-height: 1.3;
+    }
+    .renuncia-cta__sub {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      margin: 0;
+      line-height: 1.55;
+    }
+    .renuncia-cta__actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 22px;
+      padding-top: 22px;
+      border-top: 1px solid rgba(31, 120, 209, 0.2);
+      justify-content: flex-end;
+    }
+    @media (max-width: 700px) {
+      .renuncia-cta__actions {
+        flex-direction: column-reverse;
+      }
+      .renuncia-cta__actions > * {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+
+    /* v1.13.56: CTA "¿Cómo notificar al organismo?" — aparece cuando
+       t.estado === 'Firmado'. Decisión que antes vivía en el director y que
+       Danna confirmó pertenece al organismo (Flujo V4). 2 opciones tipo card
+       (Electrónicamente / En oficinas). Mismo wrapper visual que renuncia-cta
+       (border azul, gradient suave) para coherencia con el resto de CTAs
+       post-firma. Las cards internas reutilizan el patrón notif-option del
+       director (cards seleccionables). */
+    .canal-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 22px;
+      padding-top: 22px;
+      border-top: 1px solid rgba(31, 120, 209, 0.2);
+    }
+    @media (max-width: 700px) { .canal-options { grid-template-columns: 1fr; } }
+    .canal-option {
+      display: flex; flex-direction: column;
+      gap: 10px;
+      padding: 18px 16px;
+      background: #fff;
+      border: 1.5px solid var(--border, #e5e7eb);
+      border-radius: 12px;
+      cursor: pointer;
+      text-align: left;
+      font-family: inherit;
+      transition: border-color .15s, background .15s, transform .08s;
+    }
+    .canal-option:hover {
+      border-color: var(--accent, #d74009);
+      background: #fff8f4;
+    }
+    .canal-option:active { transform: scale(.99); }
+    .canal-option__icon {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      background: var(--orange-bg, #fff3e6);
+      color: var(--accent, #d74009);
+    }
+    .canal-option__title {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .canal-option__desc {
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+    .canal-option__chip {
+      align-self: flex-start;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: .3px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: var(--bg-soft, #f5f6fa);
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+
+    /* v1.11.4: CTA elegir tipo de recurso — 2 opciones tipo card. */
+    .recurso-tipo-cta {
+      padding: 28px 32px;
+      background: linear-gradient(135deg, #f7f0ff 0%, #fff 100%);
+      border: 2px solid #7c3aed;
+      border-radius: var(--radius-xl, 20px);
+      margin: 0 0 24px;
+    }
+    .recurso-tipo-cta__head {
+      display: flex;
+      gap: 18px;
+      align-items: flex-start;
+      margin-bottom: 22px;
+    }
+    .recurso-tipo-cta__icon {
+      flex-shrink: 0;
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: #7c3aed;
+      color: #fff;
+      padding: 10px;
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+    }
+    .recurso-tipo-cta__title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0 0 6px;
+      line-height: 1.3;
+    }
+    .recurso-tipo-cta__sub {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      margin: 0;
+      line-height: 1.55;
+    }
+    .recurso-tipo-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    @media (max-width: 700px) {
+      .recurso-tipo-grid { grid-template-columns: 1fr; }
+    }
+    .recurso-tipo-option {
+      display: flex; flex-direction: column;
+      gap: 10px;
+      padding: 20px 18px;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      cursor: pointer;
+      text-align: left;
+      font-family: inherit;
+      transition: border-color .15s, background .15s, transform .08s;
+    }
+    .recurso-tipo-option:hover {
+      border-color: #7c3aed;
+      background: #fafbff;
+      transform: translateY(-1px);
+    }
+    .recurso-tipo-option:active { transform: translateY(0); }
+    .recurso-tipo-option__icon {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      background: #f7f0ff;
+      color: #7c3aed;
+    }
+    .recurso-tipo-option__title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .recurso-tipo-option__desc {
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    .recurso-tipo-option__chip {
+      align-self: flex-start;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: .3px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--bg-soft, #f5f6fa);
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+    .recurso-tipo-option__chip--purple {
+      background: #f7f0ff;
+      color: #7c3aed;
+    }
+    .recurso-tipo-option__chip--orange {
+      background: var(--orange-bg, #fff3e6);
+      color: var(--accent, #d74009);
+    }
+
+    /* v1.9.0: Modal subsanación — file uploader canónico (patrón .wz-file-drop
+       del formulario) + textarea canónico DS + helper--negative para overflow. */
+    .subsanar-doc-list {
+      display: flex; flex-direction: column; gap: 14px;
+      margin: 14px 0 18px;
+    }
+    .subsanar-doc-item {
+      padding: 0;
+    }
+    .subsanar-doc-item__header {
+      display: flex; gap: 12px; align-items: flex-start;
+      margin-bottom: 10px;
+    }
+    .subsanar-doc-item__num {
+      flex-shrink: 0;
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--bg-soft);
+      border: 1px solid var(--border);
+      font-size: 11.5px; font-weight: 700;
+      color: var(--text-secondary);
+    }
+    .subsanar-doc-item__title { font-size: 13.5px; font-weight: 600; color: var(--text-primary); }
+    /* v1.9.7: __obs queda DEBAJO del file-drop (no en el header).
+       Hint sutil — italic + small + secondary. */
+    .subsanar-doc-item__obs   {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.45;
+      font-style: italic;
+      margin-top: 8px;
+      padding-left: 2px;
+    }
+    /* File drop canónico — mismo patrón que el formulario Fase 1 */
+    .ivc-file-drop {
+      display: flex; flex-direction: column;
+      align-items: center; gap: 6px;
+      padding: 18px;
+      border: 1.5px dashed var(--border-dark, #d0d4e6);
+      border-radius: 12px;
+      background: #fafbff;
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+      position: relative;
+    }
+    .ivc-file-drop:hover { border-color: var(--accent, #d74009); background: #fff8f4; }
+    .ivc-file-drop.is-filled {
+      border-style: solid;
+      border-color: #15803d;
+      background: #f0faf2;
+    }
+    .ivc-file-drop.is-error {
+      border-color: #c01818;
+      background: #fff0ee;
+      border-style: solid;
+    }
+    .ivc-file-drop__icon { color: var(--text-secondary); display: inline-flex; }
+    .ivc-file-drop.is-filled .ivc-file-drop__icon { color: #15803d; }
+    .ivc-file-drop.is-error  .ivc-file-drop__icon { color: #c01818; }
+    .ivc-file-drop__title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+    .ivc-file-drop__hint  { font-size: 11.5px; color: var(--text-secondary); text-align: center; }
+    .ivc-file-drop__name  { font-size: 12.5px; font-weight: 600; color: #15803d; margin-top: 4px; }
+    .ivc-file-drop input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    /* Helper canónico DS — helper--negative para errores de upload */
+    .naowee-helper {
+      display: flex; align-items: flex-start;
+      gap: 8px; margin-top: 6px;
+      font-size: 12px;
+    }
+    /* v1.9.7: [hidden] no se respetaba por la cascada `display: flex` —
+       fuerza el ocultamiento canónico cuando hidden está presente. */
+    .naowee-helper[hidden] { display: none !important; }
+    .naowee-helper__badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .naowee-helper__text { line-height: 1.45; }
+    .naowee-helper--negative .naowee-helper__badge { background: #c01818; color: #fff; }
+    .naowee-helper--negative .naowee-helper__text  { color: #8a1212; }
+
+    /* v1.9.7: Snackbar canónico — mirror del patrón del módulo Project
+       v2.0.3 (.naowee-snackbar) + variant --success con check icon verde. */
+    .ivc-snackbar {
+      position: fixed;
+      left: 50%;
+      bottom: 28px;
+      transform: translateX(-50%) translateY(20px);
+      display: inline-flex; align-items: center;
+      gap: 12px;
+      padding: 12px 18px 12px 14px;
+      background: #282834;
+      color: #fff;
+      border-radius: 12px;
+      box-shadow: 0 12px 28px rgba(0,0,0,.22), 0 0 0 1px rgba(255,255,255,.06);
+      font-size: 13px; font-weight: 500;
+      line-height: 1.4;
+      max-width: min(560px, calc(100vw - 32px));
+      z-index: 9999;
+      opacity: 0;
+      transition: opacity .25s ease, transform .25s cubic-bezier(.16,1,.3,1);
+    }
+    .ivc-snackbar.is-visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    .ivc-snackbar__icon {
+      width: 24px; height: 24px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,.08);
+    }
+    .ivc-snackbar--success .ivc-snackbar__icon {
+      background: #1f8923; color: #fff;
+    }
+    .ivc-snackbar__text { flex: 1; min-width: 0; }
+
+    /* v1.9.7: estado disabled canónico del CTA naowee-btn--loud --large */
+    .naowee-btn--loud[disabled],
+    .naowee-btn--loud:disabled {
+      background: var(--border, #e7e9f3) !important;
+      color: var(--text-secondary, #646587) !important;
+      border-color: transparent !important;
+      cursor: not-allowed !important;
+      box-shadow: none !important;
+      opacity: 1 !important;
+    }
+    .naowee-btn--loud[disabled]:hover,
+    .naowee-btn--loud:disabled:hover {
+      background: var(--border, #e7e9f3) !important;
+      color: var(--text-secondary, #646587) !important;
+    }
+
+    /* ── Footer ─────────────────────────────────────────────── */
+    .public-footer {
+      flex-shrink: 0;
+      padding: 20px 24px 24px;
+      text-align: center;
+      font-size: 11.5px;
+      color: var(--text-secondary);
+    }
+    .public-footer a { color: var(--accent); text-decoration: none; }
+    .public-footer a:hover { text-decoration: underline; }
+
+    /* ── Not found state ───────────────────────────────────── */
+    .empty-not-found {
+      max-width: 480px;
+      margin: 64px auto 0;
+      background: var(--surface);
+      border-radius: var(--radius-xl, 20px);
+      border: 1px solid var(--border);
+      padding: 48px 36px;
+      text-align: center;
+      
+    }
+    .empty-not-found__icon {
+      width: 72px; height: 72px;
+      margin: 0 auto 20px;
+      border-radius: 50%;
+      background: var(--bg-soft);
+      color: var(--text-secondary);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .empty-not-found h2 { font-size: 18px; font-weight: 700; margin: 0 0 8px; color: var(--text-primary); }
+    .empty-not-found p  { font-size: 13.5px; color: var(--text-secondary); line-height: 1.5; margin: 0 0 24px; }
+    .empty-not-found code {
+      font-family: var(--font-sans);font-variant-numeric:tabular-nums;
+      background: var(--bg-soft);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: var(--text-primary);
+    }
+  </style>
+</head>
+<body>
+
+  <header class="public-header">
+    <div class="public-header__inner">
+      <div class="public-header__brand">
+        <div class="public-header__logo">M</div>
+        <div class="public-header__brand-text">
+          <span class="public-header__brand-name">Ministerio del Deporte</span>
+          <span class="public-header__brand-sub">República de Colombia</span>
+        </div>
+      </div>
+      <span class="public-header__title">Consulta de trámite IVC</span>
+    </div>
+  </header>
+
+  <main class="public-main" id="content">
+    <!-- Renderizado dinámicamente por JS según ?rad= -->
+  </main>
+
+  <footer class="public-footer">
+    <div>Ministerio del Deporte · Dirección de Inspección, Vigilancia y Control (IVC)</div>
+    <div style="margin-top: 6px;">
+      ¿Necesita ayuda? Escribanos a <a href="mailto:soporte-ivc@mindeporte.gov.co">soporte-ivc@mindeporte.gov.co</a>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="../shared/data.js?v=1.13.56"></script>
+  <script src="../shared/ivc-store.js?v=1.13.56"></script>
+  <!-- v1.13.52: pill de versionamiento flotante (faltaba el JS — el CSS ya estaba). -->
+  <script src="../shared/naowee-footer.js?v=1.13.56" defer></script>
+
+  <script>
+    /* ═══════════════════════════════════════════════════════════════════
+       INS-014 · Pantalla pública de consulta de trámite
+       v1.8.4 · Sin login, lectura por radicado (riesgo conocido — INS-014).
+       Cuando el organismo radica subsanación, llama a IVCStore.actualizarEstado
+       que dispara el evento `tramite:estado-cambiado` cross-tab. El workspace
+       del Profesional escucha ese evento y quita el lock automáticamente.
+       ═══════════════════════════════════════════════════════════════════ */
+
+    var ICON_SEARCH     = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
+    var ICON_INFO       = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+    var ICON_BACK       = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>';
+    var ICON_DOWNLOAD   = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+    var ICON_UPLOAD     = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>';
+    var ICON_UPLOAD_LG  = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>';
+    var ICON_CHECK      = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+    var MSG_ICON_CHECK  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+    var MSG_ICON_WARN   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+    var MSG_ICON_X      = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+    var MSG_ICON_INFO   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+
+    function escHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+      });
+    }
+    function formatDate(iso) {
+      if (!iso) return '—';
+      var p = String(iso).split('-');
+      if (p.length !== 3) return iso;
+      var m = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+      return p[2] + ' ' + m[parseInt(p[1], 10) - 1] + ' ' + p[0];
+    }
+    function initials(name) {
+      if (!name) return '?';
+      return name.replace(/\([^)]*\)/g, '').trim().split(/\s+/).slice(0, 2)
+        .map(function(p){ return p.charAt(0).toUpperCase(); }).join('');
+    }
+
+    /* ─── Boot ─────────────────────────────────────────────────────────── */
+    document.addEventListener('DOMContentLoaded', function () {
+      IVCStore.init();
+      window.IVCState = {
+        rad: new URLSearchParams(location.search).get('rad'),
+        tramite: null
+      };
+      route();
+
+      /* Cross-tab sync: si el profesional cambia el estado mientras la pantalla
+         está abierta (ej. nuevo veredicto post-subsanación), re-render. */
+      IVCStore.on('store:changed-external', function () {
+        if (!IVCState.rad) return;
+        IVCState.tramite = IVCStore.getTramite(IVCState.rad);
+        route();
+      });
+    });
+
+    function route() {
+      var host = document.getElementById('content');
+      var rad = IVCState.rad;
+      if (!rad) {
+        renderLanding(host);
+        return;
+      }
+      var t = IVCStore.getTramite(rad);
+      IVCState.tramite = t;
+      if (!t) {
+        renderNotFound(host, rad);
+      } else {
+        renderTramite(host, t);
+      }
+    }
+
+    /* ─── Landing (sin radicado en URL) ────────────────────────────────── */
+    /* Pattern: IVC-YYYY-NNN (case insensitive). Permite también IVC-NNN sueltos
+       por robustez, pero la validación primaria es el patrón completo. */
+    var _RAD_PATTERN = /^IVC-\d{4}-\d{3,}$/i;
+
+    function renderLanding(host) {
+      host.innerHTML =
+        '<div class="landing-card">' +
+          '<div class="landing-card__icon">' + ICON_SEARCH + '</div>' +
+          '<h1>Consulte el estado de su trámite</h1>' +
+          '<p>Ingrese el número de radicado para conocer el estado de su solicitud, descargar actos administrativos y, si aplica, radicar la subsanación.</p>' +
+          '<form class="landing-form" onsubmit="return _onSubmitLanding(event)">' +
+            '<input type="text" id="radInput" placeholder="IVC-2026-XXX" autocomplete="off" autocapitalize="characters" oninput="_onRadInputChange()">' +
+            '<button type="submit" id="btnConsultar" class="naowee-btn naowee-btn--loud" style="height:44px;" disabled>Consultar</button>' +
+          '</form>' +
+          /* v1.8.6: helper error usa .naowee-message --negative canónico DS */
+          '<div id="landingError" class="naowee-message naowee-message--negative" role="alert">' +
+            '<div class="naowee-message__header">' +
+              '<div class="naowee-message__icon">' + MSG_ICON_X + '</div>' +
+              '<div class="naowee-message__title" id="landingErrorMsg">Radicado no encontrado</div>' +
+            '</div>' +
+            '<div class="naowee-message__text" id="landingErrorSub"></div>' +
+          '</div>' +
+          '<div class="landing-card__hints">' +
+            '<strong>Ejemplo de radicado:</strong>' +
+            '<span class="landing-card__sample">IVC-2026-003</span>' +
+            '<span class="landing-card__sample">IVC-2026-012</span>' +
+            '<div style="margin-top:8px;">El número de radicado le fue entregado al momento de presentar su solicitud.</div>' +
+          '</div>' +
+        '</div>';
+    }
+    /* v1.8.5: habilita botón sólo con formato válido + limpia error al editar */
+    window._onRadInputChange = function () {
+      var input = document.getElementById('radInput');
+      var btn = document.getElementById('btnConsultar');
+      var val = (input.value || '').trim();
+      btn.disabled = !_RAD_PATTERN.test(val);
+      input.classList.remove('is-error');
+      var err = document.getElementById('landingError');
+      if (err) err.classList.remove('is-visible');
+    };
+    /* v1.8.5: validación antes de navegar — si el radicado no existe en el
+       store, muestra helper error inline (no redirige a /not-found). */
+    window._onSubmitLanding = function (ev) {
+      ev.preventDefault();
+      var input = document.getElementById('radInput');
+      var val = (input.value || '').trim().toUpperCase();
+      if (!val) return false;
+      var t = IVCStore.getTramite(val);
+      if (!t) {
+        _showLandingError('El radicado ' + val + ' no tiene registro. Por favor verifique el número.');
+        return false;
+      }
+      location.search = '?rad=' + encodeURIComponent(val);
+      return false;
+    };
+    function _showLandingError(msg) {
+      var err = document.getElementById('landingError');
+      var sub = document.getElementById('landingErrorSub');
+      var input = document.getElementById('radInput');
+      if (sub) sub.textContent = msg;
+      if (err) err.classList.add('is-visible');
+      if (input) input.classList.add('is-error');
+    }
+
+    /* ─── Not Found ────────────────────────────────────────────────────── */
+    function renderNotFound(host, rad) {
+      host.innerHTML =
+        _renderBackButton() +
+        '<div class="empty-not-found">' +
+          '<div class="empty-not-found__icon">' + ICON_SEARCH + '</div>' +
+          '<h2>No encontramos el radicado</h2>' +
+          '<p>No existe ningún trámite con el número <code>' + escHtml(rad) + '</code>. Verifique que esté escrito correctamente o consulte el documento que recibió al radicar.</p>' +
+          '<button class="naowee-btn naowee-btn--quiet" onclick="_goLanding()">Intentar de nuevo</button>' +
+        '</div>';
+    }
+    /* v1.8.6: back button canónico DS — .naowee-btn--mute (Ghost) + --small
+       v1.12.4: usar <a href> en lugar de <button onclick> — más robusto
+       contra cualquier interceptor de event. Doug reportó "click no funciona". */
+    function _renderBackButton() {
+      return '<a href="consultar.html" class="naowee-btn naowee-btn--mute naowee-btn--small" style="text-decoration: none;">' +
+        ICON_BACK + ' Nueva consulta' +
+      '</a>';
+    }
+    window._goLanding = function () { location.search = ''; };
+
+    /* ─── Trámite encontrado ──────────────────────────────────────────── */
+    function renderTramite(host, t) {
+      var orgLabel = ({ liga: 'Ligas o asociaciones deportivas', asociacion: 'Asociaciones juveniles o recreativas', federacion: 'Federaciones deportivas' })[t.tipoOrganismo] || t.tipoOrganismo;
+      var plazo = (typeof t.plazoDias === 'number') ? t.plazoDias : 15;
+      var plazoCls = plazo < 0 ? 'alert' : plazo <= 5 ? 'warn' : 'ok';
+      var plazoTxt = plazo < 0 ? 'Vencido' : (plazo + ' días');
+      var plazoSub = plazo < 0
+        ? 'Hace ' + Math.abs(plazo) + ' días hábiles'
+        : 'hábiles restantes';
+
+      /* v1.11.0: estados "terminal" para mostrar resultado de la validación.
+         v1.11.4: añadidos estados del flujo de recursos. Todos muestran el
+         acto firmado en el bloque resultado. */
+      var isTerminal = (
+        t.estado === 'Cumple'   || t.estado === 'NoCumple'         || t.estado === 'Parcial' ||
+        t.estado === 'Firmado'  || t.estado === 'NotifElectronica' || t.estado === 'NotifOficinas' ||
+        t.estado === 'Vigente' ||
+        t.estado === 'PendienteRecursos'   || t.estado === 'PendienteRecursoTipo' ||
+        t.estado === 'EnApelacion'         || t.estado === 'EnReposicion'
+      );
+      var canSubsanar = (t.estado === 'Parcial');
+      /* v1.13.56 (Doug + Danna): CTA elegir canal — aparece cuando el
+         Director firmó pero el organismo todavía no eligió cómo ser notificado.
+         Decisión que ANTES vivía en el director y que se movió a este portal
+         según el Flujo V4. */
+      var canElegirCanal = (t.estado === 'Firmado');
+      var canResponderRenuncia = (t.estado === 'NotifElectronica');
+      /* v1.11.4: CTAs del flujo de recursos según estado intermedio. */
+      var canResponderRecursos  = (t.estado === 'PendienteRecursos');
+      var canElegirRecursoTipo  = (t.estado === 'PendienteRecursoTipo');
+      /* v1.13.7: cuando state=EnReposicion, mostrar CTA con link al hijo. */
+      var canVerHijoReposicion  = (t.estado === 'EnReposicion');
+      /* v1.13.7: si este trámite ES un hijo de reposición (tramite_parent),
+         renderizamos un banner arriba con link al padre. */
+      var hijoDeReposicion      = t.tramite_parent ? IVCStore.getTramite(t.tramite_parent) : null;
+
+      /* v1.8.9: caution siempre visible al cargar — dismiss sólo afecta la
+         vista actual (no persiste). Antes usaba sessionStorage y confundía
+         porque hard refresh no lo limpia. Feedback Doug. */
+      host.innerHTML =
+        _renderBackButton() +
+
+        '<div class="public-grid" id="publicGrid">' +
+          /* COLUMNA PRINCIPAL (main) */
+          '<div class="public-grid__main">' +
+
+            /* HERO */
+            '<section class="tramite-hero">' +
+              '<div class="tramite-hero__top">' +
+                '<div>' +
+                  '<div class="tramite-hero__radicado">' + escHtml(t.id) + '</div>' +
+                  '<h1 class="tramite-hero__organismo">' + escHtml(t.organismo) + '</h1>' +
+                  '<div class="tramite-hero__meta">' +
+                    '<span>Tipo: <strong>' + escHtml(orgLabel) + '</strong></span>' +
+                    '<span>Trámite: <strong>' + escHtml(t.tipoTramite) + '</strong></span>' +
+                    '<span>Radicado: <strong>' + formatDate(t.fechaRadicacion) + '</strong></span>' +
+                  '</div>' +
+                '</div>' +
+                '<div class="tramite-hero__plazo">' +
+                  '<div class="tramite-hero__plazo-label">Plazo restante</div>' +
+                  '<div class="tramite-hero__plazo-value tramite-hero__plazo-value--' + plazoCls + '">' + plazoTxt + '</div>' +
+                  '<div class="tramite-hero__plazo-sub">' + plazoSub + '</div>' +
+                '</div>' +
+              '</div>' +
+            '</section>' +
+
+            /* v1.13.7: banner trazabilidad si este trámite es un HIJO de reposición.
+               Muestra el rad del padre + link a su consulta pública. */
+            (hijoDeReposicion ?
+              '<div class="naowee-message naowee-message--informative" style="margin: 0 0 20px;">' +
+                '<div class="naowee-message__header">' +
+                  '<div class="naowee-message__icon">' + MSG_ICON_INFO + '</div>' +
+                  '<div class="naowee-message__title">TRÁMITE DE REPOSICIÓN · HIJO DE ' + escHtml(hijoDeReposicion.id) + '</div>' +
+                '</div>' +
+                '<div class="naowee-message__text">Este trámite fue creado por recurso de reposición sobre el radicado <strong>' + escHtml(hijoDeReposicion.id) + '</strong>. La documentación y trazabilidad fueron heredadas. Vuelve al ciclo de revisión del IVC desde el comienzo. <a href="consultar.html?rad=' + encodeURIComponent(hijoDeReposicion.id) + '" style="color:var(--accent,#d74009); font-weight:600;">Ver trámite padre →</a></div>' +
+              '</div>'
+              : '') +
+
+            /* RESULTADO (solo cuando hay veredicto) */
+            (isTerminal ? renderResultado(t) : renderEnTramite(t)) +
+
+            /* CTA SUBSANAR (solo NoCumple / Parcial) */
+            (canSubsanar ? renderCTASubsanar() : '') +
+
+            /* v1.13.56: CTA ELEGIR CANAL — solo cuando state es Firmado.
+               Pregunta al organismo cómo quiere ser notificado (Electrónica /
+               Oficinas). Al elegir transiciona a NotifElectronica o
+               NotifOficinas y el flujo continúa con el CTA de renuncia. */
+            (canElegirCanal ? renderCTAElegirCanal(t) : '') +
+
+            /* v1.11.0: CTA RENUNCIA — solo cuando state es NotifElectronica.
+               Pregunta al organismo si renuncia a términos. Sí → Vigente D+1. */
+            (canResponderRenuncia ? renderCTARenuncia(t) : '') +
+
+            /* v1.11.4: CTA RECURSOS — solo cuando state es PendienteRecursos.
+               Después de No-renuncia, pregunta si interpone recursos. Sí → elegir tipo. No → Vigente D+11. */
+            (canResponderRecursos ? renderCTARecursos(t) : '') +
+
+            /* v1.11.4: CTA tipo de recurso — solo cuando state es PendienteRecursoTipo.
+               Bifurca en Apelación (→ Jurídica) o Reposición (→ nuevo trámite hijo). */
+            (canElegirRecursoTipo ? renderCTAElegirRecurso(t) : '') +
+
+            /* v1.13.7: CTA con link al trámite hijo cuando state=EnReposicion. */
+            (canVerHijoReposicion ? renderCTAHijoReposicion(t) : '') +
+
+            /* HISTÓRICO */
+            renderHistorico(t) +
+
+          '</div>' +
+
+          /* COLUMNA LATERAL (aside) — caution INS-014 con dismiss canónico DS */
+          '<aside class="public-grid__aside" id="publicAside">' +
+            '<div class="naowee-message naowee-message--caution">' +
+              '<div class="naowee-message__header">' +
+                '<div class="naowee-message__icon">' + MSG_ICON_INFO + '</div>' +
+                '<div class="naowee-message__title">Consulta pública</div>' +
+                '<button type="button" class="naowee-message__dismiss" onclick="_dismissDisclaimer()" aria-label="Cerrar aviso">' +
+                  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+                '</button>' +
+              '</div>' +
+              '<div class="naowee-message__text">Esta consulta funciona por número de radicado. Próximamente activaremos verificación por correo electrónico para fortalecer la privacidad de su trámite (INS-014).</div>' +
+            '</div>' +
+          '</aside>' +
+        '</div>';
+    }
+    window._dismissDisclaimer = function () {
+      var grid = document.getElementById('publicGrid');
+      if (grid) grid.classList.add('is-aside-hidden');
+      /* v1.8.9: sin persistencia. Hard refresh / navegación → caution vuelve. */
+    };
+
+    /* ─── Resultado (cuando hay veredicto) ─────────────────────────────
+       v1.11.0: añadidos estados post-firma del Director.
+       · Firmado / NotifElectronica → acto firmado, esperando interacción del organismo
+       · Vigente → trámite cerrado positivamente (renunció a términos) */
+    function renderResultado(t) {
+      var cfg = ({
+        Cumple:           { variant: 'positive', icon: MSG_ICON_CHECK, title: 'CUMPLE',                       desc: 'Su trámite fue aprobado. El acto administrativo de Otorgamiento está pendiente de firma por el Director IVC.', file: 'acto-otorgamiento-' + t.id + '.pdf' },
+        Firmado:          { variant: 'positive', icon: MSG_ICON_CHECK, title: 'ACTO FIRMADO',                 desc: 'Su acto administrativo fue firmado electrónicamente por el Director del IVC. Elija a continuación el canal por el cual desea ser notificado para continuar con el trámite.', file: 'acto-otorgamiento-' + t.id + '-firmado.pdf' },
+        NotifElectronica: { variant: 'positive', icon: MSG_ICON_CHECK, title: 'NOTIFICADO ELECTRÓNICAMENTE',  desc: 'Su acto administrativo firmado fue enviado por canal electrónico. Por favor responda si renuncia a los términos para que su acto entre en vigencia el día siguiente.', file: 'acto-otorgamiento-' + t.id + '-firmado.pdf' },
+        NotifOficinas:    { variant: 'informative', icon: MSG_ICON_CHECK, title: 'NOTIFICACIÓN EN OFICINAS',   desc: 'Usted eligió recibir la notificación de forma presencial. Por favor asista al IVC en los próximos 5 días hábiles para recibir oficialmente el acto administrativo firmado.', file: 'acto-otorgamiento-' + t.id + '-firmado.pdf' },
+        Vigente:          { variant: 'positive', icon: MSG_ICON_CHECK, title: 'TRÁMITE VIGENTE',              desc: 'Su acto administrativo está vigente. El organismo ha sido inscrito en el Registro Nacional Deportivo. Notificación de cierre enviada.', file: 'acto-otorgamiento-' + t.id + '-firmado.pdf' },
+        /* v1.13.7: cuando hay una decisión activa abajo (CTARecursos/CTAElegirRecurso),
+           el resultado se muestra como "ACTO FIRMADO" neutral. La urgencia del
+           plazo y la pregunta operativa vive AHORA dentro del CTA card debajo,
+           para que la información esté pegada a la acción. Doug: "como podríamos
+           acercarlas para que se sienta más cercana la información". */
+        PendienteRecursos:    { variant: 'positive', icon: MSG_ICON_CHECK, title: 'ACTO ADMINISTRATIVO FIRMADO', desc: 'Su acto administrativo fue firmado por el Director del IVC y notificado. Tiene una decisión pendiente en el bloque siguiente.', file: 'acto-otorgamiento-' + t.id + '-firmado.pdf' },
+        PendienteRecursoTipo: { variant: 'positive', icon: MSG_ICON_CHECK, title: 'ACTO ADMINISTRATIVO FIRMADO', desc: 'Su acto administrativo fue firmado por el Director del IVC. Indicó que interpondrá recursos; elija la vía en el bloque siguiente.', file: 'acto-otorgamiento-' + t.id + '-firmado.pdf' },
+        EnApelacion:          { variant: 'informative', icon: MSG_ICON_CHECK, title: 'APELACIÓN EN ÁREA JURÍDICA', desc: 'Su recurso de apelación fue remitido al área jurídica del Ministerio. Recibirá notificación del fallo jurídico una vez se pronuncien sobre el recurso.', file: 'acto-otorgamiento-' + t.id + '-firmado.pdf' },
+        /* v1.13.7: lookup del rad del trámite hijo (creado por crearReposicion).
+           Lo buscamos por tramite_parent === t.id en el store. El link al hijo
+           se renderiza fuera del message como CTA dedicado (renderHijoLink),
+           porque .naowee-message__text se imprime con escHtml. */
+        EnReposicion: {
+          variant: 'informative', icon: MSG_ICON_CHECK,
+          title: 'REPOSICIÓN INTERPUESTA',
+          desc: 'Su recurso de reposición creó un nuevo trámite hijo que vuelve al ciclo de revisión del IVC. Este trámite original quedó cerrado en favor del nuevo radicado.',
+          file: 'acto-otorgamiento-' + t.id + '-firmado.pdf'
+        },
+        Parcial:          { variant: 'caution',  icon: MSG_ICON_WARN,  title: 'CUMPLIMIENTO PARCIAL',         desc: 'Su trámite presenta observaciones subsanables. Tiene 30 días hábiles desde la notificación para radicar la subsanación.', file: 'acto-cumplimiento-parcial-' + t.id + '.pdf' },
+        /* v1.9.8: NoCumple es terminal en firme — al menos un documento fue
+           marcado como No Cumple. No admite subsanación; el organismo puede
+           presentar un nuevo trámite si así lo decide. */
+        NoCumple:         { variant: 'negative', icon: MSG_ICON_X,     title: 'NO CUMPLE',                    desc: 'Su trámite no cumple con los requisitos establecidos y quedó cerrado en firme. No admite subsanación. Si desea continuar, puede presentar un nuevo trámite.', file: 'acto-no-cumplimiento-' + t.id + '.pdf' }
+      })[t.estado] || null;
+      if (!cfg) return '';
+
+      /* v1.9.1: leer event.estado + event.observacion como campos separados.
+         Fallback a parsear el accion string para entries del seed v1. */
+      var evento = (t.historico || []).slice().reverse().find(function (h) {
+        return h.estado === t.estado || (h.accion || '').indexOf(t.estado) >= 0;
+      }) || {};
+      var actorFull = evento.actor || 'Carlos Pérez (Profesional)';
+      var actorName = actorFull.replace(/\s*\([^)]*\)\s*$/, '').trim();
+      var actorRole = (actorFull.match(/\(([^)]*)\)/) || [, 'Profesional'])[1];
+      var causales = evento.observacion || '';
+      if (!causales && evento.accion) {
+        var parts = evento.accion.split(' · ');
+        if (parts.length > 1) causales = parts.slice(1).join(' · ');
+      }
+
+      /* Lista de docs observados/no aprobados (sólo si NoCumple/Parcial).
+         v1.9.8: label contextual — Parcial son subsanables; NoCumple son
+         documentos rechazados sin opción de subsanación. */
+      var docs = Array.isArray(t.documentos) ? t.documentos : [];
+      var docsFail = docs.filter(function (d) { return d.validacion === 'no' || d.validacion === 'obs'; });
+      var docsFailHtml = '';
+      if (docsFail.length > 0) {
+        var listLabel = (t.estado === 'NoCumple')
+          ? 'Documentos no aprobados'
+          : 'Documentos a subsanar';
+        docsFailHtml =
+          '<div style="margin-top: 28px;">' +
+            '<h3 class="section__title" style="margin-bottom: 14px;">' + listLabel + '</h3>' +
+            '<div class="docs-fail-list">' +
+              docsFail.map(function (d, i) {
+                var isObs = d.validacion === 'obs';
+                return '<div class="docs-fail-item' + (isObs ? ' docs-fail-item--obs' : '') + '">' +
+                  '<div class="docs-fail-item__num">' + (d.orden || (i + 1)) + '</div>' +
+                  '<div class="docs-fail-item__body">' +
+                    '<div class="docs-fail-item__title">' + escHtml(d.titulo) + '</div>' +
+                    (d.observacion ? '<div class="docs-fail-item__obs">' + escHtml(d.observacion) + '</div>' : '') +
+                  '</div>' +
+                '</div>';
+              }).join('') +
+            '</div>' +
+          '</div>';
+      }
+
+      /* v1.9.5: causales removidas del .naowee-message — quedan implícitas
+         en la lista "Documentos a subsanar" más abajo (cada doc trae su
+         observación específica del profesional). Feedback Doug. */
+
+      return '<section class="section">' +
+        '<div class="section__header"><h3 class="section__title">Resultado de la validación</h3></div>' +
+
+        /* .naowee-message canónico DS — limpio, sin causales adentro */
+        '<div class="naowee-message naowee-message--' + cfg.variant + '">' +
+          '<div class="naowee-message__header">' +
+            '<div class="naowee-message__icon">' + cfg.icon + '</div>' +
+            '<div class="naowee-message__title">' + cfg.title + '</div>' +
+          '</div>' +
+          '<div class="naowee-message__text">' + escHtml(cfg.desc) + '</div>' +
+        '</div>' +
+
+        /* Grid: profesional + fecha + acta */
+        '<div class="veredicto-grid">' +
+          '<div class="veredicto-grid__cell">' +
+            '<span class="veredicto-grid__label">Profesional encargado</span>' +
+            '<div class="actor-pill">' +
+              '<div class="actor-pill__avatar">' + initials(actorName) + '</div>' +
+              '<div>' +
+                '<div class="actor-pill__name">' + escHtml(actorName) + '</div>' +
+                '<div class="actor-pill__role">' + escHtml(actorRole) + '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="veredicto-grid__cell">' +
+            '<span class="veredicto-grid__label">Fecha del veredicto</span>' +
+            '<span style="font-size:14px; font-weight:500;">' + (evento.fecha ? formatDate(evento.fecha) + (evento.hora ? ' · ' + evento.hora : '') : '—') + '</span>' +
+          '</div>' +
+          '<div class="veredicto-grid__cell veredicto-grid__cell--full">' +
+            '<span class="veredicto-grid__label">Acto administrativo</span>' +
+            '<a href="#" class="file-link" title="Descargar" onclick="event.preventDefault(); _mockDownload(\'' + cfg.file + '\');">' +
+              '<span class="file-link__name">' + escHtml(cfg.file) + '</span>' +
+              '<span class="file-link__size">312 KB · PDF</span>' +
+              '<span class="file-link__download">' + ICON_DOWNLOAD + '</span>' +
+            '</a>' +
+          '</div>' +
+        '</div>' +
+
+        docsFailHtml +
+      '</section>';
+    }
+
+    /* ─── En trámite (sin veredicto aún) ─────────────────────────────── */
+    function renderEnTramite(t) {
+      /* v1.10.0: PendienteCOO es estado intermedio post-veredicto Cumple —
+         el profesional ya generó el acto y el Coordinador IVC lo está
+         revisando antes de pasarlo al Director para firma.
+         v1.11.0: añadidos estados del flujo Director + notificación. */
+      var msg = ({
+        'No asignada':      { variant: 'informative', title: 'EN REMISIÓN',         desc: 'Su trámite fue recibido y está pendiente de ser asignado a un profesional IVC.' },
+        'Asignada':         { variant: 'informative', title: 'EN ASIGNACIÓN',       desc: 'Su trámite ya fue asignado a un profesional. Pronto iniciará la revisión.' },
+        'En validación':    { variant: 'caution',     title: 'EN VALIDACIÓN',       desc: 'Un profesional del IVC está revisando la documentación de su trámite.' },
+        'PendienteCOO':     { variant: 'caution',     title: 'EN APROBACIÓN COO',   desc: 'Su acto administrativo fue generado por el profesional IVC y está en revisión del Coordinador. Una vez aprobado, pasará al Director del IVC para firma electrónica.' },
+        'PendienteFirma':   { variant: 'caution',     title: 'PENDIENTE FIRMA DEL DIRECTOR', desc: 'Su acto administrativo fue aprobado por el Coordinador IVC. Está en cola del Director del IVC para firma electrónica.' },
+        'NotifOficinas':    { variant: 'caution',     title: 'DEBE ASISTIR A OFICINAS', desc: 'Su acto administrativo fue firmado por el Director del IVC. Debe asistir a las oficinas del IVC en los próximos 5 días hábiles para recibir la notificación presencial.' }
+      })[t.estado] || { variant: 'informative', title: t.estado, desc: 'Su trámite se encuentra en proceso.' };
+
+      var msgIcon = msg.variant === 'caution' ? MSG_ICON_WARN : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+
+      return '<section class="section">' +
+        '<div class="section__header"><h3 class="section__title">Estado actual</h3></div>' +
+        '<div class="naowee-message naowee-message--' + msg.variant + '">' +
+          '<div class="naowee-message__header">' +
+            '<div class="naowee-message__icon">' + msgIcon + '</div>' +
+            '<div class="naowee-message__title">' + msg.title + '</div>' +
+          '</div>' +
+          '<div class="naowee-message__text">' + escHtml(msg.desc) + '</div>' +
+        '</div>' +
+      '</section>';
+    }
+
+    /* ─── CTA de subsanación (v1.8.5: protagonismo + icono + glow) ───── */
+    function renderCTASubsanar() {
+      return '<div class="subsanar-cta">' +
+        '<div class="subsanar-cta__icon">' + ICON_UPLOAD_LG + '</div>' +
+        '<div class="subsanar-cta__body">' +
+          '<h3 class="subsanar-cta__title">Subsane su trámite</h3>' +
+          '<p class="subsanar-cta__sub">Cargue los documentos corregidos. Al radicar, su trámite volverá automáticamente a validación por parte del profesional IVC.</p>' +
+        '</div>' +
+        '<button class="btn-loud-glow" onclick="_openSubsanarModal()">Radicar subsanación</button>' +
+      '</div>';
+    }
+
+    /* v1.13.56 (Doug + Danna): CTA ELEGIR CANAL — solo cuando state es 'Firmado'.
+       El organismo (no el director) elige cómo ser notificado. Al elegir:
+       · Electrónica → state = NotifElectronica (luego aparece CTA renuncia)
+       · Oficinas    → state = NotifOficinas   (timer 5d hábiles)
+       Visualmente reutiliza .renuncia-cta como wrapper (border azul + gradient)
+       para coherencia, y dos cards seleccionables (.canal-option) abajo. */
+    function renderCTAElegirCanal(t) {
+      return '<div class="renuncia-cta">' +
+        '<div class="renuncia-cta__head">' +
+          '<svg class="renuncia-cta__icon" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>' +
+          '<div>' +
+            '<h3 class="renuncia-cta__title">¿Cómo desea ser notificado?</h3>' +
+            '<p class="renuncia-cta__sub">Su acto administrativo está firmado y listo para notificar. Elija el canal por el cual desea recibir la notificación oficial. Una vez elija, el flujo continuará con la pregunta de renuncia a términos.</p>' +
+          '</div>' +
+        '</div>' +
+        '<div class="canal-options">' +
+          '<button type="button" class="canal-option" onclick="_elegirCanal(\'electronica\')">' +
+            '<span class="canal-option__icon">' +
+              '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>' +
+            '</span>' +
+            '<div class="canal-option__title">Electrónicamente</div>' +
+            '<div class="canal-option__desc">Recibirá el acto firmado en este portal de inmediato. Se le pedirá responder si renuncia a términos para que el acto entre en vigencia el día siguiente (D+1).</div>' +
+            '<span class="canal-option__chip">Inmediato</span>' +
+          '</button>' +
+          '<button type="button" class="canal-option" onclick="_elegirCanal(\'oficinas\')">' +
+            '<span class="canal-option__icon">' +
+              '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><path d="M9 9v.01"/><path d="M9 12v.01"/><path d="M9 15v.01"/><path d="M9 18v.01"/></svg>' +
+            '</span>' +
+            '<div class="canal-option__title">En oficinas</div>' +
+            '<div class="canal-option__desc">Asistir presencialmente al IVC dentro de los próximos 5 días hábiles para recibir la notificación oficial del acto firmado.</div>' +
+            '<span class="canal-option__chip">5 días hábiles</span>' +
+          '</button>' +
+        '</div>' +
+      '</div>';
+    }
+    window._elegirCanal = function (medio) {
+      var t = IVCState.tramite;
+      if (!t || t.estado !== 'Firmado') return;
+      var actorOrg = (t.organismo || 'Organismo') + ' (Representante legal)';
+      var newState, detalle, msgSnack;
+      if (medio === 'electronica') {
+        newState = 'NotifElectronica';
+        detalle = 'El organismo eligió notificación electrónica. El acto firmado queda disponible en este portal y se solicita responder sobre renuncia a términos.';
+        msgSnack = 'Canal electrónico seleccionado. Conteste si renuncia a términos para finalizar.';
+      } else {
+        newState = 'NotifOficinas';
+        detalle = 'El organismo eligió notificación en oficinas. Debe asistir presencialmente al IVC en los próximos 5 días hábiles.';
+        msgSnack = 'Canal en oficinas seleccionado. Asista al IVC en los próximos 5 días hábiles.';
+      }
+      IVCStore.actualizarEstado(t.id, newState, actorOrg, detalle);
+      _showSnackbar(msgSnack, 'success');
+      /* v1.13.56: mismo patrón que _responderRenuncia — refrescar tramite
+         desde el store y re-routear para que aparezcan los CTAs del nuevo
+         estado (renuncia si Electrónica, mensaje informativo si Oficinas). */
+      setTimeout(function () {
+        IVCState.tramite = IVCStore.getTramite(t.id);
+        route();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 400);
+    };
+
+    /* v1.11.0: CTA RENUNCIA — solo aparece cuando state es NotifElectronica.
+       El organismo responde si renuncia a términos:
+       · Sí → state = Vigente (acto vigente desde el día siguiente, D+1)
+       · No → estado pendiente recursos (placeholder hasta v1.11.1: aún sin handler) */
+    function renderCTARenuncia(t) {
+      return '<div class="renuncia-cta">' +
+        '<div class="renuncia-cta__head">' +
+          '<svg class="renuncia-cta__icon" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+          '<div>' +
+            '<h3 class="renuncia-cta__title">¿Renuncia a términos?</h3>' +
+            '<p class="renuncia-cta__sub">Al renunciar a los términos legales de notificación, su acto administrativo entrará en vigencia desde el día siguiente (D+1). Si no renuncia, los términos legales continúan corriendo y dispone de la opción de interponer recursos.</p>' +
+          '</div>' +
+        '</div>' +
+        '<div class="renuncia-cta__actions">' +
+          '<button type="button" class="naowee-btn naowee-btn--mute naowee-btn--large" onclick="_responderRenuncia(\'no\')">No renuncio · continuar términos</button>' +
+          '<button type="button" class="naowee-btn naowee-btn--loud naowee-btn--large" onclick="_responderRenuncia(\'si\')">Sí, renuncio a términos</button>' +
+        '</div>' +
+      '</div>';
+    }
+    window._responderRenuncia = function (resp) {
+      var t = IVCState.tramite;
+      if (!t) return;
+      var actorOrg = (t.organismo || 'Organismo') + ' (Organismo externo)';
+      if (resp === 'si') {
+        IVCStore.actualizarEstado(t.id, 'Vigente', actorOrg, 'Organismo renunció a términos. Acto administrativo vigente desde el día siguiente (D+1).');
+        _showSnackbar('Renuncia registrada. Su trámite quedó vigente desde el día siguiente.', 'success');
+      } else {
+        /* v1.11.4: NO renuncia → estado PendienteRecursos. Portal pregunta
+           ¿Interpone recursos? (Sí/No). Si No → Vigente D+11. Si Sí → tipo. */
+        IVCStore.actualizarEstado(t.id, 'PendienteRecursos', actorOrg,
+          'Organismo NO renunció a términos. Términos legales continúan corriendo (10 días hábiles). Puede interponer recursos.');
+        _showSnackbar('Respuesta registrada. Los términos legales continúan corriendo. Indique si interpone recursos.', 'success');
+      }
+      setTimeout(function () {
+        IVCState.tramite = IVCStore.getTramite(t.id);
+        route();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 400);
+    };
+
+    /* v1.11.4: CTA RECURSOS — aparece tras No-renuncia (state PendienteRecursos).
+       Pregunta si el organismo interpone recursos. Sí → elegir tipo. No → Vigente D+11. */
+    function renderCTARecursos(t) {
+      /* v1.13.7: la caution "TÉRMINOS LEGALES CORRIENDO" antes vivía en el
+         message del resultado (separada). Ahora se embebe DENTRO de este
+         card como header del bloque de decisión — la urgencia está pegada
+         a la acción. */
+      return '<div class="renuncia-cta">' +
+        '<div class="naowee-message naowee-message--caution" style="margin: 0 0 18px;">' +
+          '<div class="naowee-message__header">' +
+            '<div class="naowee-message__icon">' + MSG_ICON_WARN + '</div>' +
+            '<div class="naowee-message__title">TÉRMINOS LEGALES CORRIENDO</div>' +
+          '</div>' +
+          '<div class="naowee-message__text">No renunció a términos. Tiene <strong>10 días hábiles</strong> para interponer recursos (Apelación o Reposición). Si no interpone, su acto entrará en vigencia el día 11.</div>' +
+        '</div>' +
+        '<div class="renuncia-cta__head">' +
+          '<svg class="renuncia-cta__icon" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+          '<div>' +
+            '<h3 class="renuncia-cta__title">¿Interpone recursos?</h3>' +
+            '<p class="renuncia-cta__sub">Elija: si interpone recursos podrá radicar Apelación (revisión jurídica) o Reposición (nuevo trámite). Si no interpone, su acto queda vigente el día 11 (D+11).</p>' +
+          '</div>' +
+        '</div>' +
+        '<div class="renuncia-cta__actions">' +
+          '<button type="button" class="naowee-btn naowee-btn--mute naowee-btn--large" onclick="_responderRecursos(\'no\')">No interpongo · Vigencia D+11</button>' +
+          '<button type="button" class="naowee-btn naowee-btn--loud naowee-btn--large" onclick="_responderRecursos(\'si\')">Sí, interpongo recursos</button>' +
+        '</div>' +
+      '</div>';
+    }
+    window._responderRecursos = function (resp) {
+      var t = IVCState.tramite;
+      if (!t) return;
+      var actorOrg = (t.organismo || 'Organismo') + ' (Organismo externo)';
+      if (resp === 'si') {
+        IVCStore.actualizarEstado(t.id, 'PendienteRecursoTipo', actorOrg,
+          'Organismo interpone recursos. Debe elegir entre Apelación (revisión por área jurídica) o Reposición (nuevo trámite con FK al original).');
+        _showSnackbar('Recursos solicitados. Indique el tipo: Apelación o Reposición.', 'success');
+      } else {
+        IVCStore.actualizarEstado(t.id, 'Vigente', actorOrg,
+          'Organismo no interpuso recursos. Acto administrativo vigente desde el día 11 (D+11). Notificación de cierre enviada por correo.');
+        _showSnackbar('Trámite cerrado. Su acto entrará en vigencia el día 11.', 'success');
+      }
+      setTimeout(function () {
+        IVCState.tramite = IVCStore.getTramite(t.id);
+        route();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 400);
+    };
+
+    /* v1.11.4: CTA elegir tipo de recurso (state PendienteRecursoTipo).
+       2 opciones tipo card: Apelación (a Jurídica) · Reposición (nuevo trámite). */
+    function renderCTAElegirRecurso(t) {
+      return '<div class="recurso-tipo-cta">' +
+        /* v1.13.7: caution dentro del card de decisión (no afuera). */
+        '<div class="naowee-message naowee-message--caution" style="margin: 0 0 18px;">' +
+          '<div class="naowee-message__header">' +
+            '<div class="naowee-message__icon">' + MSG_ICON_WARN + '</div>' +
+            '<div class="naowee-message__title">ELIJA TIPO DE RECURSO</div>' +
+          '</div>' +
+          '<div class="naowee-message__text">Indicó que interpone recursos. Seleccione la vía abajo: Apelación (revisión jurídica) o Reposición (nuevo trámite hijo). Una vez seleccionada, no se podrá cambiar.</div>' +
+        '</div>' +
+        '<div class="recurso-tipo-cta__head">' +
+          '<svg class="recurso-tipo-cta__icon" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+          '<div>' +
+            '<h3 class="recurso-tipo-cta__title">Elija el tipo de recurso</h3>' +
+            '<p class="recurso-tipo-cta__sub">Su solicitud de recursos requiere especificar la vía.</p>' +
+          '</div>' +
+        '</div>' +
+        '<div class="recurso-tipo-grid">' +
+          '<button type="button" class="recurso-tipo-option" onclick="_elegirRecursoTipo(\'apelacion\')">' +
+            '<span class="recurso-tipo-option__icon">' +
+              '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/></svg>' +
+            '</span>' +
+            '<div class="recurso-tipo-option__title">Apelación</div>' +
+            '<div class="recurso-tipo-option__desc">Su recurso será remitido al área jurídica del Ministerio para revisión y resolución. El trámite original queda suspendido a la espera del fallo jurídico.</div>' +
+            '<span class="recurso-tipo-option__chip recurso-tipo-option__chip--purple">→ Área jurídica</span>' +
+          '</button>' +
+          '<button type="button" class="recurso-tipo-option" onclick="_elegirRecursoTipo(\'reposicion\')">' +
+            '<span class="recurso-tipo-option__icon">' +
+              '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>' +
+            '</span>' +
+            '<div class="recurso-tipo-option__title">Reposición</div>' +
+            '<div class="recurso-tipo-option__desc">Se crea un nuevo trámite hijo del actual con toda la trazabilidad heredada del padre. El nuevo trámite vuelve al ciclo de remisión automática y revisión del IVC desde el comienzo.</div>' +
+            '<span class="recurso-tipo-option__chip recurso-tipo-option__chip--orange">→ Nuevo trámite</span>' +
+          '</button>' +
+        '</div>' +
+      '</div>';
+    }
+    /* v1.13.7: CTA dedicado al trámite HIJO de una reposición. Aparece cuando
+       state=EnReposicion. Muestra el rad del hijo + link "Ver progreso" que
+       navega a /consultar.html?rad=<hijoId>. La trazabilidad parent↔child
+       queda visible en la página pública (UX más conectada). */
+    function renderCTAHijoReposicion(t) {
+      var hijo = (IVCStore.getTramites() || []).find(function (x) {
+        return x.tramite_parent === t.id && x.tipoTramite === 'Reposición';
+      });
+      if (!hijo) return '';
+      return '<div class="renuncia-cta" style="border: 1px solid var(--blue-border, #cfe1ff); background: var(--blue-bg, #eef5ff);">' +
+        '<div class="renuncia-cta__head">' +
+          '<svg class="renuncia-cta__icon" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color: var(--blue-info, #1f78d1);"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>' +
+          '<div>' +
+            '<h3 class="renuncia-cta__title">Nuevo trámite de reposición creado</h3>' +
+            '<p class="renuncia-cta__sub">Su recurso de reposición generó un nuevo radicado que volverá al ciclo de revisión del IVC desde el comienzo. Consulte su avance allí.</p>' +
+          '</div>' +
+        '</div>' +
+        '<div style="background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; margin: 16px 0 18px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">' +
+          '<div>' +
+            '<div style="font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-secondary); font-weight: 700; margin-bottom: 4px;">Trámite hijo</div>' +
+            '<div style="font-family: var(--font-sans);font-variant-numeric:tabular-nums; font-size: 16px; font-weight: 800; color: var(--text-primary);">' + escHtml(hijo.id) + '</div>' +
+            '<div style="font-size: 12.5px; color: var(--text-secondary); margin-top: 2px;">Radicado el ' + formatDate(hijo.fechaRadicacion) + ' · estado: ' + escHtml(hijo.estado) + '</div>' +
+          '</div>' +
+          '<a href="consultar.html?rad=' + encodeURIComponent(hijo.id) + '" class="naowee-btn naowee-btn--loud naowee-btn--large" style="text-decoration: none;">Ver progreso del nuevo trámite →</a>' +
+        '</div>' +
+      '</div>';
+    }
+
+    window._elegirRecursoTipo = function (tipo) {
+      var t = IVCState.tramite;
+      if (!t) return;
+      var actorOrg = (t.organismo || 'Organismo') + ' (Organismo externo)';
+      if (tipo === 'apelacion') {
+        IVCStore.actualizarEstado(t.id, 'EnApelacion', actorOrg,
+          'Recurso de Apelación interpuesto. Remitido al área jurídica del Ministerio para revisión y fallo. Trámite original suspendido a la espera del pronunciamiento jurídico.');
+        _showSnackbar('Apelación radicada. Remitida al área jurídica del Ministerio.', 'success');
+        setTimeout(function () {
+          IVCState.tramite = IVCStore.getTramite(t.id);
+          route();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 400);
+      } else if (tipo === 'reposicion') {
+        /* Crear nuevo trámite hijo + marcar el padre como EnReposicion. */
+        var hijo = IVCStore.crearReposicion(t.id, actorOrg);
+        if (!hijo) {
+          _showSnackbar('No se pudo crear la reposición. Inténtelo de nuevo.', 'success');
+          return;
+        }
+        IVCStore.actualizarEstado(t.id, 'EnReposicion', actorOrg,
+          'Recurso de Reposición interpuesto. Se creó el trámite hijo ' + hijo.id + ' con toda la trazabilidad del trámite original. El nuevo trámite vuelve al ciclo de revisión del IVC.');
+        _showSnackbar('Reposición radicada. Su nuevo trámite es ' + hijo.id + '.', 'success');
+        setTimeout(function () {
+          IVCState.tramite = IVCStore.getTramite(t.id);
+          route();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 400);
+      }
+    };
+
+    /* ─── Histórico timeline — UX Pro Max v1.13.23 ────────────────────
+       Refactor de legibilidad: cada evento se representa como una tarjeta
+       con título humanizado, badge semántico, descripción narrativa y
+       (cuando aplique) un chip técnico con la transición de estado. */
+
+    /* Diccionario de nombres humanizados para los estados internos del
+       state machine. Si no está en la tabla, se devuelve el original. */
+    var STATE_LABELS_PUB = {
+      'No asignada':          'No asignada',
+      'Asignada':             'Asignada',
+      'En validación':        'En validación',
+      'Cumple':               'Cumple',
+      'Parcial':              'Cumplimiento parcial',
+      'NoCumple':             'No cumple',
+      'PendienteCOO':         'Pendiente revisión Coordinador',
+      'PendienteFirma':       'Pendiente firma Director',
+      'Firmado':              'Acto firmado',
+      'NotifElectronica':     'Notificación electrónica',
+      'NotifOficinas':        'Notificación en oficinas',
+      'Vigente':              'Acto vigente',
+      'PendienteRecursos':    'Pendiente recursos',
+      'PendienteRecursoTipo': 'Tipo de recurso',
+      'EnApelacion':          'En apelación',
+      'EnReposicion':         'En reposición'
+    };
+
+    /* Parsea "Estado: X → Y · descripción" en sus 3 partes; cuando no
+       coincide el patrón, devuelve null para evitar mostrar ruido. */
+    function _parseAccion(text) {
+      if (!text) return null;
+      var m = String(text).match(/^Estado:\s*(.+?)\s*→\s*(.+?)(?:\s*·\s*(.+))?$/);
+      if (!m) return null;
+      return {
+        from: (m[1] || '').trim(),
+        to:   (m[2] || '').trim(),
+        desc: (m[3] || '').trim()
+      };
+    }
+
+    /* Devuelve { label, variant } para el badge semántico del evento.
+       Variant mapea a las clases canónicas del DS (positive/caution/
+       negative/informative). */
+    function _eventoBadge(accion) {
+      var a = (accion || '').toLowerCase();
+      if (a.indexOf('subsanación') >= 0)                            return { label: 'Subsanación',  variant: 'informative' };
+      if (a.indexOf('no cumple') >= 0 || a.indexOf('rechaz') >= 0) return { label: 'No cumple',    variant: 'negative' };
+      if (a.indexOf('cumplimiento parcial') >= 0 || a.indexOf('parcial') >= 0 || a.indexOf('devuelt') >= 0)
+                                                                    return { label: 'Parcial',      variant: 'caution' };
+      if (a.indexOf('apelaci') >= 0)                                return { label: 'Apelación',    variant: 'caution' };
+      if (a.indexOf('reposici') >= 0)                               return { label: 'Reposición',   variant: 'caution' };
+      if (a.indexOf('recurso') >= 0)                                return { label: 'Recurso',      variant: 'caution' };
+      if (a.indexOf('renunc') >= 0)                                 return { label: 'Renuncia',     variant: 'positive' };
+      if (a.indexOf('vigente') >= 0)                                return { label: 'Vigente',      variant: 'positive' };
+      if (a.indexOf('firma') >= 0)                                  return { label: 'Firmado',      variant: 'positive' };
+      if (a.indexOf('aprob') >= 0)                                  return { label: 'Aprobado',     variant: 'positive' };
+      if (a.indexOf('acto') >= 0 && a.indexOf('generado') >= 0)    return { label: 'Acto generado',variant: 'positive' };
+      if (a.indexOf('notificad') >= 0 || a.indexOf('notificación') >= 0)
+                                                                    return { label: 'Notificación', variant: 'informative' };
+      if (a.indexOf('asignad') >= 0)                                return { label: 'Asignación',   variant: 'informative' };
+      if (a.indexOf('inicio de validaci') >= 0)                    return { label: 'En validación',variant: 'informative' };
+      if (a.indexOf('remisi') >= 0)                                 return { label: 'Remisión',     variant: 'informative' };
+      if (a.indexOf('radicad') >= 0)                                return { label: 'Radicado',     variant: 'informative' };
+      return { label: 'Evento', variant: 'neutral' };
+    }
+
+    /* Variant del dot del timeline en base al badge. */
+    function _eventoDotVariant(badge) {
+      if (!badge) return 'muted';
+      if (badge.variant === 'positive')    return 'positive';
+      if (badge.variant === 'caution')     return 'caution';
+      if (badge.variant === 'negative')    return 'negative';
+      if (badge.variant === 'informative') return 'info';
+      return 'muted';
+    }
+
+    /* Devuelve un título humanizado y una descripción narrativa para
+       el evento. El título es corto y orientado a usuario público; la
+       descripción es la oración explicativa (sin la transición técnica). */
+    function _eventoTitulo(accion, badge, parsed) {
+      var a = (accion || '').toLowerCase();
+      /* Casos especiales con título narrativo más amable. */
+      if (a.indexOf('subsanación radicada') >= 0)        return 'Subsanación radicada por el organismo';
+      if (a.indexOf('subsanación') >= 0)                  return 'Subsanación';
+      if (a.indexOf('no cumple') >= 0)                    return 'Los documentos no cumplen los requisitos';
+      if (a.indexOf('cumplimiento parcial') >= 0 || a.indexOf('parcial') >= 0)
+                                                          return 'Cumplimiento parcial — requiere subsanación';
+      if (a.indexOf('acto') >= 0 && a.indexOf('generado') >= 0)
+                                                          return 'Acto administrativo generado';
+      if (a.indexOf('aprob') >= 0 && a.indexOf('coordinador') >= 0)
+                                                          return 'Acto aprobado por el Coordinador';
+      if (a.indexOf('firma') >= 0 && a.indexOf('firmado electrónicamente') >= 0)
+                                                          return 'Acto firmado por el Director';
+      if (a.indexOf('firma') >= 0)                        return 'Acto firmado por el Director';
+      if (a.indexOf('notificación electrónica') >= 0)    return 'Notificación electrónica enviada';
+      if (a.indexOf('notificación en oficinas') >= 0 || a.indexOf('alerta de notificación en oficinas') >= 0)
+                                                          return 'Alerta de notificación en oficinas';
+      if (a.indexOf('renunció a términos') >= 0)         return 'Organismo renunció a términos';
+      if (a.indexOf('no renunció') >= 0)                  return 'Organismo no renunció a términos';
+      if (a.indexOf('vigente') >= 0)                      return 'Acto administrativo vigente';
+      if (a.indexOf('apelaci') >= 0)                      return 'Recurso de apelación interpuesto';
+      if (a.indexOf('reposici') >= 0)                     return 'Recurso de reposición interpuesto';
+      if (a.indexOf('interpone recursos') >= 0)          return 'Organismo interpone recursos';
+      if (a.indexOf('inicio de validaci') >= 0)          return 'Inicio de validación';
+      if (a.indexOf('asignad') >= 0)                      return accion;          /* "Asignada a Carlos Pérez" */
+      if (a.indexOf('remisi') >= 0)                       return accion;          /* "Remisión automática a..." */
+      if (a.indexOf('radicado') >= 0)                     return 'Trámite radicado';
+      /* Fallback: si parseamos transición, usar el label del badge;
+         si no, devolvemos el texto crudo. */
+      if (parsed && badge) return badge.label;
+      return accion || 'Evento';
+    }
+
+    /* Extrae la descripción narrativa, eliminando el prefijo técnico
+       "Estado: X → Y · " si está presente. */
+    function _eventoDesc(accion, parsed) {
+      if (!accion) return '';
+      if (parsed && parsed.desc) return parsed.desc;
+      /* Si no hubo prefijo de Estado pero hay "·" en el texto, devolver
+         lo que viene después del primer "·". */
+      var idx = accion.indexOf('·');
+      if (idx >= 0) return accion.slice(idx + 1).trim();
+      return '';
+    }
+
+    /* Devuelve el nombre humanizado de un estado interno. */
+    function _humanState(s) {
+      if (!s) return s;
+      return STATE_LABELS_PUB[s] || s;
+    }
+
+    function renderHistorico(t) {
+      var events = (t.historico || []).slice().reverse();
+      if (events.length === 0) return '';
+      return '<section class="section">' +
+        '<div class="section__header">' +
+          '<h3 class="section__title">Histórico del trámite</h3>' +
+        '</div>' +
+        '<ol class="ctx-timeline">' +
+          events.map(function (e, i) {
+            var accion = e.accion || '';
+            var parsed = _parseAccion(accion);
+            var badge  = _eventoBadge(accion);
+            var titulo = _eventoTitulo(accion, badge, parsed);
+            var desc   = _eventoDesc(accion, parsed);
+            var variant = i === 0 ? _eventoDotVariant(badge) : 'muted';
+
+            var badgeHtml = badge
+              ? '<span class="ctx-timeline__badge">' +
+                  '<span class="naowee-badge naowee-badge--' + badge.variant + ' naowee-badge--quiet naowee-badge--small">' +
+                    escHtml(badge.label) +
+                  '</span>' +
+                '</span>'
+              : '';
+
+            var transitionHtml = (parsed && parsed.from && parsed.to)
+              ? '<span class="ctx-timeline__transition">' +
+                  '<span class="ctx-timeline__transition-from">' + escHtml(_humanState(parsed.from)) + '</span>' +
+                  '<span class="ctx-timeline__transition-arrow">→</span>' +
+                  '<span class="ctx-timeline__transition-to">' + escHtml(_humanState(parsed.to)) + '</span>' +
+                '</span>'
+              : '';
+
+            var descHtml = desc
+              ? '<p class="ctx-timeline__desc">' + escHtml(desc) + '</p>'
+              : '';
+
+            var fecha = e.fecha ? formatDate(e.fecha) : '';
+            var hora  = e.hora || '';
+            var actor = e.actor || '';
+            var footParts = [];
+            if (fecha) footParts.push('<span class="ctx-timeline__date">' + escHtml(fecha + (hora ? ' · ' + hora : '')) + '</span>');
+            if (actor) footParts.push('<span class="ctx-timeline__sep">·</span><span class="ctx-timeline__actor">' + escHtml(actor) + '</span>');
+            var footHtml = footParts.length
+              ? '<div class="ctx-timeline__foot">' + footParts.join('') + '</div>'
+              : '';
+
+            return '<li class="ctx-timeline__item ctx-timeline__item--' + variant + '">' +
+              '<span class="ctx-timeline__dot" aria-hidden="true"></span>' +
+              '<div class="ctx-timeline__card">' +
+                '<div class="ctx-timeline__head">' +
+                  '<div class="ctx-timeline__title">' + escHtml(titulo) + '</div>' +
+                  badgeHtml +
+                '</div>' +
+                descHtml +
+                transitionHtml +
+                footHtml +
+              '</div>' +
+            '</li>';
+          }).join('') +
+        '</ol>' +
+      '</section>';
+    }
+
+    /* ─── Modal de subsanación (v1.9.0 — componentes canónicos DS) ───── */
+    var MAX_UPLOAD_BYTES = 10 * 1024 * 1024;   /* 10 MB */
+    var ICON_FILE_FILLED = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="9 15 11 17 15 13"/></svg>';
+    var ICON_FILE_UP     = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>';
+    var ICON_HELPER_X    = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+
+    function _renderFileDrop(docId, obs) {
+      /* v1.9.7: layout reordenado — obs ahora vive DEBAJO del file-drop (no
+         en el header del item), y el helper de errores queda al final. */
+      var obsHtml = obs
+        ? '<div class="subsanar-doc-item__obs">' + escHtml(obs) + '</div>'
+        : '';
+      return '<label class="ivc-file-drop" for="file-' + escHtml(docId) + '" data-doc-id="' + escHtml(docId) + '">' +
+        '<span class="ivc-file-drop__icon">' + ICON_FILE_UP + '</span>' +
+        '<div class="ivc-file-drop__title">Cargar documento corregido</div>' +
+        '<div class="ivc-file-drop__hint">PDF, DOC o DOCX · máx. 10 MB</div>' +
+        '<input type="file" id="file-' + escHtml(docId) + '" accept=".pdf,.doc,.docx,application/pdf" onchange="_onUploadChange(this)" />' +
+      '</label>' +
+      obsHtml +
+      '<div class="naowee-helper naowee-helper--negative" id="err-' + escHtml(docId) + '" hidden>' +
+        '<span class="naowee-helper__badge">' + ICON_HELPER_X + '</span>' +
+        '<span class="naowee-helper__text"></span>' +
+      '</div>';
+    }
+
+    window._openSubsanarModal = function () {
+      var t = IVCState.tramite;
+      if (!t) return;
+      var docs = (Array.isArray(t.documentos) ? t.documentos : []).filter(function (d) {
+        return d.validacion === 'no' || d.validacion === 'obs';
+      });
+      if (docs.length === 0) {
+        docs = [{ id: 'general', orden: 1, titulo: 'Documentación corregida', observacion: 'Adjunte los documentos solicitados en el acto administrativo.' }];
+      }
+
+      var overlay = document.createElement('div');
+      overlay.className = 'naowee-modal-overlay open';
+      overlay.id = 'subsanarOverlay';
+      overlay.setAttribute('role', 'dialog');
+      overlay.setAttribute('aria-modal', 'true');
+      overlay.innerHTML =
+        '<div class="naowee-modal" style="width:95vw; max-width: 720px; display:flex; flex-direction:column; max-height: 88vh;">' +
+          '<div class="naowee-modal__header" style="flex-shrink:0;">' +
+            '<div class="naowee-modal__title-group">' +
+              '<h2 class="naowee-modal__title">Radicar subsanación</h2>' +
+              '<p class="naowee-modal__subtitle">' + escHtml(t.id) + ' · ' + escHtml(t.organismo) + '</p>' +
+            '</div>' +
+            '<button type="button" class="naowee-modal__dismiss" onclick="_closeSubsanarModal()" aria-label="Cerrar">' +
+              '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+            '</button>' +
+          '</div>' +
+          '<div class="naowee-modal__body" style="flex: 1 1 auto; overflow-y:auto; padding: 20px 28px;">' +
+            '<div class="naowee-message naowee-message--informative" style="margin-bottom: 18px;">' +
+              '<div class="naowee-message__header">' +
+                '<div class="naowee-message__icon">' + MSG_ICON_INFO + '</div>' +
+                '<div class="naowee-message__title">Documentos por corregir</div>' +
+              '</div>' +
+              '<div class="naowee-message__text">Adjunte la versión corregida de cada documento. Al radicar, su trámite volverá automáticamente al profesional IVC que lo está revisando.</div>' +
+            '</div>' +
+            '<div class="subsanar-doc-list">' +
+              docs.map(function (d, i) {
+                /* v1.13.13: mostrar badge semántico del veredicto del prof
+                   (Parcial → caution naranja, No cumple → negative rojo)
+                   + título del doc real + observación del prof si existe. */
+                var vBadge = '';
+                if (d.validacion === 'obs') {
+                  vBadge = ' <span class="naowee-badge naowee-badge--caution naowee-badge--quiet naowee-badge--small" style="margin-left:8px;">Cumplimiento parcial</span>';
+                } else if (d.validacion === 'no') {
+                  vBadge = ' <span class="naowee-badge naowee-badge--negative naowee-badge--quiet naowee-badge--small" style="margin-left:8px;">No cumple</span>';
+                }
+                return '<div class="subsanar-doc-item">' +
+                  '<div class="subsanar-doc-item__header">' +
+                    '<div class="subsanar-doc-item__num">' + (d.orden || (i + 1)) + '</div>' +
+                    '<div style="flex:1;min-width:0;">' +
+                      '<div class="subsanar-doc-item__title">' + escHtml(d.titulo) + vBadge + '</div>' +
+                    '</div>' +
+                  '</div>' +
+                  _renderFileDrop(d.id, d.observacion) +
+                '</div>';
+              }).join('') +
+            '</div>' +
+            /* Textarea canónico DS (.naowee-textfield --textarea pattern) */
+            '<div class="naowee-textfield naowee-textfield--textarea" style="margin-top: 8px;">' +
+              '<label class="naowee-textfield__label" for="subsanarObs">Comentarios adicionales <span style="color:var(--text-secondary);font-weight:400;">(opcional)</span></label>' +
+              '<div class="naowee-textfield__input-wrap" style="height:auto; padding: 10px 12px;">' +
+                '<textarea class="naowee-textfield__input" id="subsanarObs" maxlength="500" rows="4" placeholder="Describa brevemente los cambios realizados…" style="min-height:88px; resize:vertical; line-height:1.5; border:0; outline:none; width:100%; background:transparent; font-family:inherit; font-size:14px; color:inherit;"></textarea>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="naowee-modal__footer" style="flex-shrink:0; padding: 16px 28px; border-top: 1px solid var(--border); display:flex; justify-content:flex-end;">' +
+            /* v1.9.7: CTA --large + disabled por default. Se activa cuando al
+               menos un documento válido se sube exitosamente (file-drop is-filled). */
+            '<button id="subsanarConfirmBtn" class="naowee-btn naowee-btn--loud naowee-btn--large" onclick="_confirmSubsanacion()" disabled>Radicar subsanación</button>' +
+          '</div>' +
+        '</div>';
+      document.body.appendChild(overlay);
+    };
+    window._closeSubsanarModal = function () {
+      var el = document.getElementById('subsanarOverlay');
+      if (el) el.remove();
+    };
+    /* v1.9.0: upload con validación de tamaño máx (10 MB). Si excede →
+       muestra .naowee-helper--negative bajo el file-drop.
+       v1.9.7: tras cualquier cambio, recalcula si el CTA "Radicar" debe
+       habilitarse (al menos 1 file-drop con clase is-filled). */
+    window._onUploadChange = function (input) {
+      var file = input.files && input.files[0];
+      var dropEl = input.closest('.ivc-file-drop');
+      var docId = dropEl && dropEl.getAttribute('data-doc-id');
+      var errEl = docId && document.getElementById('err-' + docId);
+      var errTxt = errEl && errEl.querySelector('.naowee-helper__text');
+
+      /* Reset estados */
+      if (dropEl) {
+        dropEl.classList.remove('is-error');
+      }
+      if (errEl) errEl.hidden = true;
+
+      if (!file) { _updateSubsanarBtnState(); return; }
+
+      /* Validación: máx 10 MB */
+      if (file.size > MAX_UPLOAD_BYTES) {
+        var mb = (file.size / (1024 * 1024)).toFixed(1);
+        if (dropEl) dropEl.classList.add('is-error');
+        if (errTxt) errTxt.textContent = 'El archivo "' + file.name + '" pesa ' + mb + ' MB. El máximo permitido es 10 MB.';
+        if (errEl) errEl.hidden = false;
+        input.value = '';  /* limpia el file input */
+        _updateSubsanarBtnState();
+        return;
+      }
+
+      /* OK — marca el drop como "filled" con el nombre del archivo */
+      if (dropEl) {
+        dropEl.classList.add('is-filled');
+        var icon = dropEl.querySelector('.ivc-file-drop__icon');
+        if (icon) icon.innerHTML = ICON_FILE_FILLED;
+        var title = dropEl.querySelector('.ivc-file-drop__title');
+        if (title) title.textContent = 'Archivo cargado';
+        var hint  = dropEl.querySelector('.ivc-file-drop__hint');
+        if (hint)  hint.style.display = 'none';
+        /* Inserta el name si no existe */
+        if (!dropEl.querySelector('.ivc-file-drop__name')) {
+          var n = document.createElement('div');
+          n.className = 'ivc-file-drop__name';
+          n.textContent = file.name + ' · ' + _bytesToMb(file.size);
+          dropEl.insertBefore(n, dropEl.querySelector('input'));
+        }
+      }
+      _updateSubsanarBtnState();
+    };
+
+    /* v1.9.7: gate del CTA "Radicar subsanación" — habilita sólo cuando
+       hay al menos un file-drop con clase is-filled (upload válido). */
+    function _updateSubsanarBtnState() {
+      var btn = document.getElementById('subsanarConfirmBtn');
+      if (!btn) return;
+      var hasValid = document.querySelectorAll('#subsanarOverlay .ivc-file-drop.is-filled').length > 0;
+      btn.disabled = !hasValid;
+    }
+    function _bytesToMb(b) {
+      var mb = b / (1024 * 1024);
+      return (mb < 1 ? (b / 1024).toFixed(0) + ' KB' : mb.toFixed(2) + ' MB');
+    }
+
+    window._confirmSubsanacion = function () {
+      var t = IVCState.tramite;
+      if (!t) return;
+      var obs = (document.getElementById('subsanarObs') || {}).value || '';
+
+      /* v1.13.13: reset solo los docs marcados como obs/no a validacion=null
+         (el organismo los subsanó, vuelven a estado pendiente de revisar).
+         Los cumple permanecen → cuando el profesional reabre el workspace,
+         solo necesita revisar los que subsanaron, los demás siguen verdes. */
+      var docs = Array.isArray(t.documentos) ? t.documentos.slice() : [];
+      var subsanadosIds = [];
+      docs = docs.map(function (d) {
+        if (d.validacion === 'obs' || d.validacion === 'no') {
+          subsanadosIds.push(d.titulo || d.id);
+          return Object.assign({}, d, {
+            validacion: null,
+            observacion: '',
+            __subsanado_prev: d.validacion,
+            __subsanado_obs:  d.observacion || ''
+          });
+        }
+        return d;
+      });
+      IVCStore.setDocumentos(t.id, docs);
+
+      var profesional = t.profesionalNombre ? ' · vuelve a ' + t.profesionalNombre + ' para revisión' : '';
+      var actorOrg = t.organismo + ' (Organismo)';
+      var detalleSubs = subsanadosIds.length
+        ? 'Subsanación radicada: ' + subsanadosIds.length + ' documento(s) corregido(s) · ' + subsanadosIds.join(', ')
+        : 'Subsanación radicada';
+      var detalle = detalleSubs + (obs ? ' · ' + obs : '') + profesional;
+      IVCStore.actualizarEstado(t.id, 'En validación', actorOrg, detalle);
+
+      _closeSubsanarModal();
+      /* v1.9.7: snackbar canónico --success con check icon verde. */
+      _showSnackbar('Subsanación radicada con éxito. Su trámite vuelve a revisión por el profesional asignado.', 'success');
+
+      setTimeout(function () {
+        IVCState.tramite = IVCStore.getTramite(t.id);
+        route();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 200);
+    };
+
+    /* ─── Helpers ──────────────────────────────────────────────────── */
+    window._mockDownload = function (filename) {
+      _showSnackbar('Descargando ' + filename + ' (mock)');
+    };
+
+    /* v1.9.7: Snackbar canónico DS — mirror del patrón del módulo Project.
+       Soporta variants: 'default' (dark pill), 'success' (check verde).
+       Backward compat: _showToast() sigue funcionando como alias. */
+    var SNACKBAR_ICON_CHECK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>';
+
+    function _showSnackbar(msg, variant) {
+      /* Limpia snackbars previos */
+      var prev = document.querySelectorAll('.ivc-snackbar');
+      for (var i = 0; i < prev.length; i++) prev[i].remove();
+
+      var el = document.createElement('div');
+      el.className = 'ivc-snackbar' + (variant === 'success' ? ' ivc-snackbar--success' : '');
+      el.setAttribute('role', 'status');
+      el.setAttribute('aria-live', 'polite');
+
+      var iconHtml = variant === 'success'
+        ? '<span class="ivc-snackbar__icon">' + SNACKBAR_ICON_CHECK + '</span>'
+        : '';
+      el.innerHTML = iconHtml + '<span class="ivc-snackbar__text"></span>';
+      el.querySelector('.ivc-snackbar__text').textContent = msg;
+
+      document.body.appendChild(el);
+      /* Trigger entrada (next frame para que la transición corra) */
+      requestAnimationFrame(function () {
+        el.classList.add('is-visible');
+      });
+      setTimeout(function () {
+        el.classList.remove('is-visible');
+        setTimeout(function () { el.remove(); }, 280);
+      }, 3200);
+    }
+    /* Backward compat */
+    function _showToast(msg) { _showSnackbar(msg); }
+  </script>
+</body>
+</html>

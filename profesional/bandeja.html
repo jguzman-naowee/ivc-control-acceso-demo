@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mi bandeja · Profesional IVC</title>
+  <link rel="stylesheet" href="../shared/fonts/google-sans.css">
+
+  <!-- Naowee DS canónico v1.8.0 — provee .naowee-btn, .naowee-badge, .naowee-table-card,
+       .naowee-modal, .naowee-textfield, .naowee-dropdown, .naowee-empty-state,
+       .naowee-searchbox, .naowee-helper, .naowee-tooltip. -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/naowee-tech/naowee-design-system@v1.8.0/dist/design-system.css">
+
+  <link rel="stylesheet" href="../shared/tokens.css?v=1.13.56">
+  <link rel="stylesheet" href="../shared/components.css?v=1.13.57">
+  <link rel="stylesheet" href="../shared/shell.css?v=1.13.56">
+  <link rel="stylesheet" href="../shared/naowee-footer.css?v=1.13.56">
+  <style>/* FOOTER POINTER FIX INLINE — v1.12.5 defensive — Doug reportó que el cache de file:// servía CSS viejo y el footer flotante seguía bloqueando hover/click sobre las tablas. Esta regla está inline en el HTML para vencer al CSS externo cacheado. */ .naowee-floating-footer { pointer-events: none !important; } .naowee-floating-footer__version, .naowee-floating-footer__logo, .naowee-floating-footer__text, .naowee-floating-footer__sep { pointer-events: auto !important; }</style>
+  <style>
+    /* Page-local: paridad con coordinador/bandeja.html. Sin invención de
+       clases .naowee-*; solo prefijo .ivc-* y patrón page-title-block local. */
+    .page-title-block { margin-bottom: 4px; }
+    .page-title {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -.5px;
+      color: var(--text-primary);
+      line-height: 1.2;
+    }
+    .page-subtitle {
+      margin: 6px 0 0;
+      font-size: 14px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    .page-inner { max-width: 1480px !important; }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    @media (max-width: 900px) { .stat-grid { grid-template-columns: 1fr; } }
+    @media (min-width: 901px) and (max-width: 1200px) {
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .stat-grid > :first-child { grid-column: span 2; }
+    }
+
+    /* Toolbar: paridad con coordinador */
+    .bandeja-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+    }
+    .bandeja-toolbar__search { flex: 0 1 320px; min-width: 240px; max-width: 360px; }
+    .bandeja-toolbar__spacer { flex: 1 1 auto; }
+    .bandeja-toolbar__filters { display: flex; gap: 8px; flex-shrink: 0; }
+    .bandeja-toolbar__filters .naowee-dropdown { width: 180px; flex-shrink: 0; }
+    @media (max-width: 900px) {
+      .bandeja-toolbar { flex-wrap: wrap; }
+      .bandeja-toolbar__filters { flex-wrap: wrap; }
+      .bandeja-toolbar__filters .naowee-dropdown { width: auto; min-width: 160px; flex: 1 1 160px; }
+    }
+
+    /* Reset UA-default en options (paridad con coordinador) */
+    .naowee-dropdown__menu .naowee-dropdown__option {
+      background: transparent;
+      border: 0;
+      appearance: none;
+      -webkit-appearance: none;
+      width: 100%;
+      text-align: left;
+      font: inherit;
+      color: var(--naowee-color-text-primary, #282834);
+    }
+    .naowee-dropdown__menu .naowee-dropdown__option:focus { outline: none; }
+    .naowee-dropdown__menu .naowee-dropdown__option:hover {
+      background: var(--naowee-color-background-secondary, #F4F5F9);
+    }
+    .naowee-dropdown__menu .naowee-dropdown__option--selected {
+      background: var(--naowee-color-interactive-fill-quiet-idle, #fff3e6);
+      color: var(--naowee-color-text-accent, #d74009);
+      font-weight: var(--naowee-font-weight-semibold, 600);
+    }
+
+    /* Row styles */
+    .row-radicado {
+      font-family: var(--font-sans);font-variant-numeric:tabular-nums;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .row-organismo { color: var(--text-primary); font-weight: 500; }
+    /* v1.13.2: Doug pidió que solo el radicado use monospace — el NIT y el
+       resto de la tabla vuelve a Google Sans para consistencia tipográfica. */
+    .row-organismo__sub {
+      display: block;
+      font-size: 11.5px;
+      color: var(--text-secondary);
+      font-weight: 400;
+      margin-top: 2px;
+    }
+    .row-tipo { color: var(--text-secondary); }
+    .row-plazo {
+      font-size: 13px;
+      font-weight: 600;
+      font-feature-settings: 'tnum';
+    }
+    .row-plazo--positive { color: var(--green, #1f8923); }
+    .row-plazo--caution  { color: var(--accent, #d74009); }
+    .row-plazo--negative { color: #c0392b; }
+
+    /* Tooltips: igual que coordinador (sin clip) */
+    .naowee-table-card,
+    .naowee-table-card__body,
+    .row-actions,
+    .row-actions .naowee-tooltip { overflow: visible !important; }
+    .naowee-tooltip__content { z-index: 9999 !important; }
+    .naowee-tooltip:hover .naowee-tooltip__content,
+    .naowee-tooltip:focus-within .naowee-tooltip__content {
+      opacity: 1 !important;
+      pointer-events: none;
+    }
+
+    .naowee-table-card > .naowee-table-card__head { padding-bottom: 4px; }
+    .row-date {
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-feature-settings: 'tnum';
+    }
+    /* v1.13.2: split asignador en nombre (arriba) + rol (abajo gris claro)
+       — mismo patrón que .row-organismo + __sub para consistencia visual. */
+    .row-asignador {
+      display: block;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .row-asignador__sub {
+      display: block;
+      font-size: 11.5px;
+      color: var(--text-muted, #9ca3af);
+      font-weight: 400;
+      margin-top: 2px;
+    }
+    .row-actions {
+      display: flex;
+      gap: 6px;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    .bandeja-footer-info {
+      padding: 12px 20px;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      border-top: 1px solid var(--border);
+    }
+
+    /* Timeline (histórico) — patrón canónico .ivc-* del IVC */
+    .ivc-timeline { list-style: none; margin: 0; padding: 0 0 4px 0; position: relative; }
+    .ivc-timeline::before {
+      content: '';
+      position: absolute;
+      left: 9px;
+      top: 6px;
+      bottom: 6px;
+      width: 2px;
+      background: var(--border);
+    }
+    .ivc-timeline__item {
+      position: relative;
+      padding: 0 0 18px 32px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+    .ivc-timeline__item:last-child { padding-bottom: 0; }
+    .ivc-timeline__dot {
+      position: absolute;
+      left: 4px;
+      top: 4px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent, #d74009);
+      box-shadow: 0 0 0 3px #fff, 0 0 0 4px var(--accent, #d74009);
+    }
+    .ivc-timeline__item--muted .ivc-timeline__dot {
+      background: var(--text-muted, #9ca3af);
+      box-shadow: 0 0 0 3px #fff, 0 0 0 4px var(--border-dark, #d0d4e6);
+    }
+    .ivc-timeline__title {
+      display: block;
+      font-weight: 700;
+      color: var(--text-primary);
+      font-size: 13.5px;
+      margin-bottom: 2px;
+    }
+    .ivc-timeline__meta {
+      display: block;
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-family: var(--font-sans);font-variant-numeric:tabular-nums;
+    }
+    .ivc-timeline__actor {
+      display: block;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* Empty state — usa el componente DS canónico .naowee-empty-state.
+       Sin invención: este block solo controla el contenedor padre del scope. */
+    .ivc-empty-wrap {
+      padding: 56px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="shell" id="app-shell"></div>
+
+  <template id="page-content">
+    <div class="page-inner">
+
+      <header class="page-title-block">
+        <h1 class="page-title">Mi bandeja</h1>
+        <p class="page-subtitle">Trámites asignados a ti para validación de requisitos.</p>
+      </header>
+
+      <!-- Stat cards (3): Pendientes de validar / En validación / Cumplidos hoy -->
+      <section class="stat-grid">
+        <div class="naowee-stat-card naowee-stat-card--accent">
+          <span class="naowee-stat-card__label">Pendientes de validar</span>
+          <span class="naowee-stat-card__value" id="statPendientes">0</span>
+          <span class="naowee-stat-card__hint">Asignados, sin iniciar</span>
+        </div>
+        <div class="naowee-stat-card naowee-stat-card--info">
+          <span class="naowee-stat-card__label">En validación</span>
+          <span class="naowee-stat-card__value" id="statEnValidacion">0</span>
+          <span class="naowee-stat-card__hint">En curso</span>
+        </div>
+        <div class="naowee-stat-card naowee-stat-card--success">
+          <span class="naowee-stat-card__label">Cumplidos hoy</span>
+          <span class="naowee-stat-card__value" id="statCumplidos">0</span>
+          <span class="naowee-stat-card__hint">Validaciones finalizadas</span>
+        </div>
+      </section>
+
+      <!-- Bandeja card -->
+      <section class="naowee-table-card">
+        <div class="naowee-table-card__head">
+          <div class="naowee-table-card__head-text">
+            <h2 class="naowee-table-card__title">Trámites asignados</h2>
+            <p class="naowee-table-card__subtitle" id="bandejaSubtitle">0 trámites — Deporte Aficionado</p>
+          </div>
+        </div>
+
+        <!-- Toolbar: search + filters -->
+        <div class="bandeja-toolbar" id="toolbarRoot">
+          <div class="bandeja-toolbar__search">
+            <div class="naowee-searchbox naowee-searchbox--medium" id="searchboxRoot">
+              <div class="naowee-searchbox__input-wrap">
+                <div class="naowee-searchbox__icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </div>
+                <input type="text" class="naowee-searchbox__input" placeholder="Buscar por radicado o organismo" id="searchInput" />
+                <button type="button" class="naowee-searchbox__clear" id="searchClear" aria-label="Limpiar búsqueda">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="bandeja-toolbar__spacer"></div>
+          <div class="bandeja-toolbar__filters">
+            <div class="naowee-dropdown naowee-dropdown--medium" data-filter="estado" id="ddEstado">
+              <button type="button" class="naowee-dropdown__trigger" aria-haspopup="listbox" aria-expanded="false">
+                <span class="naowee-dropdown__value" data-value-label>Estado</span>
+                <span class="naowee-dropdown__controls">
+                  <span class="naowee-dropdown__chevron">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </span>
+                </span>
+              </button>
+              <div class="naowee-dropdown__menu" role="listbox">
+                <div class="naowee-dropdown__option" role="option" data-val="" tabindex="-1">Todos los estados</div>
+                <div class="naowee-dropdown__option" role="option" data-val="Asignada" tabindex="-1">Asignada (sin iniciar)</div>
+                <div class="naowee-dropdown__option" role="option" data-val="En validación" tabindex="-1">En validación</div>
+                <div class="naowee-dropdown__option" role="option" data-val="Cumple" tabindex="-1">Cumplidos</div>
+              </div>
+            </div>
+            <div class="naowee-dropdown naowee-dropdown--medium" data-filter="tipo" id="ddTipo">
+              <button type="button" class="naowee-dropdown__trigger" aria-haspopup="listbox" aria-expanded="false">
+                <span class="naowee-dropdown__value" data-value-label>Tipo de trámite</span>
+                <span class="naowee-dropdown__controls">
+                  <span class="naowee-dropdown__chevron">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </span>
+                </span>
+              </button>
+              <div class="naowee-dropdown__menu" role="listbox">
+                <div class="naowee-dropdown__option" role="option" data-val="" tabindex="-1">Todos los tipos</div>
+                <div class="naowee-dropdown__option" role="option" data-val="Otorgamiento" tabindex="-1">Otorgamiento</div>
+                <div class="naowee-dropdown__option" role="option" data-val="Renovación" tabindex="-1">Renovación</div>
+                <div class="naowee-dropdown__option" role="option" data-val="Actualización" tabindex="-1">Actualización</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabla -->
+        <table class="naowee-table" id="bandejaTable">
+          <thead>
+            <tr>
+              <th>Radicado</th>
+              <th>Tipo</th>
+              <th>Organismo</th>
+              <th>Radicado en</th>
+              <th>Plazo</th>
+              <th>Estado</th>
+              <th>Asignado por</th>
+              <th style="text-align:right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="bandejaBody"></tbody>
+        </table>
+
+        <!-- Empty state (slot reservado; el JS lo muestra si no hay filas) -->
+        <div id="emptySlot"></div>
+
+        <div class="bandeja-footer-info" id="footerCount">Mostrando 0 de 0</div>
+      </section>
+
+    </div>
+  </template>
+
+  <!-- Modal: Histórico / Trazabilidad -->
+  <div class="naowee-modal-overlay" id="modalHistoricoOverlay" role="dialog" aria-modal="true" aria-labelledby="modalHistoricoTitle">
+    <div class="naowee-modal" style="max-width: 480px;">
+      <div class="naowee-modal__header">
+        <div class="naowee-modal__title-group">
+          <h2 class="naowee-modal__title" id="modalHistoricoTitle">Histórico del trámite</h2>
+          <p class="naowee-modal__subtitle" id="modalHistoricoSub">—</p>
+        </div>
+        <button type="button" class="naowee-modal__dismiss" id="modalHistoricoClose" aria-label="Cerrar modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="naowee-modal__body">
+        <ol class="ivc-timeline" id="histTimeline"></ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../shared/data.js?v=1.13.56"></script>
+  <script src="../shared/shell.js?v=1.13.56"></script>
+  <script src="../shared/ivc-store.js?v=1.13.56"></script>
+  <script src="../shared/naowee-footer.js?v=1.13.56" defer></script>
+  <script>
+    /* Profesional activo: por simplicidad del demo, fijo a Carlos Pérez.
+       Si en el futuro se identifica via session/auth, reemplazar acá. */
+    var PROFESIONAL_ACTIVO_ID = 'cp-001';
+
+    var state = {
+      tramites: [],
+      filtros: { search: '', estado: '', tipo: '' }
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+      /* Forzar perfil Profesional para esta página */
+      window.IVCData.setPerfil('profesional');
+
+      var template = document.getElementById('page-content');
+      var shellRoot = document.getElementById('app-shell');
+      shellRoot.innerHTML = template.innerHTML;
+
+      window.IVCShell.init({ title: null, activeNav: 'bandeja-prof' });
+
+      /* SOURCE OF TRUTH = IVCStore */
+      IVCStore.init();
+
+      /* v1.11.1: estados que ya NO están en manos del Profesional (downstream
+         del Coordinador / Director / Sistema). Se excluyen de la bandeja para
+         que el profesional no vea trámites aprobados COO como "pendientes".
+         Si el usuario quiere ver el journey completo, puede acceder al
+         workspace específico (que mantiene la cenefa view-only). */
+      var ESTADOS_DOWNSTREAM = [
+        'PendienteCOO',          /* en aprobación del Coord */
+        'PendienteFirma',        /* aprobado COO, en cola Director */
+        'Firmado',               /* firmado por Director */
+        'NotifElectronica',      /* notificación enviada al portal */
+        'NotifOficinas',         /* esperando asistencia del organismo */
+        'Vigente',               /* terminal positivo final */
+        /* v1.11.4: estados del flujo de recursos también downstream. */
+        'PendienteRecursos',
+        'PendienteRecursoTipo',
+        'EnApelacion',
+        'EnReposicion'
+      ];
+
+      function loadFromStore() {
+        var todas = IVCStore.misAsignaciones(PROFESIONAL_ACTIVO_ID) || [];
+        /* Filtra los downstream — el profesional solo ve sus trámites activos
+           + sus veredictos terminales propios (NoCumple/Parcial/Cumple).
+           Cumple es legacy del seed v1; ya no se escribe a partir de v1.11.0. */
+        state.tramites = todas.filter(function (t) {
+          return ESTADOS_DOWNSTREAM.indexOf(t.estado) < 0;
+        });
+        /* Plazo fallback si el seed antiguo no lo trae */
+        state.tramites.forEach(function (t, idx) {
+          if (typeof t.plazoDias !== 'number') {
+            var rotation = [15, 12, 3, 0, 18, 5, -2, 20, 2, 10, 4, -5];
+            t.plazoDias = rotation[idx % rotation.length];
+          }
+        });
+      }
+      loadFromStore();
+
+      /* Live updates */
+      IVCStore.on('tramite:creado',         refresh);
+      IVCStore.on('tramite:asignado',       refresh);
+      IVCStore.on('tramite:estado-cambiado', refresh);
+      IVCStore.on('store:changed-external', refresh);
+      IVCStore.on('store:mode-changed',     refresh);
+
+      renderAll();
+      wireFiltros();
+      wireRowActions();
+      wireModales();
+      setupNaoweeDropdownController();
+    });
+
+    function refresh() {
+      /* v1.11.1: mismo filtro de estados downstream que el load inicial. */
+      var DOWNSTREAM = ['PendienteCOO', 'PendienteFirma', 'Firmado', 'NotifElectronica', 'NotifOficinas', 'Vigente',
+                        'PendienteRecursos', 'PendienteRecursoTipo', 'EnApelacion', 'EnReposicion'];
+      var loadFromStore = function () {
+        var todas = IVCStore.misAsignaciones(PROFESIONAL_ACTIVO_ID) || [];
+        state.tramites = todas.filter(function (t) {
+          return DOWNSTREAM.indexOf(t.estado) < 0;
+        });
+        state.tramites.forEach(function (t, idx) {
+          if (typeof t.plazoDias !== 'number') {
+            var rotation = [15, 12, 3, 0, 18, 5, -2, 20, 2, 10, 4, -5];
+            t.plazoDias = rotation[idx % rotation.length];
+          }
+        });
+      };
+      loadFromStore();
+      renderAll();
+    }
+
+    function renderAll() {
+      renderStats();
+      renderTabla();
+      updateSubtitle();
+    }
+
+    /* ─────────── Stats ─────────── */
+    function renderStats() {
+      var today = new Date().toISOString().slice(0, 10);
+      var counts = state.tramites.reduce(function (acc, t) {
+        if (t.estado === 'Asignada') acc.pend++;
+        else if (t.estado === 'En validación') acc.val++;
+        else if (t.estado === 'Cumple') {
+          /* Cumplido hoy = histórico contiene un evento de hoy con accion que empiece con "Estado: ... → Cumple" */
+          var hoy = (t.historico || []).some(function (h) {
+            return h.fecha === today && /Cumple/i.test(h.accion || '');
+          });
+          if (hoy) acc.cump++;
+        }
+        return acc;
+      }, { pend: 0, val: 0, cump: 0 });
+      document.getElementById('statPendientes').textContent = counts.pend;
+      document.getElementById('statEnValidacion').textContent = counts.val;
+      document.getElementById('statCumplidos').textContent = counts.cump;
+    }
+
+    /* ─────────── Filtros + tabla ─────────── */
+    function getFilteredTramites() {
+      return state.tramites.filter(function (t) {
+        if (state.filtros.estado && t.estado !== state.filtros.estado) return false;
+        if (state.filtros.tipo && (t.tipoTramite || t.tipo) !== state.filtros.tipo) return false;
+        if (state.filtros.search) {
+          var q = state.filtros.search.toLowerCase();
+          if (t.id.toLowerCase().indexOf(q) < 0 && (t.organismo || '').toLowerCase().indexOf(q) < 0) return false;
+        }
+        return true;
+      });
+    }
+
+    function renderTabla() {
+      var visibles = getFilteredTramites();
+      var tbody = document.getElementById('bandejaBody');
+      var emptySlot = document.getElementById('emptySlot');
+      var footer = document.getElementById('footerCount');
+
+      /* Empty state global (sin asignaciones) — patrón canónico .naowee-empty-state */
+      if (state.tramites.length === 0) {
+        tbody.innerHTML = '';
+        emptySlot.innerHTML =
+          '<div class="ivc-empty-wrap">' +
+            '<div class="naowee-empty-state">' +
+              '<div class="naowee-empty-state__icon">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
+                  '<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>' +
+                  '<path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>' +
+                '</svg>' +
+              '</div>' +
+              '<div class="naowee-empty-state__title">No tienes trámites asignados</div>' +
+              '<div class="naowee-empty-state__description">Los trámites aparecerán acá cuando el Coordinador te los asigne.</div>' +
+            '</div>' +
+          '</div>';
+        footer.textContent = 'Mostrando 0 de 0';
+        return;
+      }
+
+      emptySlot.innerHTML = '';
+
+      var rowsHtml = visibles.map(function (t) {
+        var badgeEstado = badgeForEstado(t.estado);
+        var badgePlazo  = badgeForPlazo(t.plazoDias);
+        var coord = coordinatorFromHistorico(t);
+
+        var abrirBtn =
+          '<span class="naowee-tooltip">' +
+            '<button type="button" class="naowee-btn naowee-btn--mute naowee-btn--icon naowee-btn--small" data-abrir="' + t.id + '" aria-label="Abrir validación">' +
+              '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+                '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>' +
+                '<circle cx="12" cy="12" r="3"/>' +
+              '</svg>' +
+            '</button>' +
+            '<span class="naowee-tooltip__content">Abrir validación</span>' +
+          '</span>';
+
+        var histBtn =
+          '<span class="naowee-tooltip">' +
+            '<button type="button" class="naowee-btn naowee-btn--mute naowee-btn--icon naowee-btn--small" data-historico="' + t.id + '" aria-label="Ver histórico del trámite">' +
+              '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+                '<circle cx="12" cy="12" r="10"/>' +
+                '<polyline points="12 6 12 12 16 14"/>' +
+              '</svg>' +
+            '</button>' +
+            '<span class="naowee-tooltip__content">Ver histórico</span>' +
+          '</span>';
+
+        return '<tr data-tramite-id="' + t.id + '">' +
+          '<td><span class="row-radicado">' + t.id + '</span></td>' +
+          '<td><span class="row-tipo">' + (t.tipoTramite || t.tipo || '—') + '</span></td>' +
+          '<td><span class="row-organismo">' + (t.organismo || '—') + '<span class="row-organismo__sub">NIT ' + (t.nit || '—') + '</span></span></td>' +
+          '<td><span class="row-date">' + formatDate(t.fechaRadicacion) + '</span></td>' +
+          '<td>' + badgePlazo + '</td>' +
+          '<td>' + badgeEstado + '</td>' +
+          '<td><span class="row-asignador">' + coord.nombre +
+            '<span class="row-asignador__sub">' + coord.rol + '</span>' +
+          '</span></td>' +
+          '<td><div class="row-actions">' + histBtn + abrirBtn + '</div></td>' +
+        '</tr>';
+      }).join('');
+
+      tbody.innerHTML = rowsHtml || '<tr><td colspan="8" style="text-align:center; padding:32px; color:var(--text-secondary);">No hay trámites que coincidan con los filtros.</td></tr>';
+      footer.textContent = 'Mostrando ' + visibles.length + ' de ' + state.tramites.length;
+    }
+
+    /* v1.13.2: devuelve { nombre, rol } separados para renderizarlos
+       en 2 líneas en la columna ASIGNADO POR (nombre arriba, rol gris). */
+    function coordinatorFromHistorico(t) {
+      var asig = (t.historico || []).find(function (h) {
+        return /asignad/i.test(h.accion || '') && (h.actor || '').toLowerCase().indexOf('coordinador') >= 0;
+      });
+      var raw = asig ? asig.actor : 'Carolina Méndez (Coordinador IVC)';
+      /* Parsea "Nombre Apellido (Rol completo)" → { nombre, rol } */
+      var m = raw.match(/^(.+?)\s*\(([^)]+)\)\s*$/);
+      if (m) return { nombre: m[1].trim(), rol: m[2].trim() };
+      return { nombre: raw, rol: 'Coordinador IVC' };
+    }
+
+    function badgeForEstado(estado) {
+      if (estado === 'Asignada') {
+        return '<span class="naowee-badge naowee-badge--caution naowee-badge--quiet naowee-badge--small">Pendiente</span>';
+      }
+      if (estado === 'En validación') {
+        return '<span class="naowee-badge naowee-badge--informative naowee-badge--quiet naowee-badge--small">En validación</span>';
+      }
+      if (estado === 'Cumple') {
+        return '<span class="naowee-badge naowee-badge--positive naowee-badge--quiet naowee-badge--small">Cumple</span>';
+      }
+      if (estado === 'NoCumple') {
+        return '<span class="naowee-badge naowee-badge--negative naowee-badge--quiet naowee-badge--small">No cumple</span>';
+      }
+      if (estado === 'Parcial') {
+        return '<span class="naowee-badge naowee-badge--caution naowee-badge--quiet naowee-badge--small">Parcial</span>';
+      }
+      return '<span class="naowee-badge naowee-badge--neutral naowee-badge--quiet naowee-badge--small">' + estado + '</span>';
+    }
+
+    function badgeForPlazo(dias) {
+      if (dias <= 0)  return '<span class="row-plazo row-plazo--negative">Vencido</span>';
+      if (dias <= 5)  return '<span class="row-plazo row-plazo--caution">' + dias + ' días</span>';
+      return '<span class="row-plazo row-plazo--positive">' + dias + ' días</span>';
+    }
+
+    function formatDate(iso) {
+      if (!iso) return '—';
+      var p = iso.split('-');
+      var months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      return p[2] + ' ' + months[parseInt(p[1], 10) - 1] + ' ' + p[0];
+    }
+
+    function updateSubtitle() {
+      var n = state.tramites.length;
+      var sub = document.getElementById('bandejaSubtitle');
+      if (sub) sub.textContent = (n === 0 ? 'Sin trámites' : (n + ' trámite' + (n === 1 ? '' : 's'))) + ' — Deporte Aficionado';
+    }
+
+    /* ─────────── Filtros ─────────── */
+    function wireFiltros() {
+      var sb = document.getElementById('searchboxRoot');
+      var sbInput = document.getElementById('searchInput');
+      sbInput.addEventListener('input', function () {
+        state.filtros.search = sbInput.value;
+        if (sbInput.value) sb.classList.add('naowee-searchbox--has-value');
+        else sb.classList.remove('naowee-searchbox--has-value');
+        renderTabla();
+      });
+      document.getElementById('searchClear').addEventListener('click', function () {
+        sbInput.value = '';
+        state.filtros.search = '';
+        sb.classList.remove('naowee-searchbox--has-value');
+        renderTabla();
+      });
+    }
+
+    /* ─────────── Acciones de fila ─────────── */
+    function wireRowActions() {
+      document.getElementById('bandejaBody').addEventListener('click', function (ev) {
+        var hist = ev.target.closest('[data-historico]');
+        if (hist) {
+          openModalHistorico(hist.getAttribute('data-historico'));
+          return;
+        }
+        var abrir = ev.target.closest('[data-abrir]');
+        if (abrir) {
+          var id = abrir.getAttribute('data-abrir');
+          window.location.href = 'workspace.html?id=' + encodeURIComponent(id);
+        }
+      });
+    }
+
+    /* ─────────── Modal histórico ─────────── */
+    function wireModales() {
+      var histOv = document.getElementById('modalHistoricoOverlay');
+      document.getElementById('modalHistoricoClose').addEventListener('click', closeModalHistorico);
+      histOv.addEventListener('click', function (e) { if (e.target === histOv) closeModalHistorico(); });
+    }
+
+    function openModalHistorico(tramiteId) {
+      var t = state.tramites.find(function (x) { return x.id === tramiteId; });
+      if (!t) return;
+      document.getElementById('modalHistoricoSub').textContent = t.id + ' · ' + t.organismo;
+      var ol = document.getElementById('histTimeline');
+      var hist = (t.historico || []);
+      ol.innerHTML = hist.map(function (ev, idx) {
+        var isLast = idx === hist.length - 1;
+        var muted = isLast ? '' : ' ivc-timeline__item--muted';
+        var meta = (ev.fecha || '') + (ev.hora ? ' · ' + ev.hora : (ev.meta ? ' · ' + ev.meta : ''));
+        return '<li class="ivc-timeline__item' + muted + '">' +
+          '<span class="ivc-timeline__dot"></span>' +
+          '<span class="ivc-timeline__title">' + (ev.accion || ev.titulo || '—') + '</span>' +
+          '<span class="ivc-timeline__meta">' + meta + '</span>' +
+          '<span class="ivc-timeline__actor">' + (ev.actor || '—') + '</span>' +
+        '</li>';
+      }).join('');
+      document.getElementById('modalHistoricoOverlay').classList.add('open');
+    }
+    function closeModalHistorico() {
+      document.getElementById('modalHistoricoOverlay').classList.remove('open');
+    }
+
+    /* ─────────── Dropdown controller (paridad con coordinador) ───────────
+       Portal pattern: mueve el menu al body con position:fixed para que no se
+       recorte por overflow del padre. Patrón canónico del DS v1.8.0 con fix
+       de portal. */
+    function setupNaoweeDropdownController() {
+      function ensureDdId(wrap) {
+        if (wrap.dataset.ddId) return wrap.dataset.ddId;
+        var id = 'dd-portal-' + Math.random().toString(36).slice(2, 9);
+        wrap.dataset.ddId = id;
+        return id;
+      }
+
+      function positionMenu(wrap, menu) {
+        var trg = wrap.querySelector('.naowee-dropdown__trigger');
+        if (!trg) return;
+        var rect = trg.getBoundingClientRect();
+        var margin = 8;
+        var menuH = menu.offsetHeight || 240;
+        var spaceBelow = window.innerHeight - rect.bottom - margin;
+        var top;
+        if (spaceBelow >= menuH + 6 || spaceBelow >= rect.top - margin) {
+          top = rect.bottom + 6;
+          if (top + menuH > window.innerHeight - margin) {
+            top = Math.max(margin, window.innerHeight - margin - menuH);
+          }
+        } else {
+          top = rect.top - menuH - 6;
+          if (top < margin) top = margin;
+        }
+        menu.style.position = 'fixed';
+        menu.style.top = top + 'px';
+        menu.style.left = rect.left + 'px';
+        menu.style.width = rect.width + 'px';
+        menu.style.zIndex = '9999';
+      }
+
+      function portalToBody(wrap) {
+        var id = ensureDdId(wrap);
+        var menu = wrap.querySelector(':scope > .naowee-dropdown__menu');
+        if (menu) {
+          menu.dataset.ownedBy = id;
+          document.body.appendChild(menu);
+        } else {
+          menu = document.querySelector('body > .naowee-dropdown__menu[data-owned-by="' + id + '"]');
+        }
+        return menu;
+      }
+
+      function openDropdown(wrap) {
+        closeAll(wrap);
+        var menu = portalToBody(wrap);
+        if (!menu) return;
+        wrap.classList.add('naowee-dropdown--open');
+        menu.style.opacity = '1';
+        menu.style.pointerEvents = 'auto';
+        menu.style.visibility = 'visible';
+        menu.style.transform = 'translateY(0)';
+        menu.style.maxHeight = '260px';
+        menu.style.overflowY = 'auto';
+        positionMenu(wrap, menu);
+        var trg = wrap.querySelector('.naowee-dropdown__trigger');
+        if (trg) trg.setAttribute('aria-expanded', 'true');
+      }
+
+      function closeDropdown(wrap) {
+        wrap.classList.remove('naowee-dropdown--open');
+        var id = wrap.dataset.ddId;
+        if (id) {
+          var menu = document.querySelector('body > .naowee-dropdown__menu[data-owned-by="' + id + '"]');
+          if (menu) {
+            menu.style.opacity = '0';
+            menu.style.pointerEvents = 'none';
+            menu.style.visibility = 'hidden';
+          }
+        }
+        var trg = wrap.querySelector('.naowee-dropdown__trigger');
+        if (trg) trg.setAttribute('aria-expanded', 'false');
+      }
+
+      function closeAll(except) {
+        document.querySelectorAll('.naowee-dropdown.naowee-dropdown--open').forEach(function (d) {
+          if (d === except) return;
+          closeDropdown(d);
+        });
+      }
+
+      var scrollCloseScheduled = false;
+      function onScrollOrResize() {
+        if (scrollCloseScheduled) return;
+        scrollCloseScheduled = true;
+        requestAnimationFrame(function () {
+          scrollCloseScheduled = false;
+          closeAll(null);
+        });
+      }
+      window.addEventListener('scroll', onScrollOrResize, true);
+      window.addEventListener('resize', onScrollOrResize);
+
+      function resolveWrap(option) {
+        var direct = option.closest('.naowee-dropdown');
+        if (direct) return direct;
+        var menu = option.closest('.naowee-dropdown__menu');
+        if (menu && menu.dataset.ownedBy) {
+          return document.querySelector('.naowee-dropdown[data-dd-id="' + menu.dataset.ownedBy + '"]');
+        }
+        return null;
+      }
+
+      document.addEventListener('click', function (ev) {
+        var trigger = ev.target.closest('.naowee-dropdown__trigger');
+        var option  = ev.target.closest('.naowee-dropdown__option');
+
+        if (option) {
+          var wrap = resolveWrap(option);
+          if (!wrap) return;
+          if (option.classList.contains('naowee-dropdown__option--disabled') || option.getAttribute('aria-disabled') === 'true') {
+            ev.stopPropagation();
+            return;
+          }
+          var value = option.getAttribute('data-val') || option.getAttribute('data-value') || '';
+          var text  = option.textContent.trim();
+          var menu = option.closest('.naowee-dropdown__menu');
+          var scope = menu || wrap;
+          scope.querySelectorAll('.naowee-dropdown__option--selected')
+              .forEach(function (o) { o.classList.remove('naowee-dropdown__option--selected'); });
+          option.classList.add('naowee-dropdown__option--selected');
+          var trg = wrap.querySelector('.naowee-dropdown__trigger');
+          var labelSpan = trg && trg.querySelector('.naowee-dropdown__placeholder, .naowee-dropdown__value');
+          if (labelSpan) {
+            labelSpan.className = 'naowee-dropdown__value';
+            labelSpan.textContent = text;
+          }
+          closeDropdown(wrap);
+
+          var filterName = wrap.getAttribute('data-filter');
+          if (filterName) {
+            state.filtros[filterName] = value;
+            renderTabla();
+          }
+          ev.stopPropagation();
+          return;
+        }
+
+        if (trigger) {
+          var wrap2 = trigger.closest('.naowee-dropdown');
+          if (!wrap2) return;
+          if (wrap2.classList.contains('naowee-dropdown--disabled')) return;
+          var wasOpen = wrap2.classList.contains('naowee-dropdown--open');
+          if (wasOpen) closeDropdown(wrap2);
+          else openDropdown(wrap2);
+          ev.stopPropagation();
+          return;
+        }
+
+        if (ev.target.closest('.naowee-dropdown__menu')) return;
+        closeAll(null);
+      });
+    }
+  </script>
+</body>
+</html>

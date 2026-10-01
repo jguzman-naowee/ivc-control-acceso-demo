@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Equipo · Coordinador IVC</title>
+  <link rel="stylesheet" href="../shared/fonts/google-sans.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/naowee-tech/naowee-design-system@v1.8.0/dist/design-system.css">
+  <link rel="stylesheet" href="../shared/tokens.css?v=1.13.56">
+  <link rel="stylesheet" href="../shared/components.css?v=1.13.57">
+  <link rel="stylesheet" href="../shared/shell.css?v=1.13.56">
+  <link rel="stylesheet" href="../shared/naowee-footer.css?v=1.13.56">
+  <style>.naowee-floating-footer { pointer-events: none !important; } .naowee-floating-footer__version, .naowee-floating-footer__logo, .naowee-floating-footer__text, .naowee-floating-footer__sep { pointer-events: auto !important; }</style>
+
+  <style>
+    /* ═══════════════════════════════════════════════════════════════════
+       Coordinador — Gestión del Equipo IVC
+       v1.13.33 (2026-05-27)
+
+       Permite al Coordinador gestionar el equipo IVC del Ministerio:
+       invitar Profesionales, Director, otros Coordinadores, ATU, GIT,
+       Jurídica. Patrón inspirado en Project admin/usuarios.html pero
+       adaptado a personas internas (no entidades territoriales).
+       ═══════════════════════════════════════════════════════════════════ */
+    .page-title-block { margin-bottom: 4px; }
+    .page-title { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -.5px; color: var(--text-primary); line-height: 1.2; }
+    .page-subtitle { margin: 6px 0 0; font-size: 14px; color: var(--text-secondary); font-weight: 500; }
+    .page-inner { max-width: 1480px !important; }
+    .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 24px 0; }
+    @media (max-width: 900px) { .stat-grid { grid-template-columns: 1fr; } }
+    @media (min-width: 901px) and (max-width: 1200px) { .stat-grid { grid-template-columns: repeat(3, 1fr); } }
+    /* v1.13.36 (Doug): stat cards sin stroke, solo elevation suave. */
+    .stat-grid .naowee-stat-card {
+      border: 0 !important;
+      box-shadow: 0 1px 2px rgba(40,40,52,.04), 0 6px 16px rgba(40,40,52,.06) !important;
+    }
+
+    /* Toolbar dentro del card — searchbox + filtros + CTA */
+    .equipo-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      flex-wrap: wrap;
+    }
+    .equipo-toolbar__search { flex: 0 1 320px; min-width: 240px; }
+    .equipo-toolbar__filters { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
+    .equipo-toolbar__spacer { flex: 1 1 auto; }
+    .equipo-toolbar .naowee-dropdown { width: 180px; flex-shrink: 0; }
+    @media (max-width: 900px) {
+      .equipo-toolbar__filters { flex-wrap: wrap; }
+      .equipo-toolbar .naowee-dropdown { width: auto; min-width: 160px; flex: 1 1 160px; }
+    }
+
+    /* v1.13.45 (Doug): mobile (<640px) — densidad máxima para ganar espacio.
+       Lateral padding reducido, filtros secundarios ocultos (área + estado
+       sólo se aplican vía dropdown principal cuando el usuario tira detail),
+       columnas redundantes ocultas en stacked cards.  */
+    @media (max-width: 639px) {
+      /* Toolbar densidad ↑ — padding mínimo y filtros simplificados. */
+      .equipo-toolbar {
+        padding: 10px 12px !important;
+        gap: 8px !important;
+      }
+      /* Sólo mantener el filtro Rol — área y estado quedan en dropdown principal o desktop. */
+      .equipo-toolbar__filters .naowee-dropdown[data-filtro="area"],
+      .equipo-toolbar__filters .naowee-dropdown[data-filtro="estado"] {
+        display: none !important;
+      }
+      /* Si sólo queda un filtro, ocupa todo el ancho. */
+      .equipo-toolbar__filters {
+        grid-template-columns: 1fr !important;
+        display: grid !important;
+      }
+      .equipo-toolbar__filters .naowee-dropdown { width: 100% !important; flex: none !important; }
+
+      /* Stacked card: ocultar Área, Correo institucional, columnas que ya no aportan
+         en mobile (la persona se entiende por su rol + estado + carga). */
+      .naowee-table-card .naowee-table tbody td:nth-of-type(3),  /* Área */
+      .naowee-table-card .naowee-table tbody td:nth-of-type(4) { /* Correo */
+        display: none !important;
+      }
+      /* Carga "—" cuando la persona no es profesional (no aporta info útil). */
+      .naowee-table-card .naowee-table tbody td:nth-of-type(6):has(> span[style*="text-muted"]) {
+        display: none !important;
+      }
+      /* Wrapper de la tabla inline-styled "overflow-x:auto" — ya no aplica en stacked */
+      .naowee-table-card > div[style*="overflow-x"] { overflow-x: visible !important; }
+      /* Página: padding lateral compact. */
+      .page-inner { padding-left: 12px !important; padding-right: 12px !important; }
+    }
+
+    /* v1.13.34: el DS usa CSS variables para la transition del menu que
+       en este contexto no resuelve (var(--naowee-transition-smooth)).
+       Forzamos valores concretos para que el menu se muestre al --open. */
+    .naowee-dropdown__menu {
+      transition: max-height .22s cubic-bezier(.4,0,.2,1), opacity .18s ease !important;
+    }
+    .naowee-dropdown--open .naowee-dropdown__menu {
+      max-height: 320px !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
+      overflow-y: auto !important;
+      padding: 4px !important;
+    }
+    /* Dropdown menu options — hover canónico DS */
+    .naowee-dropdown__menu .naowee-dropdown__option {
+      padding: 10px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      border-radius: 6px;
+      margin: 2px 0;
+    }
+    .naowee-dropdown__menu .naowee-dropdown__option:hover {
+      background: var(--orange-bg, #fff3e6);
+      color: var(--accent, #d74009);
+    }
+    .naowee-dropdown__menu .naowee-dropdown__option--selected {
+      background: var(--orange-bg, #fff3e6);
+      color: var(--accent, #d74009);
+      font-weight: 600;
+    }
+
+    /* v1.13.35-36 (Doug): avatares low-contrast con identidad por persona.
+       Cada persona tiene SU color único determinístico (clase --p1 a --p8)
+       para que se reconozca consistentemente en cualquier vista (tabla
+       Personas, Áreas, dropdowns de asignación, etc.). */
+    .persona-avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--orange-bg, #fff3e6);
+      color: var(--accent, #d74009);
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700;
+      flex-shrink: 0;
+      letter-spacing: -.2px;
+    }
+    .persona-avatar--sm { width: 28px; height: 28px; font-size: 11px; }
+    /* Identidad por persona — paleta de 8 colores pastel. */
+    .persona-avatar--p1 { background: #fff3e6; color: #d74009; } /* naranja */
+    .persona-avatar--p2 { background: #fce4f0; color: #db2777; } /* rosa */
+    .persona-avatar--p3 { background: #fef3c7; color: #b45309; } /* ámbar */
+    .persona-avatar--p4 { background: #f0e6ff; color: #7c3aed; } /* violeta */
+    .persona-avatar--p5 { background: #e6effa; color: #1f78d1; } /* azul */
+    .persona-avatar--p6 { background: #d8f3ee; color: #0d9488; } /* teal */
+    .persona-avatar--p7 { background: #e0f4ff; color: #0284c7; } /* celeste */
+    .persona-avatar--p8 { background: #e6f4e7; color: #1f8923; } /* verde */
+    .persona-avatar--pendiente { background: var(--bg-soft, #f5f6fa); color: var(--text-muted, #9ca3af); }
+
+    .persona-cell { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .persona-cell__body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+    .persona-cell__name { font-size: 13.5px; font-weight: 600; color: var(--text-primary); font-family: var(--font-sans); }
+    /* v1.13.37 (Doug): Inter en TODA la tabla — antes la cédula usaba
+       ui-monospace y el email JetBrains Mono. Unificado a Inter para
+       consistencia. */
+    .persona-cell__cedula { font-size: 11.5px; color: var(--text-muted, #9ca3af); font-family: var(--font-sans); font-variant-numeric: tabular-nums; }
+
+    .row-rol-label { font-size: 13px; font-weight: 500; color: var(--text-primary); font-family: var(--font-sans); }
+    .row-area-label { font-size: 13px; color: var(--text-secondary); font-family: var(--font-sans); }
+    .row-area-label--empty { font-style: italic; color: var(--text-muted, #9ca3af); }
+    .row-email { font-size: 12.5px; color: var(--text-secondary); font-family: var(--font-sans); }
+
+    /* v1.13.35: Carga label con dot semáforo (verde/amarillo/rojo). */
+    .carga-label {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 12.5px; font-weight: 600;
+      color: var(--text-primary);
+      font-family: var(--font-sans); /* v1.13.37: explícito Google Sans. */
+    }
+    .carga-label__dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .carga-label--low    .carga-label__dot { background: #1f8923; }
+    .carga-label--medium .carga-label__dot { background: #f59e0b; }
+    .carga-label--high   .carga-label__dot { background: #c01818; }
+    .carga-label--zero   .carga-label__dot { background: var(--text-muted, #9ca3af); }
+    .carga-label--zero { color: var(--text-muted, #9ca3af); font-weight: 500; }
+
+    /* v1.13.36-38: Acciones — canónico DS .naowee-btn--mute --icon --small +
+       .naowee-tooltip wrapper. Patrón de coord/bandeja líneas 1617+.
+
+       v1.13.38 (Doug): icon button CENTRADO en la columna + tooltip no
+       se enmascara. Cambios:
+       - .row-actions justify-content: center (centra en la celda)
+       - th/td de la columna Acciones también text-align: center
+       - Todos los wrappers padre con overflow: visible !important
+         INCLUYENDO el wrap de overflow-x:auto del table (que es el
+         culprit del clipping a la derecha)
+       - Tooltip ahora ancla a derecha en la última columna para que
+         no se extienda fuera de la tabla. */
+    .row-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      justify-content: center;
+    }
+    .naowee-table-card,
+    .naowee-table-card__body,
+    .row-actions,
+    .row-actions .naowee-tooltip {
+      overflow: visible !important;
+    }
+    /* El div wrapper con overflow-x:auto del table también necesita
+       permitir que el tooltip sobresalga vertically — usamos clip-x. */
+    .naowee-table-card > div[style*="overflow-x"] {
+      overflow-x: auto !important;
+      overflow-y: visible !important;
+    }
+    .naowee-tooltip__content {
+      z-index: 9999 !important;
+    }
+    /* v1.13.39 (Doug): tooltip centrado con la flecha del DS apuntando
+       al botón. Removí el override de right:0 que desalineaba la flecha.
+       El overflow:visible en los padres (row-actions, table wrap)
+       garantiza que no se clipee. */
+    .naowee-tooltip:hover .naowee-tooltip__content,
+    .naowee-tooltip:focus-within .naowee-tooltip__content {
+      opacity: 1 !important;
+      pointer-events: none;
+    }
+
+    /* Centrar columna Acciones (header + cells). */
+    .naowee-table th.col-acciones,
+    .naowee-table td.col-acciones {
+      text-align: center !important;
+    }
+
+    /* v1.13.39: dropdown options con nowrap — evita que labels largos
+       como "Pendiente confirmación" se rompan en 2 líneas. */
+    .naowee-dropdown__menu .naowee-dropdown__option {
+      white-space: nowrap;
+    }
+
+    /* v1.13.39: modal body con overflow visible para que el menu del
+       dropdown no quede enmascarado al abrirse. El z-index del menu
+       sube a 2000 para asegurar que está sobre cualquier otro layer
+       del modal (header, body, footer). */
+    .naowee-modal .naowee-modal__body {
+      overflow: visible !important;
+    }
+    .naowee-modal .naowee-dropdown[data-mod] .naowee-dropdown__menu {
+      z-index: 2000 !important;
+    }
+
+    /* Estado badge — forzar nowrap para que "Pendiente confirmación"
+       no se rompa en 2 líneas dentro de la tabla. */
+    .naowee-badge { white-space: nowrap; }
+
+    /* Form modal */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+    .form-grid__field--full { grid-column: 1 / -1; }
+    @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+    .form-label__required { color: var(--accent, #d74009); margin-left: 2px; }
+    .form-helper {
+      display: block;
+      font-size: 11.5px;
+      color: var(--text-secondary);
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+    /* v1.13.35: helper info canónico con icono badge azul. */
+    .form-helper--info {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .form-helper__icon {
+      flex-shrink: 0;
+      color: #1f78d1;
+    }
+
+    /* v1.13.35: modal dropdowns en tamaño LARGE igualando textfield height
+       y menu portal con z-index alto para no quedar enmascarado por el modal. */
+    .naowee-modal .naowee-dropdown[data-mod] .naowee-dropdown__trigger {
+      height: 44px;
+      padding: 0 14px;
+      font-size: 14px;
+    }
+    .naowee-modal .naowee-dropdown[data-mod] .naowee-dropdown__menu {
+      z-index: 1200 !important;
+    }
+
+    /* v1.13.41 (Doug): row-pending sin tint — el badge "Pendiente
+       confirmación" ya es indicador suficiente. El hover canónico de
+       fila (#fafbfd) viene de shared/components.css L783. */
+
+    /* Padding bottom del table-card para que la última fila no quede
+       pegada al borde inferior del card. Aplica al wrapper de tabla
+       (último child del card) y también al empty-state. */
+    .naowee-table-card > div:last-child { padding-bottom: 10px !important; }
+    .naowee-table-card > div[style*="overflow-x"] { padding-bottom: 10px !important; }
+
+    /* Limpiar filtros — link sutil, aparece solo cuando hay filtros
+       activos. */
+    .equipo-toolbar__clear {
+      background: transparent;
+      border: 0;
+      cursor: pointer;
+      color: var(--accent, #d74009);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 12px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-sans);
+      transition: background .15s;
+    }
+    .equipo-toolbar__clear:hover {
+      background: var(--orange-bg, #fff3e6);
+    }
+
+    /* Áreas técnicas — cards */
+    .areas-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      padding: 18px 20px;
+    }
+    @media (max-width: 900px) { .areas-grid { grid-template-columns: 1fr; } }
+    .area-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg, 12px);
+      padding: 20px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .area-card:hover { border-color: var(--border-dark, #d0d4e6); }
+    .area-card__head {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px;
+    }
+    .area-card__title-group { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .area-card__title { font-size: 17px; font-weight: 700; color: var(--text-primary); margin: 0; }
+    .area-card__subtitle { font-size: 12.5px; color: var(--text-secondary); }
+    .area-card__icon {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      background: var(--orange-bg, #fff3e6);
+      color: var(--accent, #d74009);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .area-card__stats {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 14px 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .area-card__stat-label { font-size: 11px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; color: var(--text-muted, #9ca3af); margin-bottom: 4px; }
+    .area-card__stat-value { font-size: 22px; font-weight: 700; color: var(--text-primary); letter-spacing: -.4px; }
+    .area-card__profesionales-title {
+      font-size: 11px; font-weight: 700; letter-spacing: .4px;
+      text-transform: uppercase; color: var(--text-muted, #9ca3af);
+      margin: 0;
+    }
+    .area-card__prof-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px dashed var(--border);
+    }
+    .area-card__prof-row:last-child { border-bottom: 0; }
+    .area-card__prof-info { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .area-card__prof-name { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+
+    /* Tabs canónico — usa pattern transversal de v1.13.24 */
+    .equipo-tabs-wrap {
+      padding: 0 24px;
+      border-bottom: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+  <div class="shell" id="app-shell"></div>
+  <template id="page-content"><div class="page-inner" id="pageInner"></div></template>
+
+  <!-- Modal Invitar/Editar persona (reusable v1.13.42) -->
+  <div class="naowee-modal-overlay" id="modalInvitar" role="dialog" aria-modal="true">
+    <div class="naowee-modal" style="width:95vw; max-width: 620px;">
+      <div class="naowee-modal__header">
+        <div class="naowee-modal__title-group">
+          <h2 class="naowee-modal__title" id="invitarTitle">Invitar persona al equipo IVC</h2>
+          <p class="naowee-modal__subtitle" id="invitarSubtitle">Se enviará una invitación al correo institucional para que confirme su acceso.</p>
+        </div>
+        <button type="button" class="naowee-modal__dismiss" id="invitarDismiss" aria-label="Cerrar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="naowee-modal__body">
+        <div class="form-grid" id="invitarForm">
+          <!-- Nombre — full width -->
+          <div class="form-grid__field--full" style="grid-column: 1 / -1;">
+            <div class="naowee-textfield">
+              <label class="naowee-textfield__label" for="invNombre">Nombre completo <span style="color:#c01818;">*</span></label>
+              <div class="naowee-textfield__input-wrap">
+                <input type="text" class="naowee-textfield__input" id="invNombre" placeholder="María García González" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Cédula con máscara colombiana (puntos como separador de miles, solo números) -->
+          <div>
+            <div class="naowee-textfield">
+              <label class="naowee-textfield__label" for="invCedula">Cédula</label>
+              <div class="naowee-textfield__input-wrap">
+                <input type="text" inputmode="numeric" class="naowee-textfield__input" id="invCedula" placeholder="1.044.424.169" maxlength="15" />
+              </div>
+            </div>
+            <span class="form-helper form-helper--info">
+              <svg class="form-helper__icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+              Campo opcional. Solo números — se formatea automáticamente con puntos.
+            </span>
+          </div>
+
+          <!-- Email -->
+          <div>
+            <div class="naowee-textfield">
+              <label class="naowee-textfield__label" for="invEmail">Correo institucional <span style="color:#c01818;">*</span></label>
+              <div class="naowee-textfield__input-wrap">
+                <input type="email" class="naowee-textfield__input" id="invEmail" placeholder="nombre.apellido@deporte.gov.co" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Rol — dropdown canónico -->
+          <div>
+            <label class="naowee-textfield__label" style="display:block; margin-bottom:6px;">Rol en el sistema <span style="color:#c01818;">*</span></label>
+            <div class="naowee-dropdown naowee-dropdown--medium" data-mod="rol" id="ddInvRol" style="width:100%;">
+              <button type="button" class="naowee-dropdown__trigger" aria-haspopup="listbox" aria-expanded="false">
+                <span class="naowee-dropdown__value" data-value-label>Seleccionar rol…</span>
+                <span class="naowee-dropdown__controls">
+                  <span class="naowee-dropdown__chevron">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </span>
+                </span>
+              </button>
+              <div class="naowee-dropdown__menu" role="listbox">
+                <div class="naowee-dropdown__option" role="option" data-val="profesional" tabindex="-1">Profesional IVC</div>
+                <div class="naowee-dropdown__option" role="option" data-val="coordinador" tabindex="-1">Coordinador IVC</div>
+                <div class="naowee-dropdown__option" role="option" data-val="director" tabindex="-1">Director IVC</div>
+                <div class="naowee-dropdown__option" role="option" data-val="atu" tabindex="-1">ATU · Atención al Usuario</div>
+                <div class="naowee-dropdown__option" role="option" data-val="git" tabindex="-1">GIT · Comunicaciones</div>
+                <div class="naowee-dropdown__option" role="option" data-val="juridica" tabindex="-1">Jurídica</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Área — dropdown canónico (solo si rol = profesional) -->
+          <div id="invAreaWrap" style="display:none;">
+            <label class="naowee-textfield__label" style="display:block; margin-bottom:6px;">Área asignada <span style="color:#c01818;">*</span></label>
+            <div class="naowee-dropdown naowee-dropdown--medium" data-mod="area" id="ddInvArea" style="width:100%;">
+              <button type="button" class="naowee-dropdown__trigger" aria-haspopup="listbox" aria-expanded="false">
+                <span class="naowee-dropdown__value" data-value-label>Seleccionar área…</span>
+                <span class="naowee-dropdown__controls">
+                  <span class="naowee-dropdown__chevron">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </span>
+                </span>
+              </button>
+              <div class="naowee-dropdown__menu" role="listbox">
+                <div class="naowee-dropdown__option" role="option" data-val="aficionado" tabindex="-1">Deporte Aficionado</div>
+                <div class="naowee-dropdown__option" role="option" data-val="profesional" tabindex="-1">Deporte Profesional</div>
+              </div>
+            </div>
+            <span class="form-helper">Solo aplica para Profesionales IVC.</span>
+          </div>
+
+          <!-- Mensaje — textarea canónico full width -->
+          <div class="form-grid__field--full" style="grid-column: 1 / -1;">
+            <div class="naowee-textfield naowee-textfield--textarea">
+              <label class="naowee-textfield__label" for="invMensaje">Mensaje personalizado</label>
+              <div class="naowee-textfield__input-wrap" style="height:auto; padding:10px 12px;">
+                <textarea class="naowee-textfield__input" id="invMensaje" rows="3" placeholder="Bienvenido al equipo IVC. Tu acceso te permitirá…" style="min-height:78px; resize:vertical; line-height:1.55; border:0; outline:none; width:100%; background:transparent; font-family:inherit; font-size:14px; color:inherit;"></textarea>
+              </div>
+            </div>
+            <span class="form-helper">Opcional — se incluirá en el correo de invitación.</span>
+          </div>
+        </div>
+      </div>
+      <div class="naowee-modal__footer naowee-modal__footer--end" style="gap: 10px;">
+        <!-- v1.13.39: Cancelar removido — X o ESC para cerrar.
+             v1.13.42: label dinámico para soportar modo edit. -->
+        <button type="button" class="naowee-btn naowee-btn--loud" id="invitarSubmit" disabled>Enviar invitación</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal confirmar desactivar -->
+  <div class="naowee-modal-overlay" id="modalDesactivar" role="dialog" aria-modal="true">
+    <div class="naowee-modal" style="width:95vw; max-width: 480px;">
+      <div class="naowee-modal__header">
+        <div class="naowee-modal__title-group">
+          <h2 class="naowee-modal__title">Desactivar acceso</h2>
+          <p class="naowee-modal__subtitle" id="desactivarSub">—</p>
+        </div>
+        <button type="button" class="naowee-modal__dismiss" id="desactivarDismiss" aria-label="Cerrar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="naowee-modal__body">
+        <div class="naowee-message naowee-message--caution" style="margin: 0;">
+          <div class="naowee-message__header">
+            <span class="naowee-message__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </span>
+            <span class="naowee-message__title">La persona pierde acceso al sistema</span>
+          </div>
+          <div class="naowee-message__text">
+            Esta acción retira el acceso al módulo IVC. Los trámites asignados quedan visibles para reasignación, pero no se eliminan. Podrás reactivar el acceso después si es necesario.
+          </div>
+        </div>
+      </div>
+      <div class="naowee-modal__footer naowee-modal__footer--end" style="gap: 10px;">
+        <button type="button" class="naowee-btn naowee-btn--mute" id="desactivarCancel">Cancelar</button>
+        <button type="button" class="naowee-btn naowee-btn--loud" id="desactivarSubmit">Desactivar acceso</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../shared/data.js?v=1.13.56"></script>
+  <script src="../shared/shell.js?v=1.13.56"></script>
+  <script src="../shared/ivc-store.js?v=1.13.56"></script>
+  <script src="../shared/naowee-footer.js?v=1.13.56" defer></script>
+
+  <script>
+    var state = {
+      personas: [],
+      activeTab: 'personas',
+      filtros: { rol: '', area: '', estado: '', q: '' },
+      modalAction: null,  /* { type: 'desactivar', personaId: '...' } */
+      /* Modal Invitar state — antes vivía en el DOM (selects nativos);
+         ahora vive aquí porque los .naowee-dropdown son custom. */
+      invitarForm: { rol: '', area: '' },
+      /* v1.13.42: el modal es reusable invitar/edit. 'create' es default. */
+      invitarMode: 'create',  /* 'create' | 'edit' */
+      invitarEditingId: null  /* personaId si modo edit */
+    };
+
+    /* Labels humanizados */
+    var ROL_LABELS = {
+      profesional: 'Profesional IVC',
+      coordinador: 'Coordinador IVC',
+      director:    'Director IVC',
+      atu:         'ATU',
+      git:         'GIT Comunicaciones',
+      juridica:    'Jurídica'
+    };
+    var AREA_LABELS = {
+      aficionado:  'Deporte Aficionado',
+      profesional: 'Deporte Profesional'
+    };
+    var ESTADO_LABELS = {
+      activo:    'Activo',
+      pendiente: 'Pendiente confirmación',
+      inactivo:  'Inactivo'
+    };
+    var ESTADO_VARIANT = {
+      activo:    'positive',
+      pendiente: 'caution',
+      inactivo:  'neutral'
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+      window.IVCData.setPerfil('coordinador');
+      var template = document.getElementById('page-content');
+      var shellRoot = document.getElementById('app-shell');
+      shellRoot.innerHTML = template.innerHTML;
+      window.IVCShell.init({ title: null, activeNav: 'equipo-coord' });
+
+      IVCStore.init();
+      load();
+
+      /* Escuchar cambios cross-tab o internos. */
+      ['store:changed-external', 'persona:invitada', 'persona:aceptada', 'persona:desactivada', 'persona:reactivada', 'persona:editada'].forEach(function (ev) {
+        IVCStore.on(ev, function () { load(); render(); });
+      });
+
+      wireModals();
+      render();
+    });
+
+    function load() {
+      state.personas = IVCStore.getPersonas();
+    }
+
+    /* ─── Render ─────────────────────────────────────────────────────── */
+    function render() {
+      var host = document.getElementById('pageInner');
+      var stats = computeStats();
+
+      host.innerHTML =
+        '<header class="page-title-block">' +
+          '<h1 class="page-title">Equipo IVC</h1>' +
+          '<p class="page-subtitle">Gestiona quiénes participan en el módulo IVC: Profesionales que validan documentos, Director que firma actos, ATU/GIT/Jurídica que operan etapas posteriores, y otros Coordinadores.</p>' +
+        '</header>' +
+
+        '<section class="stat-grid">' +
+          renderStatCard('Total activos',  stats.totalActivos,     'Personas con acceso',      'accent') +
+          renderStatCard('Pendientes',     stats.totalPendientes,  'Sin confirmar invitación', 'caution') +
+          renderStatCard('Profesionales',  stats.totalProfes,      'Validan trámites',         'info') +
+        '</section>' +
+
+        '<section class="naowee-table-card">' +
+          /* Tabs canónicos directamente — sin head box per Doug v1.13.35. */
+          '<nav class="equipo-tabs-wrap" role="tablist" style="padding-top:6px;">' +
+            '<button type="button" class="actos-tab' + (state.activeTab === 'personas' ? ' is-selected' : '') + '" data-tab="personas" role="tab">' +
+              '<span>Personas IVC</span>' +
+              '<span class="actos-tab__count">' + state.personas.length + '</span>' +
+            '</button>' +
+            '<button type="button" class="actos-tab' + (state.activeTab === 'areas' ? ' is-selected' : '') + '" data-tab="areas" role="tab">' +
+              '<span>Áreas técnicas</span>' +
+              '<span class="actos-tab__count">2</span>' +
+            '</button>' +
+          '</nav>' +
+
+          (state.activeTab === 'personas' ? renderPersonasTab() : renderAreasTab()) +
+        '</section>';
+
+      wireTabs();
+      if (state.activeTab === 'personas') wirePersonasTab();
+    }
+
+    function computeStats() {
+      var totalActivos = state.personas.filter(function (p) { return p.estado === 'activo'; }).length;
+      var totalPendientes = state.personas.filter(function (p) { return p.estado === 'pendiente'; }).length;
+      var totalProfes = state.personas.filter(function (p) { return p.rol === 'profesional' && p.estado === 'activo'; }).length;
+      var totalCarga = state.personas
+        .filter(function (p) { return p.rol === 'profesional' && p.estado === 'activo'; })
+        .reduce(function (sum, p) { return sum + IVCStore.getCargaPersona(p.id); }, 0);
+      return { totalActivos: totalActivos, totalPendientes: totalPendientes, totalProfes: totalProfes, totalCarga: totalCarga };
+    }
+
+    function renderStatCard(label, value, hint, variant) {
+      return '<div class="naowee-stat-card naowee-stat-card--' + variant + '">' +
+        '<span class="naowee-stat-card__label">' + label + '</span>' +
+        '<span class="naowee-stat-card__value">' + value + '</span>' +
+        '<span class="naowee-stat-card__hint">' + hint + '</span>' +
+      '</div>';
+    }
+
+    /* ─── Tab Personas ───────────────────────────────────────────────── */
+    function renderPersonasTab() {
+      var filtered = applyFilters(state.personas);
+      return renderToolbar() + renderPersonasTable(filtered);
+    }
+
+    function renderToolbar() {
+      var hasQ = !!state.filtros.q;
+      return '<div class="equipo-toolbar">' +
+        '<div class="equipo-toolbar__search">' +
+          '<div class="naowee-searchbox naowee-searchbox--medium' + (hasQ ? ' naowee-searchbox--has-text' : '') + '" id="searchboxWrap">' +
+            '<div class="naowee-searchbox__input-wrap">' +
+              '<div class="naowee-searchbox__icon">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' +
+              '</div>' +
+              '<input type="text" class="naowee-searchbox__input" placeholder="Buscar por nombre o correo" id="equipoSearch" value="' + escHtml(state.filtros.q) + '"/>' +
+              '<button type="button" class="naowee-searchbox__clear" id="equipoSearchClear" aria-label="Limpiar búsqueda" style="' + (hasQ ? '' : 'display:none;') + '">' +
+                '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+              '</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="equipo-toolbar__filters">' +
+          renderFiltroDropdown('rol', [
+            { value: '', label: 'Todos los roles' },
+            { value: 'profesional', label: 'Profesional IVC' },
+            { value: 'coordinador', label: 'Coordinador IVC' },
+            { value: 'director', label: 'Director IVC' },
+            { value: 'atu', label: 'ATU' },
+            { value: 'git', label: 'GIT Comunicaciones' },
+            { value: 'juridica', label: 'Jurídica' }
+          ], state.filtros.rol) +
+          renderFiltroDropdown('area', [
+            { value: '', label: 'Todas las áreas' },
+            { value: 'aficionado', label: 'Deporte Aficionado' },
+            { value: 'profesional', label: 'Deporte Profesional' }
+          ], state.filtros.area) +
+          renderFiltroDropdown('estado', [
+            { value: '', label: 'Todos los estados' },
+            { value: 'activo', label: 'Activo' },
+            { value: 'pendiente', label: 'Pendiente confirmación' },
+            { value: 'inactivo', label: 'Inactivo' }
+          ], state.filtros.estado) +
+          /* v1.13.41 (Doug): link "Limpiar filtros" aparece solo cuando
+             alguno de los 3 filtros está activo. Resetea todos a default
+             pero NO el searchbox (es su propio control con clear). */
+          (hasAnyFilter()
+            ? '<button type="button" class="equipo-toolbar__clear" id="btnClearFiltros" title="Restablecer filtros a default">' +
+                '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+                'Limpiar filtros' +
+              '</button>'
+            : '') +
+        '</div>' +
+        '<div class="equipo-toolbar__spacer"></div>' +
+        '<button type="button" class="naowee-btn naowee-btn--loud" id="btnInvitar">' +
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
+          'Invitar persona' +
+        '</button>' +
+      '</div>';
+    }
+
+    /* Render canonical naowee-dropdown for a filter. The first option in
+       the list is the "all" reset option; data-val="" represents no filter. */
+    function renderFiltroDropdown(key, options, current) {
+      var selected = options.find(function (o) { return o.value === current; }) || options[0];
+      return '<div class="naowee-dropdown naowee-dropdown--medium" data-filtro="' + key + '">' +
+        '<button type="button" class="naowee-dropdown__trigger" aria-haspopup="listbox" aria-expanded="false">' +
+          '<span class="naowee-dropdown__value" data-value-label>' + escHtml(selected.label) + '</span>' +
+          '<span class="naowee-dropdown__controls">' +
+            '<span class="naowee-dropdown__chevron">' +
+              '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+            '</span>' +
+          '</span>' +
+        '</button>' +
+        '<div class="naowee-dropdown__menu" role="listbox">' +
+          options.map(function (o) {
+            return '<div class="naowee-dropdown__option' + (o.value === current ? ' naowee-dropdown__option--selected' : '') + '" role="option" data-val="' + escHtml(o.value) + '" tabindex="-1">' + escHtml(o.label) + '</div>';
+          }).join('') +
+        '</div>' +
+      '</div>';
+    }
+
+    function renderPersonasTable(personas) {
+      if (personas.length === 0) {
+        return '<div class="naowee-empty-state">' +
+          '<div class="naowee-empty-state__icon">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' +
+          '</div>' +
+          '<div class="naowee-empty-state__title">Sin coincidencias</div>' +
+          '<div class="naowee-empty-state__description">Ningún miembro del equipo coincide con los filtros aplicados. Ajusta los filtros o invita una persona nueva.</div>' +
+        '</div>';
+      }
+      return '<div style="overflow-x:auto;"><table class="naowee-table">' +
+        '<thead><tr>' +
+          '<th>Persona</th>' +
+          '<th>Rol</th>' +
+          '<th>Área</th>' +
+          '<th>Correo institucional</th>' +
+          '<th>Estado</th>' +
+          '<th style="text-align:center;">Carga actual</th>' +
+          '<th class="col-acciones">Acciones</th>' +
+        '</tr></thead>' +
+        '<tbody>' +
+          personas.map(renderPersonaRow).join('') +
+        '</tbody>' +
+      '</table></div>';
+    }
+
+    function renderPersonaRow(p) {
+      var carga = p.rol === 'profesional' && p.estado === 'activo' ? IVCStore.getCargaPersona(p.id) : null;
+      var cargaCell = carga !== null ? renderCargaLabel(carga) : '<span style="color:var(--text-muted, #9ca3af); font-size:12px;">—</span>';
+      /* v1.13.41: removida la clase row-pending (orange tint). El badge
+         de estado "Pendiente confirmación" ya identifica visualmente. */
+      return '<tr>' +
+        '<td>' + renderPersonaCell(p) + '</td>' +
+        '<td><span class="row-rol-label">' + escHtml(ROL_LABELS[p.rol] || p.rol) + '</span></td>' +
+        '<td>' + (p.area
+          ? '<span class="row-area-label">' + escHtml(AREA_LABELS[p.area] || p.area) + '</span>'
+          : '<span class="row-area-label row-area-label--empty">—</span>') + '</td>' +
+        '<td><span class="row-email">' + escHtml(p.email) + '</span></td>' +
+        '<td>' + renderEstadoBadge(p.estado) + '</td>' +
+        '<td style="text-align:center;">' + cargaCell + '</td>' +
+        '<td class="col-acciones">' + renderRowActions(p) + '</td>' +
+      '</tr>';
+    }
+
+    /* v1.13.36: hash deterministico del id a paleta p1..p8. Garantiza
+       que la misma persona tenga el mismo color en cualquier vista. */
+    function avatarPaletteClass(personaId) {
+      if (!personaId) return 'persona-avatar--p1';
+      var hash = 0;
+      for (var i = 0; i < personaId.length; i++) hash = ((hash << 5) - hash) + personaId.charCodeAt(i);
+      var idx = Math.abs(hash) % 8;
+      return 'persona-avatar--p' + (idx + 1);
+    }
+    function getInitials(nombre) {
+      return (nombre || '?').split(/\s+/).slice(0, 2).map(function (s) { return s.charAt(0).toUpperCase(); }).join('');
+    }
+
+    function renderPersonaCell(p) {
+      var avatarClass = p.estado === 'pendiente' ? 'persona-avatar--pendiente' : avatarPaletteClass(p.id);
+      return '<div class="persona-cell">' +
+        '<div class="persona-avatar ' + avatarClass + '">' + escHtml(getInitials(p.nombre)) + '</div>' +
+        '<div class="persona-cell__body">' +
+          '<span class="persona-cell__name">' + escHtml(p.nombre) + '</span>' +
+          (p.cedula ? '<span class="persona-cell__cedula">' + escHtml(p.cedula) + '</span>' : '') +
+        '</div>' +
+      '</div>';
+    }
+
+    function renderEstadoBadge(estado) {
+      var variant = ESTADO_VARIANT[estado] || 'neutral';
+      var label = ESTADO_LABELS[estado] || estado;
+      return '<span class="naowee-badge naowee-badge--' + variant + ' naowee-badge--quiet naowee-badge--small">' + escHtml(label) + '</span>';
+    }
+
+    function renderCargaLabel(n) {
+      var variant = n === 0 ? 'zero' : (n <= 5 ? 'low' : (n <= 12 ? 'medium' : 'high'));
+      return '<span class="carga-label carga-label--' + variant + '">' +
+        '<span class="carga-label__dot" aria-hidden="true"></span>' +
+        n + ' activos' +
+      '</span>';
+    }
+
+    function renderRowActions(p) {
+      var btns = [];
+      if (p.estado === 'pendiente') {
+        btns.push(
+          '<button type="button" class="naowee-btn naowee-btn--mute naowee-btn--small" data-action="aceptar" data-id="' + escHtml(p.id) + '">' +
+            'Simular aceptación' +
+          '</button>'
+        );
+      }
+      /* v1.13.42 (Doug): icon button Editar visible para TODOS los
+         estados (activo, pendiente, inactivo). Permite corregir nombre,
+         email, cédula, rol y área sin importar el estado. */
+      btns.push(
+        '<span class="naowee-tooltip">' +
+          '<button type="button" class="naowee-btn naowee-btn--mute naowee-btn--icon naowee-btn--small" data-action="editar" data-id="' + escHtml(p.id) + '" aria-label="Editar persona">' +
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>' +
+          '</button>' +
+          '<span class="naowee-tooltip__content">Editar persona</span>' +
+        '</span>'
+      );
+      if (p.estado === 'inactivo') {
+        btns.push(
+          '<button type="button" class="naowee-btn naowee-btn--mute naowee-btn--small" data-action="reactivar" data-id="' + escHtml(p.id) + '">' +
+            'Reactivar' +
+          '</button>'
+        );
+      } else if (p.estado === 'activo') {
+        /* v1.13.36: patrón canónico .naowee-btn--mute --icon --small +
+           .naowee-tooltip (idéntico a coord/bandeja row actions). */
+        btns.push(
+          '<span class="naowee-tooltip">' +
+            '<button type="button" class="naowee-btn naowee-btn--mute naowee-btn--icon naowee-btn--small" data-action="desactivar" data-id="' + escHtml(p.id) + '" aria-label="Desactivar acceso">' +
+              '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>' +
+            '</button>' +
+            '<span class="naowee-tooltip__content">Desactivar acceso</span>' +
+          '</span>'
+        );
+      }
+      return '<div class="row-actions">' + btns.join('') + '</div>';
+    }
+
+    function applyFilters(personas) {
+      var f = state.filtros;
+      return personas.filter(function (p) {
+        if (f.rol    && p.rol    !== f.rol)    return false;
+        if (f.area   && p.area   !== f.area)   return false;
+        if (f.estado && p.estado !== f.estado) return false;
+        if (f.q) {
+          var q = f.q.toLowerCase();
+          if ((p.nombre || '').toLowerCase().indexOf(q) < 0 &&
+              (p.email  || '').toLowerCase().indexOf(q) < 0) return false;
+        }
+        return true;
+      });
+    }
+
+    /* v1.13.41: ¿hay algún filtro activo? — usado para mostrar el link
+       "Limpiar filtros". El searchbox tiene su propio clear, así que
+       lo excluimos de esta detección. */
+    function hasAnyFilter() {
+      return !!(state.filtros.rol || state.filtros.area || state.filtros.estado);
+    }
+    function clearAllFilters() {
+      state.filtros.rol = '';
+      state.filtros.area = '';
+      state.filtros.estado = '';
+      render();
+    }
+
+    /* ─── Tab Áreas técnicas ─────────────────────────────────────────── */
+    /* v1.13.35: iconos outline naranja en lugar de emojis. */
+    var ICON_AFICIONADO = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14 14 0 0 0 0 20"/><path d="M12 2a14 14 0 0 1 0 20"/><path d="M2 12h20"/></svg>';
+    var ICON_PROFESIONAL = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>';
+
+    function renderAreasTab() {
+      var areas = [
+        { key: 'aficionado',  label: 'Deporte Aficionado',  icon: ICON_AFICIONADO },
+        { key: 'profesional', label: 'Deporte Profesional', icon: ICON_PROFESIONAL }
+      ];
+      return '<div class="areas-grid">' +
+        areas.map(renderAreaCard).join('') +
+      '</div>';
+    }
+
+    function renderAreaCard(area) {
+      var profes = state.personas.filter(function (p) { return p.rol === 'profesional' && p.area === area.key && p.estado === 'activo'; });
+      var totalCarga = profes.reduce(function (sum, p) { return sum + IVCStore.getCargaPersona(p.id); }, 0);
+      var profesList = profes.length === 0
+        /* v1.13.36: empty state canónico DS en lugar de párrafo libre. */
+        ? '<div class="naowee-empty-state" style="padding: 20px 0;">' +
+            '<div class="naowee-empty-state__icon">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>' +
+            '</div>' +
+            '<div class="naowee-empty-state__title">Sin profesionales asignados</div>' +
+            '<div class="naowee-empty-state__description">Invita a un Profesional desde el tab Personas IVC y asígnalo al área para que pueda recibir trámites.</div>' +
+          '</div>'
+        : profes.map(function (p) {
+            var carga = IVCStore.getCargaPersona(p.id);
+            /* v1.13.36: avatares con paleta determinística por persona — match exacto con Personas IVC. */
+            return '<div class="area-card__prof-row">' +
+              '<div class="area-card__prof-info">' +
+                '<div class="persona-avatar persona-avatar--sm ' + avatarPaletteClass(p.id) + '">' + escHtml(getInitials(p.nombre)) + '</div>' +
+                '<span class="area-card__prof-name">' + escHtml(p.nombre) + '</span>' +
+              '</div>' +
+              renderCargaLabel(carga) +
+            '</div>';
+          }).join('');
+      return '<div class="area-card">' +
+        '<div class="area-card__head">' +
+          '<div class="area-card__title-group">' +
+            '<h3 class="area-card__title">' + escHtml(area.label) + '</h3>' +
+            '<span class="area-card__subtitle">Área técnica fija del Ministerio</span>' +
+          '</div>' +
+          '<div class="area-card__icon">' + area.icon + '</div>' +
+        '</div>' +
+        '<div class="area-card__stats">' +
+          '<div>' +
+            '<div class="area-card__stat-label">Profesionales</div>' +
+            '<div class="area-card__stat-value">' + profes.length + '</div>' +
+          '</div>' +
+          '<div>' +
+            '<div class="area-card__stat-label">Trámites activos</div>' +
+            '<div class="area-card__stat-value">' + totalCarga + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div>' +
+          '<h4 class="area-card__profesionales-title" style="margin-bottom:8px;">Profesionales asignados</h4>' +
+          profesList +
+        '</div>' +
+      '</div>';
+    }
+
+    /* ─── Wire interactions ──────────────────────────────────────────── */
+    function wireTabs() {
+      document.querySelectorAll('.equipo-tabs-wrap .actos-tab').forEach(function (t) {
+        t.addEventListener('click', function () {
+          state.activeTab = t.getAttribute('data-tab');
+          render();
+        });
+      });
+    }
+
+    function wirePersonasTab() {
+      /* Filter dropdowns — canónico naowee-dropdown */
+      wireFilterDropdowns();
+      /* Search + clear button */
+      var search = document.getElementById('equipoSearch');
+      var searchClear = document.getElementById('equipoSearchClear');
+      var searchboxWrap = document.getElementById('searchboxWrap');
+      function refreshTable() {
+        var tableHost = document.querySelector('.naowee-table-card > div:last-child');
+        if (!tableHost) return;
+        var filtered = applyFilters(state.personas);
+        var newHtml = renderPersonasTable(filtered);
+        var prev = tableHost;
+        var div = document.createElement('div');
+        div.innerHTML = newHtml;
+        if (prev.parentNode && div.firstChild) {
+          prev.parentNode.replaceChild(div.firstChild, prev);
+        }
+        wireRowActions();
+      }
+      function updateClearVisibility() {
+        if (!searchClear) return;
+        var has = state.filtros.q && state.filtros.q.length > 0;
+        searchClear.style.display = has ? 'inline-flex' : 'none';
+        if (searchboxWrap) searchboxWrap.classList.toggle('naowee-searchbox--has-text', has);
+      }
+      if (search) {
+        search.addEventListener('input', function () {
+          state.filtros.q = search.value;
+          updateClearVisibility();
+          refreshTable();
+        });
+      }
+      if (searchClear) {
+        searchClear.addEventListener('click', function () {
+          state.filtros.q = '';
+          if (search) { search.value = ''; search.focus(); }
+          updateClearVisibility();
+          refreshTable();
+        });
+      }
+      /* CTA Invitar */
+      var btn = document.getElementById('btnInvitar');
+      if (btn) btn.addEventListener('click', openInvitar);
+      /* v1.13.41: link "Limpiar filtros". */
+      var btnClear = document.getElementById('btnClearFiltros');
+      if (btnClear) btnClear.addEventListener('click', clearAllFilters);
+      wireRowActions();
+    }
+
+    /* ─── Dropdown canónico — wireup compartido ──────────────────────
+       Patrón: cada .naowee-dropdown tiene un __trigger que toggle la
+       clase --open en el wrap. Clicks en __option seleccionan y cierran.
+       Click fuera cierra todos. Soporta ESC. */
+    function setDropdownValue(wrap, value, label) {
+      var valueLabel = wrap.querySelector('[data-value-label]');
+      if (valueLabel) valueLabel.textContent = label;
+      wrap.querySelectorAll('.naowee-dropdown__option').forEach(function (o) {
+        o.classList.toggle('naowee-dropdown__option--selected', o.getAttribute('data-val') === value);
+      });
+      wrap.setAttribute('data-current-value', value);
+    }
+
+    function openDropdown(wrap) {
+      closeAllDropdowns(wrap);
+      wrap.classList.add('naowee-dropdown--open');
+      var trg = wrap.querySelector('.naowee-dropdown__trigger');
+      if (trg) trg.setAttribute('aria-expanded', 'true');
+    }
+    function closeDropdown(wrap) {
+      wrap.classList.remove('naowee-dropdown--open');
+      var trg = wrap.querySelector('.naowee-dropdown__trigger');
+      if (trg) trg.setAttribute('aria-expanded', 'false');
+    }
+    function closeAllDropdowns(exceptWrap) {
+      document.querySelectorAll('.naowee-dropdown.naowee-dropdown--open').forEach(function (w) {
+        if (w !== exceptWrap) closeDropdown(w);
+      });
+    }
+
+    /* Wire UP filter dropdowns (data-filtro="rol/area/estado"). */
+    function wireFilterDropdowns() {
+      document.querySelectorAll('.equipo-toolbar .naowee-dropdown[data-filtro]').forEach(function (wrap) {
+        var key = wrap.getAttribute('data-filtro');
+        var trg = wrap.querySelector('.naowee-dropdown__trigger');
+        if (trg && !trg.__bound) {
+          trg.__bound = true;
+          trg.addEventListener('click', function (ev) {
+            ev.stopPropagation();
+            if (wrap.classList.contains('naowee-dropdown--open')) closeDropdown(wrap);
+            else openDropdown(wrap);
+          });
+        }
+        wrap.querySelectorAll('.naowee-dropdown__option').forEach(function (opt) {
+          if (opt.__bound) return;
+          opt.__bound = true;
+          opt.addEventListener('click', function (ev) {
+            ev.stopPropagation();
+            var val = opt.getAttribute('data-val');
+            var label = opt.textContent;
+            setDropdownValue(wrap, val, label);
+            state.filtros[key] = val;
+            closeDropdown(wrap);
+            render();
+          });
+        });
+      });
+    }
+
+    /* Wire modal dropdowns (data-mod="rol/area") — one-time init. */
+    function wireModalDropdowns() {
+      ['ddInvRol', 'ddInvArea'].forEach(function (id) {
+        var wrap = document.getElementById(id);
+        if (!wrap || wrap.__wired) return;
+        wrap.__wired = true;
+        var key = wrap.getAttribute('data-mod');
+        var trg = wrap.querySelector('.naowee-dropdown__trigger');
+        trg.addEventListener('click', function (ev) {
+          ev.stopPropagation();
+          if (wrap.classList.contains('naowee-dropdown--open')) closeDropdown(wrap);
+          else openDropdown(wrap);
+        });
+        wrap.querySelectorAll('.naowee-dropdown__option').forEach(function (opt) {
+          opt.addEventListener('click', function (ev) {
+            ev.stopPropagation();
+            var val = opt.getAttribute('data-val');
+            var label = opt.textContent;
+            setDropdownValue(wrap, val, label);
+            state.invitarForm[key] = val;
+            closeDropdown(wrap);
+            /* Mostrar/ocultar área si rol cambia */
+            if (key === 'rol') {
+              var areaWrap = document.getElementById('invAreaWrap');
+              areaWrap.style.display = val === 'profesional' ? 'block' : 'none';
+              if (val !== 'profesional') {
+                state.invitarForm.area = '';
+                resetDropdown(document.getElementById('ddInvArea'), 'Seleccionar área…');
+              }
+            }
+            validateInvitar();
+          });
+        });
+      });
+    }
+
+    /* Reset dropdown a su estado vacío. */
+    function resetDropdown(wrap, defaultLabel) {
+      if (!wrap) return;
+      var valueLabel = wrap.querySelector('[data-value-label]');
+      if (valueLabel) valueLabel.textContent = defaultLabel;
+      wrap.querySelectorAll('.naowee-dropdown__option').forEach(function (o) {
+        o.classList.remove('naowee-dropdown__option--selected');
+      });
+      wrap.removeAttribute('data-current-value');
+    }
+
+    /* Click global afuera cierra todos los dropdowns. */
+    document.addEventListener('click', function (ev) {
+      if (!ev.target.closest('.naowee-dropdown')) closeAllDropdowns(null);
+    });
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape') closeAllDropdowns(null);
+    });
+
+    function wireRowActions() {
+      document.querySelectorAll('[data-action]').forEach(function (b) {
+        if (b.__bound) return;
+        b.__bound = true;
+        b.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          var action = b.getAttribute('data-action');
+          var id = b.getAttribute('data-id');
+          if (action === 'aceptar')    { IVCStore.aceptarInvitacion(id);  showSnack('Invitación aceptada · acceso activado.', 'success'); }
+          if (action === 'reactivar')  { IVCStore.reactivarPersona(id);   showSnack('Acceso reactivado.', 'success'); }
+          if (action === 'desactivar') { openDesactivar(id); }
+          if (action === 'editar')     { openEditar(id); }
+        });
+      });
+    }
+
+    /* ─── Modal Invitar/Editar persona ───────────────────────────────── */
+    function openInvitar() {
+      /* Modo CREATE: reset campos + título "Invitar persona". */
+      state.invitarMode = 'create';
+      state.invitarEditingId = null;
+      document.getElementById('invitarTitle').textContent = 'Invitar persona al equipo IVC';
+      document.getElementById('invitarSubtitle').textContent = 'Se enviará una invitación al correo institucional para que confirme su acceso.';
+      document.getElementById('invitarSubmit').textContent = 'Enviar invitación';
+
+      ['invNombre','invCedula','invEmail','invMensaje'].forEach(function (id) {
+        var el = document.getElementById(id); if (el) el.value = '';
+      });
+      state.invitarForm = { rol: '', area: '' };
+      resetDropdown(document.getElementById('ddInvRol'),  'Seleccionar rol…');
+      resetDropdown(document.getElementById('ddInvArea'), 'Seleccionar área…');
+      document.getElementById('invAreaWrap').style.display = 'none';
+      document.getElementById('invitarSubmit').disabled = true;
+      /* v1.13.42: mensaje field visible solo en create. */
+      var msgWrap = document.getElementById('invMensaje').closest('.form-grid__field--full');
+      if (msgWrap) msgWrap.style.display = '';
+      document.getElementById('modalInvitar').classList.add('open');
+      wireModalDropdowns();
+      setTimeout(function () { document.getElementById('invNombre').focus(); }, 50);
+    }
+
+    /* v1.13.42: modo EDIT — pre-rellena campos con la persona existente.
+       Cambia título + subtítulo + submit label. Oculta el mensaje
+       (no aplica al editar). */
+    function openEditar(personaId) {
+      var p = IVCStore.getPersona(personaId);
+      if (!p) return;
+      state.invitarMode = 'edit';
+      state.invitarEditingId = personaId;
+      document.getElementById('invitarTitle').textContent = 'Editar persona';
+      document.getElementById('invitarSubtitle').textContent = 'Actualiza nombre, cédula, correo, rol o área. Los cambios se aplican inmediatamente.';
+      document.getElementById('invitarSubmit').textContent = 'Guardar cambios';
+
+      /* Pre-fill campos. */
+      document.getElementById('invNombre').value = p.nombre || '';
+      document.getElementById('invCedula').value = (p.cedula || '').replace(/^CC\s*/i, '');
+      document.getElementById('invEmail').value  = p.email || '';
+      document.getElementById('invMensaje').value = '';
+      /* Oculta el mensaje al editar — no aplica. */
+      var msgWrap = document.getElementById('invMensaje').closest('.form-grid__field--full');
+      if (msgWrap) msgWrap.style.display = 'none';
+
+      /* Pre-fill dropdowns. */
+      state.invitarForm = { rol: p.rol || '', area: p.area || '' };
+      var rolLabel = ({ profesional:'Profesional IVC', coordinador:'Coordinador IVC', director:'Director IVC', atu:'ATU · Atención al Usuario', git:'GIT · Comunicaciones', juridica:'Jurídica' })[p.rol] || 'Seleccionar rol…';
+      setDropdownValue(document.getElementById('ddInvRol'), p.rol || '', rolLabel);
+      var areaLabel = ({ aficionado:'Deporte Aficionado', profesional:'Deporte Profesional' })[p.area] || 'Seleccionar área…';
+      setDropdownValue(document.getElementById('ddInvArea'), p.area || '', areaLabel);
+      document.getElementById('invAreaWrap').style.display = p.rol === 'profesional' ? 'block' : 'none';
+
+      document.getElementById('modalInvitar').classList.add('open');
+      wireModalDropdowns();
+      validateInvitar();
+      setTimeout(function () { document.getElementById('invNombre').focus(); }, 50);
+    }
+
+    function closeInvitar() {
+      document.getElementById('modalInvitar').classList.remove('open');
+      closeAllDropdowns(null);
+    }
+
+    function validateInvitar() {
+      var nombre = document.getElementById('invNombre').value.trim();
+      var email  = document.getElementById('invEmail').value.trim();
+      var rol    = state.invitarForm.rol;
+      var area   = state.invitarForm.area;
+      var ok = nombre.length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && !!rol;
+      if (ok && rol === 'profesional' && !area) ok = false;
+      document.getElementById('invitarSubmit').disabled = !ok;
+    }
+
+    function wireModals() {
+      /* Invitar modal — solo X dismiss y click-outside (v1.13.39: removido Cancelar). */
+      document.getElementById('invitarDismiss').addEventListener('click', closeInvitar);
+      document.getElementById('modalInvitar').addEventListener('click', function (ev) {
+        if (ev.target === this) closeInvitar();
+      });
+
+      /* Text field bindings — solo nombre/email (cédula/mensaje no requieren validar). */
+      ['invNombre','invEmail'].forEach(function (id) {
+        document.getElementById(id).addEventListener('input', validateInvitar);
+      });
+
+      /* v1.13.40 (Doug): máscara cédula colombiana — solo dígitos +
+         puntos como separador de miles automático. */
+      var cedulaInput = document.getElementById('invCedula');
+      if (cedulaInput) {
+        cedulaInput.addEventListener('input', function (ev) {
+          var input = ev.target;
+          var prevPos = input.selectionStart;
+          var prevLen = input.value.length;
+          /* Strip a solo dígitos, luego formatear con puntos cada 3
+             desde la derecha. */
+          var digits = input.value.replace(/\D/g, '');
+          var formatted = digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+          input.value = formatted;
+          /* Reposicionar cursor proporcionalmente al cambio de longitud. */
+          var newLen = formatted.length;
+          var newPos = prevPos + (newLen - prevLen);
+          newPos = Math.max(0, Math.min(newLen, newPos));
+          input.setSelectionRange(newPos, newPos);
+        });
+        /* Bloquear caracteres no numéricos en keydown (defensivo —
+           input también filtra, pero esto evita el flash visual). */
+        cedulaInput.addEventListener('keydown', function (ev) {
+          /* Permitir teclas de navegación / edición. */
+          var navKeys = ['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Home','End'];
+          if (navKeys.indexOf(ev.key) >= 0) return;
+          if (ev.ctrlKey || ev.metaKey) return;  /* permite Ctrl+A, Cmd+C, etc */
+          if (!/^\d$/.test(ev.key)) ev.preventDefault();
+        });
+      }
+
+      /* Submit — branch create vs edit. */
+      document.getElementById('invitarSubmit').addEventListener('click', function () {
+        var nombre  = document.getElementById('invNombre').value.trim();
+        var cedula  = document.getElementById('invCedula').value.trim();
+        var email   = document.getElementById('invEmail').value.trim();
+        var rol     = state.invitarForm.rol;
+        var area    = state.invitarForm.area || null;
+        var mensaje = document.getElementById('invMensaje').value.trim();
+
+        /* Email duplicado — solo bloquea en CREATE. En EDIT permite
+           que la persona conserve su email (no es duplicado consigo
+           misma) pero bloquea si cambia a uno de otra persona. */
+        var existing = IVCStore.getPersonas().find(function (p) {
+          return (p.email || '').toLowerCase() === email.toLowerCase();
+        });
+        if (existing && existing.id !== state.invitarEditingId) {
+          var estadoLabel = ESTADO_LABELS[existing.estado] || existing.estado;
+          showSnack(
+            'Este correo ya está registrado para ' + existing.nombre +
+            ' (' + (ROL_LABELS[existing.rol] || existing.rol) +
+            ') · estado: ' + estadoLabel + '. No se ' +
+            (state.invitarMode === 'edit' ? 'guardó el cambio' : 'envió una nueva invitación') + '.',
+            'error'
+          );
+          return;
+        }
+
+        if (state.invitarMode === 'edit') {
+          /* v1.13.42: actualizar persona existente. */
+          var actualizada = IVCStore.editarPersona(state.invitarEditingId, {
+            nombre: nombre, cedula: cedula, email: email,
+            rol: rol, area: area
+          });
+          if (!actualizada) { showSnack('No se pudo guardar los cambios. Verifica los datos.', 'error'); return; }
+          closeInvitar();
+          showSnack('Cambios guardados para ' + nombre + '.', 'success');
+        } else {
+          /* Modo CREATE: invitar nueva persona. */
+          var nueva = IVCStore.invitarPersona({
+            nombre: nombre, cedula: cedula, email: email,
+            rol: rol, area: area, mensaje: mensaje
+          });
+          if (!nueva) { showSnack('No se pudo enviar la invitación. Verifica los datos.', 'error'); return; }
+          closeInvitar();
+          showSnack('Invitación enviada a ' + email + ' · estado: Pendiente confirmación.', 'success');
+        }
+      });
+
+      /* Desactivar modal */
+      document.getElementById('desactivarDismiss').addEventListener('click', closeDesactivar);
+      document.getElementById('desactivarCancel').addEventListener('click', closeDesactivar);
+      document.getElementById('modalDesactivar').addEventListener('click', function (ev) {
+        if (ev.target === this) closeDesactivar();
+      });
+      document.getElementById('desactivarSubmit').addEventListener('click', function () {
+        if (!state.modalAction) return;
+        IVCStore.desactivarPersona(state.modalAction.personaId);
+        closeDesactivar();
+        showSnack('Acceso desactivado.', 'success');
+      });
+
+      /* ESC global */
+      document.addEventListener('keydown', function (ev) {
+        if (ev.key !== 'Escape') return;
+        var mi = document.getElementById('modalInvitar');
+        var md = document.getElementById('modalDesactivar');
+        if (mi.classList.contains('open'))  closeInvitar();
+        if (md.classList.contains('open'))  closeDesactivar();
+      });
+    }
+
+    function openDesactivar(personaId) {
+      var p = IVCStore.getPersona(personaId);
+      if (!p) return;
+      state.modalAction = { type: 'desactivar', personaId: personaId };
+      document.getElementById('desactivarSub').textContent = p.nombre + ' · ' + (ROL_LABELS[p.rol] || p.rol);
+      document.getElementById('modalDesactivar').classList.add('open');
+    }
+    function closeDesactivar() {
+      document.getElementById('modalDesactivar').classList.remove('open');
+      state.modalAction = null;
+    }
+
+    /* ─── Utils ──────────────────────────────────────────────────────── */
+    function escHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+      });
+    }
+    function showSnack(msg, variant) {
+      if (window.IVCShell && typeof window.IVCShell.showSnackbar === 'function') {
+        window.IVCShell.showSnackbar(msg, variant || 'success');
+      } else {
+        console.log('[snack]', variant, msg);
+      }
+    }
+  </script>
+</body>
+</html>

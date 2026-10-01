@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Por notificar · Atención al Usuario</title>
+  <link rel="stylesheet" href="../shared/fonts/google-sans.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/naowee-tech/naowee-design-system@v1.8.0/dist/design-system.css">
+  <link rel="stylesheet" href="../shared/tokens.css?v=1.13.56">
+  <link rel="stylesheet" href="../shared/components.css?v=1.13.57">
+  <link rel="stylesheet" href="../shared/shell.css?v=1.13.56">
+  <link rel="stylesheet" href="../shared/naowee-footer.css?v=1.13.56">
+  <style>/* FOOTER POINTER FIX INLINE — v1.12.5 defensive — Doug reportó que el cache de file:// servía CSS viejo y el footer flotante seguía bloqueando hover/click sobre las tablas. Esta regla está inline en el HTML para vencer al CSS externo cacheado. */ .naowee-floating-footer { pointer-events: none !important; } .naowee-floating-footer__version, .naowee-floating-footer__logo, .naowee-floating-footer__text, .naowee-floating-footer__sep { pointer-events: auto !important; }</style>
+
+  <style>
+    /* ═══════════════════════════════════════════════════════════════════
+       Atención al Usuario — Notificación por plantilla (dentro de 5d hábiles)
+       v1.12.0 (2026-05-26)
+
+       El rol ATU recibe trámites en estado NotifOficinas. Si el organismo
+       asiste dentro de 5 días, ATU lo notifica por plantilla y marca el
+       trámite como notificado. Estado → NotifElectronica (mismo semantic).
+       ═══════════════════════════════════════════════════════════════════ */
+    .page-title-block { margin-bottom: 4px; }
+    .page-title { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -.5px; color: var(--text-primary); line-height: 1.2; }
+    .page-subtitle { margin: 6px 0 0; font-size: 14px; color: var(--text-secondary); font-weight: 500; }
+    .page-inner { max-width: 1480px !important; }
+    .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 24px 0; }
+    @media (max-width: 900px) { .stat-grid { grid-template-columns: 1fr; } }
+    @media (min-width: 901px) and (max-width: 1200px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+
+    .naowee-table tbody tr.row-clickable { cursor: pointer; transition: background var(--duration-fast, .12s) ease; }
+    .naowee-table tbody tr.row-clickable:hover { background: #fafbfd; }
+    .naowee-table-card > div:last-child { padding-bottom: 8px; }
+
+    .row-radicado { font-family: var(--font-sans);font-variant-numeric:tabular-nums; font-size: 13px; font-weight: 700; }
+    /* v1.12.7: empty state migrado al canónico .naowee-empty-state — ver
+       components.css#v1.12.7 (icono 40×40 + tipografía DS). */
+
+    /* Modal "Marcar notificado" — confirma la notificación con un mini-form */
+    .notif-modal-body__row { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .notif-modal-body__row:last-child { border-bottom: 0; }
+    .notif-modal-body__key { color: var(--text-secondary); flex: 0 0 140px; }
+    .notif-modal-body__val { color: var(--text-primary); font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="shell" id="app-shell"></div>
+  <template id="page-content"><div class="page-inner" id="pageInner"></div></template>
+
+  <!-- Modal confirmar notificación por plantilla -->
+  <div class="naowee-modal-overlay" id="modalConfirmNotif" role="dialog" aria-modal="true">
+    <div class="naowee-modal" style="width:95vw; max-width: 560px;">
+      <div class="naowee-modal__header">
+        <div class="naowee-modal__title-group">
+          <h2 class="naowee-modal__title">Notificar por plantilla</h2>
+          <p class="naowee-modal__subtitle" id="confirmNotifSub">Confirme que el organismo fue notificado presencialmente.</p>
+        </div>
+        <button type="button" class="naowee-modal__dismiss" onclick="window._closeConfirmNotif()" aria-label="Cerrar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="naowee-modal__body">
+        <div class="naowee-message naowee-message--informative" style="margin-bottom: 16px;">
+          <div class="naowee-message__header">
+            <span class="naowee-message__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            </span>
+            <span class="naowee-message__title">Notificación por plantilla (dentro de 5 días hábiles)</span>
+          </div>
+          <div class="naowee-message__text">
+            El organismo asistió presencialmente dentro de los 5 días hábiles. Al confirmar, el trámite quedará marcado como notificado y el portal del organismo le pedirá responder si renuncia a términos.
+          </div>
+        </div>
+        <div id="confirmNotifDetails"></div>
+      </div>
+      <div class="naowee-modal__footer naowee-modal__footer--end" style="gap: 10px;">
+        <button type="button" class="naowee-btn naowee-btn--mute" onclick="window._closeConfirmNotif()">Cancelar</button>
+        <button type="button" class="naowee-btn naowee-btn--loud" id="confirmNotifBtn">Confirmar notificación</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../shared/data.js?v=1.13.56"></script>
+  <script src="../shared/shell.js?v=1.13.56"></script>
+  <script src="../shared/ivc-store.js?v=1.13.56"></script>
+  <script src="../shared/naowee-footer.js?v=1.13.56" defer></script>
+
+  <script>
+    var state = { tramites: [], confirmId: null };
+
+    document.addEventListener('DOMContentLoaded', function () {
+      window.IVCData.setPerfil('atu');
+      var template = document.getElementById('page-content');
+      var shellRoot = document.getElementById('app-shell');
+      shellRoot.innerHTML = template.innerHTML;
+      window.IVCShell.init({ title: null, activeNav: 'bandeja-atu' });
+
+      IVCStore.init();
+      load();
+      IVCStore.on('store:changed-external', function () { load(); render(); });
+      IVCStore.on('tramite:estado-cambiado',  function () { load(); render(); });
+
+      wireConfirm();
+      render();
+    });
+
+    function load() {
+      var todas = IVCStore.getTramites({ area: 'aficionado' }) || [];
+      /* ATU ve trámites en NotifOficinas dentro de 5 días hábiles (plazoDias >= 0). */
+      state.tramites = todas.filter(function (t) {
+        return t.estado === 'NotifOficinas' && (typeof t.plazoDias === 'number' ? t.plazoDias >= 0 : true);
+      });
+    }
+
+    function render() {
+      var host = document.getElementById('pageInner');
+      var notificados = (IVCStore.getTramites({ area: 'aficionado' }) || []).filter(function (t) {
+        var ev = (t.historico || []).slice().reverse()
+          .find(function (h) { return (h.observacion || '').indexOf('plantilla') >= 0; });
+        return !!ev;
+      });
+      var hoy = new Date().toISOString().slice(0, 10);
+      var notificadosHoy = notificados.filter(function (t) {
+        var ev = (t.historico || []).slice().reverse()
+          .find(function (h) { return (h.observacion || '').indexOf('plantilla') >= 0 && h.fecha === hoy; });
+        return !!ev;
+      }).length;
+
+      host.innerHTML =
+        '<header class="page-title-block">' +
+          '<h1 class="page-title">Notificaciones por plantilla</h1>' +
+          '<p class="page-subtitle">Atienda presencialmente al organismo dentro de los 5 días hábiles posteriores a la alerta del Director. Cumplido el plazo, la notificación pasa a GIT Comunicaciones por aviso.</p>' +
+        '</header>' +
+
+        '<section class="stat-grid">' +
+          '<div class="naowee-stat-card naowee-stat-card--accent">' +
+            '<span class="naowee-stat-card__label">Por notificar</span>' +
+            '<span class="naowee-stat-card__value">' + state.tramites.length + '</span>' +
+            '<span class="naowee-stat-card__hint">Organismos a notificar presencialmente</span>' +
+          '</div>' +
+          '<div class="naowee-stat-card naowee-stat-card--success">' +
+            '<span class="naowee-stat-card__label">Notificados hoy</span>' +
+            '<span class="naowee-stat-card__value">' + notificadosHoy + '</span>' +
+            '<span class="naowee-stat-card__hint">Por plantilla (CPACA Art 66)</span>' +
+          '</div>' +
+          '<div class="naowee-stat-card naowee-stat-card--info">' +
+            '<span class="naowee-stat-card__label">Total acumulado</span>' +
+            '<span class="naowee-stat-card__value">' + notificados.length + '</span>' +
+            '<span class="naowee-stat-card__hint">Notificados por plantilla</span>' +
+          '</div>' +
+        '</section>' +
+
+        '<section class="naowee-table-card">' +
+          '<div class="naowee-table-card__head">' +
+            '<div class="naowee-table-card__head-text">' +
+              '<h2 class="naowee-table-card__title">Trámites por notificar</h2>' +
+              '<p class="naowee-table-card__subtitle">' + state.tramites.length + ' trámites · CPACA Art 66 (notificación personal por plantilla)</p>' +
+            '</div>' +
+          '</div>' +
+          (state.tramites.length === 0
+            ? '<div class="naowee-empty-state">' +
+                '<div class="naowee-empty-state__icon">' +
+                  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>' +
+                '</div>' +
+                '<div class="naowee-empty-state__title">Sin trámites por notificar</div>' +
+                '<div class="naowee-empty-state__description">Cuando el Director del IVC firme actos con notificación en oficinas, aparecerán aquí dentro de los 5 días hábiles para notificar al organismo presencialmente por plantilla.</div>' +
+              '</div>'
+            : renderTable())+
+        '</section>';
+    }
+
+    function renderTable() {
+      return '<div style="overflow-x:auto;"><table class="naowee-table"><thead><tr>' +
+        '<th>Radicado</th><th>Tipo</th><th>Organismo</th><th>Profesional IVC</th><th>Plazo restante</th><th style="text-align:center;">Acciones</th>' +
+      '</tr></thead><tbody>' +
+        state.tramites.map(function (t) {
+          var plazo = typeof t.plazoDias === 'number' ? t.plazoDias : 0;
+          var plazoTxt = plazo + ' días';
+          var plazoCls = plazo <= 1 ? 'row-plazo--caution' : 'row-plazo--positive';
+          return '<tr>' +
+            '<td><span class="row-radicado">' + escHtml(t.id) + '</span></td>' +
+            '<td>' + escHtml(t.tipoTramite || 'Otorgamiento') + '</td>' +
+            '<td><div style="font-weight:500;">' + escHtml(t.organismo) + '</div>' +
+                '<div style="font-size:11.5px;color:var(--text-secondary);font-family:var(--font-sans);font-variant-numeric:tabular-nums;margin-top:2px;">NIT ' + escHtml(t.nit || '—') + '</div></td>' +
+            '<td>' + escHtml(t.profesionalNombre || '—') + '</td>' +
+            '<td><span class="row-plazo ' + plazoCls + '">' + plazoTxt + '</span></td>' +
+            '<td style="text-align:center;">' +
+              '<button type="button" class="naowee-btn naowee-btn--loud naowee-btn--small" onclick="window._openConfirm(\'' + escHtml(t.id) + '\')">Marcar notificado</button>' +
+            '</td>' +
+          '</tr>';
+        }).join('') +
+      '</tbody></table></div>';
+    }
+
+    window._openConfirm = function (id) {
+      state.confirmId = id;
+      var t = state.tramites.find(function (x) { return x.id === id; });
+      if (!t) return;
+      document.getElementById('confirmNotifSub').textContent = t.id + ' · ' + t.organismo;
+      document.getElementById('confirmNotifDetails').innerHTML =
+        '<div class="notif-modal-body__row"><span class="notif-modal-body__key">Radicado</span><span class="notif-modal-body__val">' + escHtml(t.id) + '</span></div>' +
+        '<div class="notif-modal-body__row"><span class="notif-modal-body__key">Organismo</span><span class="notif-modal-body__val">' + escHtml(t.organismo) + '</span></div>' +
+        '<div class="notif-modal-body__row"><span class="notif-modal-body__key">NIT</span><span class="notif-modal-body__val">' + escHtml(t.nit || '—') + '</span></div>' +
+        '<div class="notif-modal-body__row"><span class="notif-modal-body__key">Profesional IVC</span><span class="notif-modal-body__val">' + escHtml(t.profesionalNombre || '—') + '</span></div>' +
+        '<div class="notif-modal-body__row"><span class="notif-modal-body__key">Canal</span><span class="notif-modal-body__val">Plantilla (CPACA Art 66)</span></div>';
+      document.getElementById('modalConfirmNotif').classList.add('open');
+    };
+    window._closeConfirmNotif = function () {
+      document.getElementById('modalConfirmNotif').classList.remove('open');
+      state.confirmId = null;
+    };
+
+    function wireConfirm() {
+      document.getElementById('confirmNotifBtn').addEventListener('click', function () {
+        if (!state.confirmId) return;
+        var perfil = (window.IVCData && window.IVCData.PERFILES && window.IVCData.PERFILES['atu']) || {};
+        var actor = (perfil.nombre || 'Atención al Usuario') + ' (Atención al Usuario · ATU)';
+        IVCStore.marcarNotificadoOficinas(state.confirmId, 'plantilla', actor);
+        window._closeConfirmNotif();
+        _showSnackbar('Trámite notificado por plantilla. Pasa al organismo para responder renuncia a términos.', 'success');
+      });
+      document.getElementById('modalConfirmNotif').addEventListener('click', function (ev) {
+        if (ev.target === this) window._closeConfirmNotif();
+      });
+    }
+
+    /* Helpers */
+    function escHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+      });
+    }
+    function _showSnackbar(msg, variant) {
+      if (window.IVCShell && typeof window.IVCShell.showSnackbar === 'function') {
+        window.IVCShell.showSnackbar(msg, variant || 'success');
+        return;
+      }
+      var t = document.createElement('div');
+      t.textContent = msg;
+      t.style.cssText = 'position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#282834; color:#fff; padding:12px 20px; border-radius:10px; font-size:13px; z-index:9999;';
+      document.body.appendChild(t);
+      setTimeout(function () { t.remove(); }, 3000);
+    }
+  </script>
+</body>
+</html>

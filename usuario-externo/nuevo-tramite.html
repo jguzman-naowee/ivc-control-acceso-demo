@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nuevo trámite · IVC Naowee</title>
+  <link rel="stylesheet" href="../shared/fonts/google-sans.css">
+
+  <!-- Naowee Design System (CDN oficial v1.8.0) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/naowee-tech/naowee-design-system@v1.8.0/dist/design-system.css">
+
+  <link rel="stylesheet" href="../shared/tokens.css">
+  <link rel="stylesheet" href="../shared/components.css">
+  <link rel="stylesheet" href="../shared/shell.css">
+  <style>
+    .wizard-card { max-width: 880px; margin: 0 auto; width: 100%; }
+
+    .wizard-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px 20px;
+    }
+    /* v1.1.4 — clase IVC-scoped (no inventar `.naowee-*`).
+       Hace que el campo ocupe las 2 columnas del grid. */
+    .wizard-form .ivc-field--full { grid-column: 1 / -1; }
+    .wizard-form .naowee-textfield { width: 100%; }
+
+    @media (max-width: 720px) {
+      .wizard-form { grid-template-columns: 1fr; }
+    }
+
+    .docs-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .docs-section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .docs-section-title__progress {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .docs-section-title__progress strong {
+      color: var(--accent);
+      font-weight: 800;
+    }
+
+    .progress-bar {
+      flex: 1;
+      max-width: 120px;
+      height: 6px;
+      background: var(--bg);
+      border-radius: var(--radius-full);
+      overflow: hidden;
+    }
+
+    .progress-bar__fill {
+      height: 100%;
+      background: var(--green);
+      transition: width var(--duration-normal) var(--ease-out);
+    }
+
+    .wizard-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 18px 28px;
+      border-top: 1px solid var(--border);
+      background: var(--surface-alt);
+    }
+
+    .wizard-footer__hint {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    /* Loader overlay for radicación */
+    .radicando-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(255, 255, 255, .9);
+      z-index: 1100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 18px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .3s ease;
+    }
+    .radicando-overlay.is-visible { opacity: 1; pointer-events: auto; }
+    .radicando-overlay__spinner {
+      width: 48px; height: 48px;
+      border: 4px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .radicando-overlay__text {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    /* Step 1 & 3 placeholders */
+    .step-placeholder {
+      padding: 56px 24px;
+      text-align: center;
+      color: var(--text-secondary);
+    }
+
+    /* Page title block (Doug v1.1.5 — title vive en el body antes del stepper,
+       igual que en dashboard.html. Patrón project v2.1). */
+    .page-title-block { margin-bottom: 4px; max-width: 880px; margin-left: auto; margin-right: auto; text-align: left; }
+    .page-title {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -.5px;
+      color: var(--text-primary);
+      line-height: 1.2;
+    }
+    .page-subtitle {
+      margin: 6px 0 0;
+      font-size: 14px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    /* Constrain stepper a misma anchura que las wizard-cards. */
+    .ivc-stepper { max-width: 880px; margin-left: auto; margin-right: auto; margin-bottom: 28px; }
+
+    /* v1.1.6 fix #3 — helpers IVC-scoped (sustituyen inline styles en messages).
+       El DS .naowee-message ya hereda font-size/padding canónicos; aquí solo
+       agregamos contexto de layout específico de esta página. */
+    .ivc-message--block { margin-bottom: 18px; }
+    .ivc-message--inline { margin-bottom: 0; flex: 1; }
+  </style>
+</head>
+<body>
+
+  <div class="shell" id="app-shell"></div>
+
+  <template id="page-content">
+    <div class="page-inner">
+
+      <!-- Page title block (Doug v1.1.5 — wizard como project v2.1: title
+           vive en el body, encabeza la pantalla, antes del stepper). -->
+      <header class="page-title-block">
+        <h1 class="page-title">Nuevo trámite</h1>
+        <p class="page-subtitle">Otorgamiento de Reconocimiento Deportivo — Liga de Atletismo de Bolívar.</p>
+      </header>
+
+      <!-- Stepper IVC (v1.1.5 — renombrado de `.naowee-stepper` que no calzaba
+           con el DS canónico). Sub-elementos `__item`/`__circle`/`__label`.
+           data-tour="wizard-stepper" lo usa el tour Step 2. -->
+      <ol class="ivc-stepper" id="wizardStepper" data-tour="wizard-stepper">
+        <li class="ivc-stepper__item is-active" data-step="1">
+          <div class="ivc-stepper__circle">1</div>
+          <span class="ivc-stepper__label">Datos generales</span>
+        </li>
+        <li class="ivc-stepper__item" data-step="2">
+          <div class="ivc-stepper__circle">2</div>
+          <span class="ivc-stepper__label">Documentos</span>
+        </li>
+        <li class="ivc-stepper__item" data-step="3">
+          <div class="ivc-stepper__circle">3</div>
+          <span class="ivc-stepper__label">Confirmación</span>
+        </li>
+      </ol>
+
+      <!-- Step 1: Datos generales — usa `.naowee-card` del DS canónico v1.8.0
+           + variant local `.ivc-card-sectioned` para conseguir header/body/
+           footer con dividers (estilo project v2.1). El form usa el patrón
+           `.naowee-textfield` del DS. -->
+      <section class="naowee-card ivc-card-sectioned wizard-card" id="step-1">
+        <div class="naowee-card__header">
+          <div>
+            <h2 class="naowee-card__title">Datos generales del trámite</h2>
+            <p class="naowee-card__subtitle">Identificación del organismo y tipo de Reconocimiento.</p>
+          </div>
+          <span class="naowee-badge naowee-badge--informative naowee-badge--quiet">Trámite</span>
+        </div>
+        <div class="naowee-card__body">
+          <!-- Info message canónico DS — .naowee-message + variant `--informative`.
+               Antes el helper "Pre-seleccionado..." iba como `.naowee-input-helper`. -->
+          <div class="naowee-message naowee-message--informative ivc-message--block">
+            <div class="naowee-message__header">
+              <span class="naowee-message__icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+              </span>
+              <div class="naowee-message__content">
+                <p class="naowee-message__title">Tipo de trámite pre-seleccionado para esta demo</p>
+                <p class="naowee-message__text">En el sistema real, el Usuario elige entre Otorgamiento, Renovación o Actualización del Reconocimiento Deportivo.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="wizard-form">
+            <!-- Tipo de trámite (select dentro de naowee-textfield) -->
+            <div class="naowee-textfield naowee-textfield--disabled ivc-field--full">
+              <label class="naowee-textfield__label" for="tipo">Tipo de trámite</label>
+              <div class="naowee-textfield__input-wrap">
+                <select class="naowee-textfield__input" id="tipo" disabled>
+                  <option>Otorgamiento de Reconocimiento Deportivo</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Organismo deportivo (readonly) -->
+            <div class="naowee-textfield naowee-textfield--readonly">
+              <label class="naowee-textfield__label" for="organismo">Organismo deportivo</label>
+              <div class="naowee-textfield__input-wrap">
+                <input class="naowee-textfield__input" id="organismo" type="text" value="Liga de Atletismo de Bolívar" readonly>
+              </div>
+              <span class="naowee-textfield__helper">Leído del perfil del usuario autenticado.</span>
+            </div>
+
+            <!-- NIT (readonly) -->
+            <div class="naowee-textfield naowee-textfield--readonly">
+              <label class="naowee-textfield__label" for="nit">NIT</label>
+              <div class="naowee-textfield__input-wrap">
+                <input class="naowee-textfield__input" id="nit" type="text" value="800.245.678-3" readonly>
+              </div>
+            </div>
+
+            <!-- Disciplina deportiva (DS .naowee-dropdown — v1.1.6 fix #1:
+                 reemplaza native <select> que renderizaba el dropdown nativo
+                 de Chrome. DS provee trigger + menu + option (line 2192+). -->
+            <div class="naowee-dropdown" data-dropdown id="disciplina-dropdown">
+              <label class="naowee-dropdown__label" for="disciplina-trigger">Disciplina deportiva</label>
+              <button type="button" class="naowee-dropdown__trigger" id="disciplina-trigger" aria-haspopup="listbox" aria-expanded="false">
+                <span class="naowee-dropdown__value">Atletismo</span>
+                <span class="naowee-dropdown__controls">
+                  <span class="naowee-dropdown__chevron">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  </span>
+                </span>
+              </button>
+              <ul class="naowee-dropdown__menu" role="listbox">
+                <li class="naowee-dropdown__option naowee-dropdown__option--selected" role="option" data-value="atletismo">Atletismo</li>
+                <li class="naowee-dropdown__option" role="option" data-value="ciclismo">Ciclismo</li>
+                <li class="naowee-dropdown__option" role="option" data-value="natacion">Natación</li>
+                <li class="naowee-dropdown__option" role="option" data-value="voleibol">Voleibol</li>
+              </ul>
+            </div>
+
+            <!-- Domicilio principal -->
+            <div class="naowee-textfield">
+              <label class="naowee-textfield__label naowee-textfield__label--required" for="domicilio">Domicilio principal</label>
+              <div class="naowee-textfield__input-wrap">
+                <input class="naowee-textfield__input" id="domicilio" type="text" value="Cartagena de Indias, Bolívar">
+              </div>
+            </div>
+
+            <!-- Observaciones (textarea variant) -->
+            <div class="naowee-textfield naowee-textfield--textarea ivc-field--full">
+              <label class="naowee-textfield__label" for="observaciones">Observaciones adicionales (opcional)</label>
+              <div class="naowee-textfield__input-wrap">
+                <textarea class="naowee-textfield__input" id="observaciones" rows="4" placeholder="Información complementaria que el organismo quiera adjuntar al trámite..."></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="wizard-footer">
+          <button type="button" class="naowee-btn naowee-btn--mute" onclick="location.href='dashboard.html'">← Cancelar</button>
+          <button type="button" class="naowee-btn naowee-btn--loud" id="btnStep1Next">
+            Continuar a Documentos →
+          </button>
+        </div>
+      </section>
+
+      <!-- Step 2: Documentos -->
+      <section class="naowee-card ivc-card-sectioned wizard-card" id="step-2" hidden data-tour="docs-decreto-1387">
+        <div class="naowee-card__header">
+          <div>
+            <h2 class="naowee-card__title">Documentos requeridos por el Decreto 1387/1970, Art. 2.1.1.2</h2>
+            <p class="naowee-card__subtitle">Carga los 7 documentos exigidos para el Otorgamiento del Reconocimiento Deportivo.</p>
+          </div>
+          <span class="naowee-badge naowee-badge--informative naowee-badge--quiet">Trámite</span>
+        </div>
+        <div class="naowee-card__body">
+          <div class="docs-section-title">
+            <div class="naowee-message naowee-message--informative ivc-message--inline">
+              <div class="naowee-message__header">
+                <span class="naowee-message__icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                </span>
+                <div class="naowee-message__content">
+                  <p class="naowee-message__title">Demo · Haz click en cada documento para simular la carga</p>
+                  <p class="naowee-message__text">En el sistema real, esto abre un picker de archivos con validación de extensión, tamaño y firma.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="docs-section-title">
+            <span class="docs-section-title__progress">
+              Progreso: <strong id="docsProgress">0 / 6</strong> obligatorios
+              <span class="progress-bar"><span class="progress-bar__fill" id="docsProgressFill" style="width:0%"></span></span>
+            </span>
+          </div>
+
+          <div class="docs-grid" id="docsGrid"></div>
+        </div>
+        <div class="wizard-footer">
+          <button type="button" class="naowee-btn naowee-btn--quiet" id="btnStep2Back">← Volver</button>
+          <div style="display:flex;align-items:center;gap:14px">
+            <span class="wizard-footer__hint" id="radicarHint">Carga los 6 documentos obligatorios para continuar.</span>
+            <button type="button" class="naowee-btn naowee-btn--loud" id="btnRadicar" disabled>
+              Radicar trámite →
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 3: Confirmación (transitorio) -->
+      <section class="naowee-card ivc-card-sectioned wizard-card" id="step-3" hidden>
+        <div class="step-placeholder">
+          Procesando radicación...
+        </div>
+      </section>
+
+    </div>
+  </template>
+
+  <!-- Loader -->
+  <div class="radicando-overlay" id="radicandoOverlay">
+    <div class="radicando-overlay__spinner"></div>
+    <div class="radicando-overlay__text">Radicando trámite en GESDOC...</div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../shared/data.js"></script>
+  <script src="../shared/shell.js"></script>
+  <script src="../shared/demo-tour.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var template = document.getElementById('page-content');
+      var shellRoot = document.getElementById('app-shell');
+      shellRoot.innerHTML = template.innerHTML;
+
+      /* Header sin breadcrumb (Doug fix #2) — title vive en stepper/contenido */
+      window.IVCShell.init({
+        title: null,
+        activeNav: 'tramites'
+      });
+
+      /* Asegurar borrador */
+      if (!window.IVCData.getTramite()) {
+        window.IVCData.initTramiteBorrador();
+      }
+
+      renderDocs();
+
+      /* Step navigation */
+      document.getElementById('btnStep1Next').addEventListener('click', function () { goToStep(2); });
+      document.getElementById('btnStep2Back').addEventListener('click', function () { goToStep(1); });
+      document.getElementById('btnRadicar').addEventListener('click', radicarTramite);
+
+      /* Sincroniza wizardStep en estado inicial (v1.1.4 #4 — tour reactivo) */
+      var currentStep = window.IVCData.getWizardStep();
+      if (currentStep !== 1) goToStep(currentStep); else window.IVCData.setWizardStep(1);
+
+      /* Mount tour */
+      window.IVCTour.mount({ pageId: 'usuario-externo/nuevo-tramite.html' });
+    });
+
+    function goToStep(n) {
+      /* v1.1.4 #4 — notifica al tour para que cambie entre Step 2 (datos
+         generales) y Step 2b (documentos) según la posición del wizard. */
+      window.IVCData.setWizardStep(n);
+
+      ['1','2','3'].forEach(function (s) {
+        var sec = document.getElementById('step-' + s);
+        var item = document.querySelector('.ivc-stepper__item[data-step="' + s + '"]');
+        if (parseInt(s, 10) === n) {
+          sec.hidden = false;
+          item.classList.add('is-active');
+          item.classList.remove('is-complete');
+        } else if (parseInt(s, 10) < n) {
+          sec.hidden = true;
+          item.classList.add('is-complete');
+          item.classList.remove('is-active');
+        } else {
+          sec.hidden = true;
+          item.classList.remove('is-active');
+          item.classList.remove('is-complete');
+        }
+      });
+      /* Scroll to top of section */
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function renderDocs() {
+      var docs = window.IVCData.DOCUMENTOS_DECRETO_1387;
+      var t = window.IVCData.getTramite();
+      var uploaded = (t && t.documentos) || [];
+      var grid = document.getElementById('docsGrid');
+
+      grid.innerHTML = docs.map(function (d) {
+        var isUploaded = uploaded.indexOf(d.id) >= 0;
+        var optionalChip = !d.obligatorio
+          ? '<span class="doc-upload-card__optional">Opcional</span>'
+          : '';
+        return '<div class="doc-upload-card ' + (isUploaded ? 'is-uploaded' : '') + '" data-doc="' + d.id + '">' +
+          '<div class="doc-upload-card__check">' +
+            (isUploaded
+              ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+              : '<span>' + d.orden + '</span>') +
+          '</div>' +
+          '<div class="doc-upload-card__content">' +
+            '<h4 class="doc-upload-card__title">' + d.titulo + optionalChip + '</h4>' +
+            '<p class="doc-upload-card__legal">' + d.descripcion + '</p>' +
+            '<p class="doc-upload-card__meta">📜 ' + d.fundamento + '</p>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+
+      /* Wire clicks */
+      grid.querySelectorAll('[data-doc]').forEach(function (el) {
+        el.addEventListener('click', function () {
+          window.IVCData.toggleDocumento(el.dataset.doc);
+          renderDocs();
+        });
+      });
+
+      updateProgress();
+    }
+
+    function updateProgress() {
+      var docs = window.IVCData.DOCUMENTOS_DECRETO_1387;
+      var t = window.IVCData.getTramite();
+      var uploaded = (t && t.documentos) || [];
+
+      var obligatorios = docs.filter(function (d) { return d.obligatorio; });
+      var cargadosObligatorios = obligatorios.filter(function (d) { return uploaded.indexOf(d.id) >= 0; });
+
+      document.getElementById('docsProgress').textContent = cargadosObligatorios.length + ' / ' + obligatorios.length;
+      var pct = (cargadosObligatorios.length / obligatorios.length) * 100;
+      document.getElementById('docsProgressFill').style.width = pct + '%';
+
+      var btn = document.getElementById('btnRadicar');
+      var hint = document.getElementById('radicarHint');
+      var allLoaded = cargadosObligatorios.length === obligatorios.length;
+      btn.disabled = !allLoaded;
+      hint.textContent = allLoaded
+        ? '✓ Todos los documentos obligatorios cargados.'
+        : 'Faltan ' + (obligatorios.length - cargadosObligatorios.length) + ' documentos obligatorios.';
+      hint.style.color = allLoaded ? 'var(--green)' : 'var(--text-secondary)';
+    }
+
+    function radicarTramite() {
+      goToStep(3);
+      var loader = document.getElementById('radicandoOverlay');
+      loader.classList.add('is-visible');
+
+      setTimeout(function () {
+        window.IVCData.radicarTramite();
+        loader.classList.remove('is-visible');
+        window.location.href = 'tramite-detalle.html';
+      }, 1400);
+    }
+
+    /* v1.1.6 fix #1 — Dropdown widget canónico (DS .naowee-dropdown).
+       Open/close + selection. DS solo provee CSS; el behavior es app-level. */
+    document.querySelectorAll('[data-dropdown]').forEach(function (dd) {
+      var trigger = dd.querySelector('.naowee-dropdown__trigger');
+      var menu = dd.querySelector('.naowee-dropdown__menu');
+      var value = dd.querySelector('.naowee-dropdown__value');
+
+      trigger.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var isOpen = dd.classList.contains('naowee-dropdown--open');
+        if (isOpen) {
+          dd.classList.remove('naowee-dropdown--open');
+          trigger.setAttribute('aria-expanded', 'false');
+        } else {
+          dd.classList.add('naowee-dropdown--open');
+          trigger.setAttribute('aria-expanded', 'true');
+        }
+      });
+
+      menu.querySelectorAll('.naowee-dropdown__option').forEach(function (opt) {
+        opt.addEventListener('click', function () {
+          menu.querySelectorAll('.naowee-dropdown__option').forEach(function (o) {
+            o.classList.remove('naowee-dropdown__option--selected');
+          });
+          opt.classList.add('naowee-dropdown__option--selected');
+          value.textContent = opt.textContent;
+          dd.classList.remove('naowee-dropdown--open');
+          trigger.setAttribute('aria-expanded', 'false');
+        });
+      });
+    });
+
+    document.addEventListener('click', function (e) {
+      document.querySelectorAll('[data-dropdown]').forEach(function (dd) {
+        if (!dd.contains(e.target)) {
+          dd.classList.remove('naowee-dropdown--open');
+          var trig = dd.querySelector('.naowee-dropdown__trigger');
+          if (trig) trig.setAttribute('aria-expanded', 'false');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

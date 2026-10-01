@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html class="login-pf" lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sign in to Nao Suite</title>
+    <link rel="icon" type="image/x-icon" href="suid/login/img/favicon.ico">
+    <link rel="stylesheet" href="shared/fonts/google-sans.css">
+    <!-- Tema Keycloak "naowee" copiado del login real (sandbox). El login de este demo es falso. -->
+    <link href="suid/login/css/base-v2.css" rel="stylesheet">
+    <link href="suid/login/css/layout-v2.css" rel="stylesheet">
+    <link href="suid/login/css/components-v2.css" rel="stylesheet">
+    <link href="suid/login/css/utilities-v2.css" rel="stylesheet">
+    <link href="suid/login/css/keycloak-compat-v2.css" rel="stylesheet">
+    <link href="suid/login/css/brands-v2.css" rel="stylesheet">
+    <style>/* Ajuste: en el login real PatternFly aporta line-height; aquí se fija para igualar alturas. */
+      .auth-form__input { line-height: 21px; }
+      .auth-form__button--primary { min-height: 44px; }
+    </style>
+</head>
+<body class="">
+    <header class="main-header">
+        <div class="header-logos">
+            <img src="suid/login/img/suid.png" alt="SUID" class="header-logo-img header-logo-img--suid">
+        </div>
+        <div class="header-actions">
+            <a href="#" class="auth-form__button auth-form__button--secondary">Crear una cuenta</a>
+        </div>
+    </header>
+
+    <div class="auth-container">
+        <aside class="brand-panel">
+            <div class="brand-panel__inner"></div>
+        </aside>
+
+        <main class="content-panel">
+            <div class="content-panel__wrapper">
+                <div class="auth-card">
+                    <div class="auth-card__header">
+                        <div class="auth-card__title">Bienvenido al <strong>Sistema Único de Información del Deporte&nbsp;👋</strong></div>
+                    </div>
+                    <div class="auth-card__subheader">
+                        <p class="auth-card__subtitle text-center">
+                            Ingresa tus credenciales para acceder a tu perfil y gestionar tu información deportiva.
+                        </p>
+                    </div>
+
+                    <div class="auth-card__content">
+                        <div id="kc-form">
+                            <div id="kc-form-wrapper">
+                                <form id="kc-form-login" class="auth-form" method="post">
+                                    <div class="auth-form__group">
+                                        <label for="username" class="auth-form__label auth-form__label--required">Correo electrónico</label>
+                                        <input tabindex="1" id="username" class="auth-form__input" name="username" value="" type="text" autofocus autocomplete="username" placeholder="correo@ejemplo.com">
+                                    </div>
+
+                                    <div class="auth-form__group">
+                                        <label for="password" class="auth-form__label auth-form__label--required">Contraseña</label>
+                                        <div class="password-input-container">
+                                            <input tabindex="2" id="password" class="auth-form__input" name="password" type="password" autocomplete="current-password" placeholder="Ingresa tu contraseña">
+                                            <button type="button" class="password-toggle" aria-label="Show password" onclick="togglePasswordVisibility('password', this)">
+                                                <img src="suid/login/img/Visibility_close.svg" class="icon-eye-open" alt="Mostrar contraseña" width="24" height="24">
+                                                <img src="suid/login/img/Visibility_open.svg" class="icon-eye-closed" alt="Ocultar contraseña" width="24" height="24">
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="auth-form__group">
+                                        <span class="forgot-password-link">
+                                            ¿Olvidaste la contraseña?
+                                            <a tabindex="5" href="#">Recuperar</a>
+                                        </span>
+                                    </div>
+
+                                    <div class="auth-form__group auth-form__group--submit">
+                                        <input tabindex="4" class="auth-form__button auth-form__button--primary" name="login" id="kc-login" type="submit" value="Iniciar sesión">
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="auth-card__footer">
+                        <p class="footer-links">
+                            <a href="#" class="footer-link">Política de tratamiento de datos</a>
+                            <span class="footer-link-separator">y</span>
+                            <a href="#" class="footer-link">Términos y condiciones</a>
+                        </p>
+                        <div class="help-section">
+                            <p class="help-section__label"><span class="help-icon">💬</span> ¿NECESITAS AYUDA?</p>
+                            <p class="help-section__text">Si tienes dudas o problemas con la activación de tu cuenta, puedes comunicarte con el equipo de soporte</p>
+                            <a href="mailto:soporte@naowee.com" class="help-section__link">soporte@naowee.com</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="naowee-credit">
+                    <img src="suid/login/img/naowee.png" alt="Naowee" class="naowee-credit__logo">
+                    <span class="naowee-credit__text">Todos los derechos reservados © 2026</span>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function togglePasswordVisibility(inputId, button) {
+            var input = document.getElementById(inputId);
+            var iconOpen = button.querySelector('.icon-eye-open');
+            var iconClosed = button.querySelector('.icon-eye-closed');
+            if (input.type === 'password') { input.type = 'text'; iconOpen.style.display = 'none'; iconClosed.style.display = 'block'; }
+            else { input.type = 'password'; iconOpen.style.display = 'block'; iconClosed.style.display = 'none'; }
+        }
+
+        // Demo: entra con cualquier dato, incluso vacío. Se autollenan para que se vea llena.
+        var u = document.getElementById('username'), p = document.getElementById('password');
+        u.value = 'funcionario.ivc@mindeporte.gov.co'; p.value = 'demo-demo-demo';
+        document.getElementById('kc-form-login').addEventListener('submit', function (e) {
+            e.preventDefault();
+            try { sessionStorage.setItem('suid.demo.user', u.value || 'funcionario.ivc@mindeporte.gov.co'); } catch (x) {}
+            location.href = 'suid/app.html';
+        });
+    </script>
+</body>
+</html>

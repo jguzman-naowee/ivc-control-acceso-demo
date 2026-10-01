@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IVC · Diagnóstico de clicks</title>
+  <link rel="stylesheet" href="shared/fonts/google-sans.css">
+  <style>
+    body { font-family: var(--font-sans); padding: 24px; max-width: 700px; margin: 0 auto; color: #282834; }
+    h1 { font-size: 22px; margin: 0 0 8px; }
+    h2 { font-size: 15px; margin: 24px 0 8px; color: #d74009; }
+    button, a.btn {
+      display: inline-block;
+      padding: 12px 20px;
+      background: #d74009;
+      color: #fff;
+      border: 0;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      margin-right: 8px;
+      margin-bottom: 8px;
+    }
+    button:hover, a.btn:hover { background: #b03208; }
+    .log {
+      background: #f5f6fa;
+      padding: 16px;
+      border-radius: 8px;
+      font-family: var(--font-sans);font-variant-numeric:tabular-nums;
+      font-size: 12.5px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      max-height: 400px;
+      overflow-y: auto;
+      margin: 8px 0;
+    }
+    .ok { color: #1f8923; }
+    .err { color: #c01818; }
+    .test { padding: 12px 16px; background: #fff; border: 1px solid #e7e9f3; border-radius: 8px; margin-bottom: 10px; }
+    .links a { color: #d74009; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <h1>🩺 Diagnóstico de clicks · Naowee IVC</h1>
+  <p>Si los clicks en la demo no funcionan, esta página ayuda a identificar la causa.</p>
+
+  <h2>1. Test básico</h2>
+  <div class="test">
+    <p>Clickea cada botón. Debería aparecer un mensaje abajo:</p>
+    <button onclick="logEvent('btn-onclick', 'inline onclick')">Botón con onclick</button>
+    <button id="btn-listener">Botón con addEventListener</button>
+    <a href="#test-link" class="btn" onclick="logEvent('anchor-onclick', 'anchor con onclick'); return false;">Anchor link</a>
+    <a href="javascript:logEvent('javascript-link', 'javascript: pseudo-protocol')" class="btn">Anchor javascript:</a>
+  </div>
+  <div class="log" id="log">Esperando clicks…</div>
+
+  <h2>2. Diagnóstico del entorno</h2>
+  <div class="test">
+    <button onclick="runDiagnostic()">Ejecutar diagnóstico completo</button>
+  </div>
+  <div class="log" id="diag">Click "Ejecutar diagnóstico" para ver el reporte.</div>
+
+  <h2>3. Vínculos al prototype</h2>
+  <div class="test links">
+    <ul>
+      <li><a href="coordinador/bandeja.html">Bandeja del Coordinador</a></li>
+      <li><a href="coordinador/actos.html">Aprobación de actos</a></li>
+      <li><a href="director/bandeja.html">Bandeja del Director</a></li>
+      <li><a href="usuario-externo/consultar.html?rad=IVC-2026-002">Portal público (IVC-2026-002)</a></li>
+      <li><a href="usuario-externo/dashboard.html">Dashboard usuario externo</a></li>
+    </ul>
+  </div>
+
+  <h2>4. Reset emergencia</h2>
+  <div class="test">
+    <p>Si nada funciona, click para limpiar todo el localStorage y refrescar:</p>
+    <button onclick="hardReset()">🔥 Nuclear reset (limpia todo)</button>
+  </div>
+
+  <script>
+    var counter = 0;
+    function logEvent(type, msg) {
+      counter++;
+      var log = document.getElementById('log');
+      var time = new Date().toLocaleTimeString();
+      log.innerHTML = '<span class="ok">✓ #' + counter + ' [' + time + '] ' + type + ': "' + msg + '" — CLICK FUNCIONA</span>\n' + log.innerHTML;
+    }
+
+    document.getElementById('btn-listener').addEventListener('click', function () {
+      logEvent('addEventListener', 'event listener directo');
+    });
+
+    function runDiagnostic() {
+      var lines = [];
+      lines.push('URL: ' + location.href);
+      lines.push('UA: ' + navigator.userAgent);
+      lines.push('Body classes: "' + document.body.className + '"');
+      lines.push('LocalStorage keys:');
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        lines.push('  · ' + k);
+      }
+      lines.push('');
+      lines.push('Buscando elementos grandes con position:fixed/absolute que pueden bloquear:');
+      var blockers = [];
+      document.querySelectorAll('*').forEach(function (el) {
+        var s = getComputedStyle(el);
+        var r = el.getBoundingClientRect();
+        if ((s.position === 'fixed' || s.position === 'absolute') &&
+            r.width > 400 && r.height > 400 &&
+            s.pointerEvents !== 'none' &&
+            (s.opacity === '' || parseFloat(s.opacity) > 0)) {
+          blockers.push('  · ' + el.tagName + (el.id ? '#' + el.id : '') + (el.className ? '.' + String(el.className).replace(/ /g, '.') : '') +
+                       ' [' + (r.width|0) + 'x' + (r.height|0) + ', z-index:' + s.zIndex + ', pointer-events:' + s.pointerEvents + ', opacity:' + s.opacity + ']');
+        }
+      });
+      if (blockers.length === 0) {
+        lines.push('  ✓ Ninguno encontrado');
+      } else {
+        lines.push.apply(lines, blockers);
+      }
+
+      document.getElementById('diag').innerHTML = lines.join('\n');
+    }
+
+    function hardReset() {
+      if (!confirm('Esto borra TODO el localStorage de Naowee IVC. ¿Confirmar?')) return;
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+        alert('Hecho. Recargando…');
+        location.href = 'index.html';
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+  </script>
+</body>
+</html>

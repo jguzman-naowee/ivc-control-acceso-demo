@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aprobación de actos · Coordinador IVC</title>
+  <link rel="stylesheet" href="../shared/fonts/google-sans.css">
+
+  <!-- Naowee DS canónico v1.8.0 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/naowee-tech/naowee-design-system@v1.8.0/dist/design-system.css">
+
+  <link rel="stylesheet" href="../shared/tokens.css?v=1.13.56">
+  <link rel="stylesheet" href="../shared/components.css?v=1.13.57">
+  <link rel="stylesheet" href="../shared/shell.css?v=1.13.56">
+  <link rel="stylesheet" href="../shared/naowee-footer.css?v=1.13.56">
+  <style>/* FOOTER POINTER FIX INLINE — v1.12.5 defensive — Doug reportó que el cache de file:// servía CSS viejo y el footer flotante seguía bloqueando hover/click sobre las tablas. Esta regla está inline en el HTML para vencer al CSS externo cacheado. */ .naowee-floating-footer { pointer-events: none !important; } .naowee-floating-footer__version, .naowee-floating-footer__logo, .naowee-floating-footer__text, .naowee-floating-footer__sep { pointer-events: auto !important; }</style>
+
+  <style>
+    /* ═══════════════════════════════════════════════════════════════════
+       Aprobación de actos administrativos — Coordinador IVC (loop COO INS-004)
+       v1.10.0 (2026-05-26)
+
+       2 vistas en un mismo HTML:
+       · LIST   → tabla de trámites en PendienteCOO
+       · DETAIL → acto en viewport + aside (info + trazabilidad) + CTAs
+
+       Patrón consistente con bandeja.html (page-title, table-card, stat-grid)
+       y workspace.html (hero, lock cenefa).
+       ═══════════════════════════════════════════════════════════════════ */
+
+    .page-title-block { margin-bottom: 4px; }
+    .page-title {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -.5px;
+      color: var(--text-primary);
+      line-height: 1.2;
+    }
+    .page-subtitle {
+      margin: 6px 0 0;
+      font-size: 14px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    .page-inner { max-width: 1480px !important; }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin: 24px 0;
+    }
+    @media (max-width: 900px) { .stat-grid { grid-template-columns: 1fr; } }
+    @media (min-width: 901px) and (max-width: 1200px) {
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* v1.10.4: Back link canónico DS Naowee — sin background, sin underline.
+       Hover: chevron se desplaza ligero a la izquierda + texto naranja más
+       saturado. Mirror del patrón usado en pages.css del módulo Project. */
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 13px; font-weight: 600;
+      color: var(--accent, #d74009);
+      text-decoration: none !important;
+      background: transparent;
+      padding: 6px 4px;
+      margin-bottom: 12px;
+      border-radius: 6px;
+      transition: color .15s;
+    }
+    .back-link:hover,
+    .back-link:focus-visible {
+      color: #b03208;
+      background: transparent;
+      text-decoration: none !important;
+    }
+    .back-link:focus-visible {
+      outline: 2px solid var(--accent, #d74009);
+      outline-offset: 2px;
+    }
+    .back-link__chev {
+      transition: transform .15s;
+    }
+    .back-link:hover .back-link__chev {
+      transform: translateX(-2px);
+    }
+
+    /* ── Hero (vista detalle) ──────────────────────────────────────── */
+    .actos-hero {
+      display: flex; gap: 20px; justify-content: space-between;
+      padding: 20px 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg, 12px);
+      margin-bottom: 20px;
+    }
+    .actos-hero__rad {
+      font-family: var(--font-sans);font-variant-numeric:tabular-nums;
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 600;
+      letter-spacing: .3px;
+      margin-bottom: 4px;
+    }
+    .actos-hero__title {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text-primary);
+      letter-spacing: -.3px;
+      line-height: 1.2;
+    }
+    .actos-hero__meta {
+      display: flex; flex-wrap: wrap; gap: 18px;
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    .actos-hero__meta strong { color: var(--text-primary); font-weight: 600; }
+    .actos-hero__badges {
+      display: flex; gap: 8px; flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .actos-hero__right {
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .actos-hero__right-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+    .actos-hero__right-value {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -.3px;
+      margin-top: 4px;
+    }
+    .actos-hero__right-value--positive { color: var(--green, #1f8923); }
+    .actos-hero__right-value--caution  { color: var(--accent, #d74009); }
+    .actos-hero__right-value--negative { color: #c01818; }
+    .actos-hero__right-sub {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* ── Grid 2 columnas (vista detalle): acto + aside ─────────────── */
+    .actos-detail-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr);
+      gap: 20px;
+      align-items: start;
+    }
+    @media (max-width: 1100px) {
+      .actos-detail-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── Card del acto en viewport ─────────────────────────────────── */
+    .acto-viewport-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg, 12px);
+      overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+    .acto-viewport-card__head {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      background: #fafbff;
+    }
+    .acto-viewport-card__head-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      font-weight: 700;
+      color: var(--text-secondary);
+    }
+    .acto-viewport-card__head-actions {
+      display: flex; gap: 8px;
+    }
+    .acto-viewport-card__body {
+      padding: 36px 56px;
+      max-height: 720px;
+      overflow-y: auto;
+    }
+    .acto-viewport-card__body::-webkit-scrollbar { width: 8px; }
+    .acto-viewport-card__body::-webkit-scrollbar-thumb {
+      background: var(--border-dark, #d0d4e6);
+      border-radius: 4px;
+    }
+
+    /* ── Documento del acto (look formal) ──────────────────────────── */
+    .acto-doc {
+      font-family: var(--font-sans);
+      color: #1a1a1a;
+      line-height: 1.7;
+      font-size: 14px;
+    }
+    .acto-doc__header {
+      text-align: center;
+      margin-bottom: 28px;
+      padding-bottom: 18px;
+      border-bottom: 2px solid #1a1a1a;
+    }
+    .acto-doc__ministerio {
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #002b5b;
+      margin-bottom: 8px;
+    }
+    .acto-doc__resolucion {
+      font-weight: 700;
+      font-size: 14.5px;
+      color: #002b5b;
+      letter-spacing: .5px;
+    }
+    .acto-doc__porlacual {
+      font-style: italic;
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--text-primary);
+    }
+    .acto-doc__body p { margin: 0 0 14px; }
+    .acto-doc__body strong { color: #1a1a1a; }
+    .acto-doc__footer {
+      margin-top: 36px;
+      padding-top: 22px;
+      border-top: 1px dashed var(--border-dark);
+      text-align: center;
+      font-size: 12px;
+      font-style: italic;
+      color: var(--text-secondary);
+    }
+
+    /* ── Aside (detalle) ───────────────────────────────────────────── */
+    .actos-aside {
+      display: flex; flex-direction: column; gap: 16px;
+      position: sticky;
+      top: 20px;
+    }
+    .actos-aside__card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg, 12px);
+      padding: 18px 20px;
+    }
+    .actos-aside__card-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      margin: 0 0 14px;
+    }
+    .actos-aside__row {
+      display: flex; justify-content: space-between;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .actos-aside__row:last-child { border-bottom: 0; }
+    .actos-aside__row-key {
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    .actos-aside__row-val {
+      color: var(--text-primary);
+      font-weight: 600;
+      text-align: right;
+    }
+    .actos-aside__actor {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 0;
+    }
+    .actos-aside__avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--accent, #d74009);
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700;
+      font-size: 12.5px;
+    }
+    .actos-aside__actor-name { font-size: 13.5px; font-weight: 600; color: var(--text-primary); line-height: 1.2; }
+    .actos-aside__actor-role { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+    /* ── Trazabilidad (timeline) ───────────────────────────────────── */
+    /* v1.10.3: container con alto fijo + scroll interno + ver más toggle.
+       Estados:
+       · collapsed (default): max-height 240px, overflow-y auto si list > 4.
+       · expanded:            max-height 480px, scroll si aún excede.
+       Fade en el bottom edge para señalar que hay más contenido scrolleable. */
+    .traza-scroll-box {
+      position: relative;
+      max-height: 240px;
+      overflow-y: auto;
+      transition: max-height .25s cubic-bezier(.4, 0, .2, 1);
+      /* Scrollbar custom sutil */
+      scrollbar-width: thin;
+      scrollbar-color: var(--border-dark, #d0d4e6) transparent;
+    }
+    .traza-scroll-box::-webkit-scrollbar { width: 6px; }
+    .traza-scroll-box::-webkit-scrollbar-track { background: transparent; }
+    .traza-scroll-box::-webkit-scrollbar-thumb {
+      background: var(--border-dark, #d0d4e6);
+      border-radius: 3px;
+    }
+    .traza-scroll-box::-webkit-scrollbar-thumb:hover { background: var(--text-secondary, #646587); }
+    .traza-scroll-box.is-expanded { max-height: 480px; }
+
+    /* Fade edge en el bottom para señalar overflow (solo cuando hay overflow). */
+    .traza-scroll-wrap {
+      position: relative;
+    }
+    .traza-scroll-wrap::after {
+      content: '';
+      position: absolute;
+      left: 0; right: 6px;  /* dejar espacio para el scrollbar */
+      bottom: 0;
+      height: 24px;
+      pointer-events: none;
+      background: linear-gradient(to bottom, transparent, var(--surface) 90%);
+      opacity: 0;
+      transition: opacity .15s;
+    }
+    .traza-scroll-wrap.has-overflow::after { opacity: 1; }
+
+    /* Toggle Ver más / Ver menos — patrón del modal Detalle del bandeja. */
+    .traza-toggle {
+      display: inline-flex; align-items: center; gap: 4px;
+      margin-top: 10px;
+      padding: 6px 8px 6px 0;
+      background: transparent;
+      border: 0;
+      color: var(--accent, #d74009);
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: opacity .15s;
+    }
+    .traza-toggle:hover { opacity: 0.75; }
+    .traza-toggle__chev {
+      transition: transform .25s cubic-bezier(.4, 0, .2, 1);
+    }
+    .traza-toggle.is-expanded .traza-toggle__chev {
+      transform: rotate(180deg);
+    }
+
+    .traza-list {
+      display: flex; flex-direction: column;
+      list-style: none;
+      margin: 0; padding: 0;
+      position: relative;
+    }
+    .traza-list::before {
+      content: '';
+      position: absolute;
+      left: 7px; top: 8px; bottom: 8px;
+      width: 2px;
+      background: var(--border);
+    }
+    .traza-list__item {
+      position: relative;
+      padding: 6px 0 14px 28px;
+    }
+    .traza-list__item::before {
+      content: '';
+      position: absolute;
+      left: 4px; top: 10px;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--border-dark);
+      box-shadow: 0 0 0 3px var(--surface);
+    }
+    .traza-list__item--active::before { background: var(--accent, #d74009); }
+    .traza-list__item-actor {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 1.3;
+    }
+    .traza-list__item-action {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+      margin-top: 2px;
+    }
+    .traza-list__item-date {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+      letter-spacing: .2px;
+    }
+
+    /* v1.10.2: footer pegado al acto card (no sticky a viewport). Vive
+       DENTRO del .acto-viewport-card como su última sección. Feedback Doug. */
+    .acto-viewport-card__footer {
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+      background: #fafbff;
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 12px;
+    }
+    .acto-viewport-card__footer-hint {
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      flex: 1; min-width: 0;
+      line-height: 1.45;
+    }
+    .acto-viewport-card__footer-actions {
+      display: flex; gap: 10px;
+      flex-shrink: 0;
+    }
+    @media (max-width: 900px) {
+      .acto-viewport-card__footer { flex-direction: column; align-items: stretch; }
+      .acto-viewport-card__footer-actions { justify-content: stretch; }
+      .acto-viewport-card__footer-actions > * { flex: 1; justify-content: center; }
+    }
+
+    /* v1.10.5: Descargar PDF — usa la clase canónica DS .naowee-btn--quiet
+       (que el DS provee) con override defensivo para text-decoration: none.
+       El usuario explícitamente pidió "estilos canónicos de ds naowee".
+       Selector específico para ganar sobre cualquier rule del DS que pueda
+       imponer underline en <a> tags. */
+    .acto-viewport-card__head a.naowee-btn,
+    .acto-viewport-card__head a.naowee-btn:hover,
+    .acto-viewport-card__head a.naowee-btn:visited,
+    .acto-viewport-card__head a.naowee-btn:focus,
+    .acto-viewport-card__head a.naowee-btn:active {
+      text-decoration: none !important;
+    }
+
+    /* v1.10.2: Read-only state — cuando el trámite está en Cumple, no se
+       muestran los CTAs aprobar/devolver porque ya está aprobado. */
+    .acto-viewport-card__footer--readonly {
+      justify-content: flex-start;
+    }
+    .acto-viewport-card__footer-status {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--green, #1f8923);
+    }
+
+    /* v1.10.2: Tabs de actos.html LIST — Por aprobar / Aprobados.
+       Mirror del patrón canónico .naowee-tabs del playground.
+       v1.10.4: variant --in-card: tabs viven DENTRO del .naowee-table-card,
+       debajo del head. Padding lateral igualado al head + border-bottom
+       full-width que sirve de separador con la tabla. */
+    /* v1.13.18: estilos de .actos-tab + variantes promovidos a
+       shared/components.css con hover canónico DS (peach naranja bg +
+       accent text). Doug: "los estados de hover no corresponden al DS". */
+
+    /* ── Table row click affordance (vista lista) ──────────────────── */
+    /* v1.12.1: hover bumpeado a #f0f2f8 — el #fafbfd canónico era demasiado
+       sutil (casi blanco) y Doug reportó "no hace hover tampoco". Este tono
+       es ligeramente más visible pero sigue siendo gris neutral (no peach).
+       Forzamos con !important para vencer la regla canónica de components.css
+       L762 que pone #fafbfd con specificity (0,3,3). */
+    .naowee-table tbody tr.row-clickable {
+      cursor: pointer;
+      transition: background var(--duration-fast, .12s) var(--ease-in-out, ease);
+    }
+    .naowee-table-card .naowee-table tbody tr.row-clickable:hover,
+    .naowee-table tbody tr.row-clickable:hover {
+      /* v1.13.47 (Doug 27/05/2026): hover más clarito — antes #f0f2f8 muy
+         saturado. Ahora gris neutral muy suave consistente con otras tablas. */
+      background: #fafbfd !important;
+    }
+    /* v1.12.3 defensive removido en v1.12.4. */
+    /* v1.12.1: action button "Revisar acto →" — forzar hover canónico
+       del naowee-btn--mute (peach naranja). El onclick="event.stopPropagation()"
+       en el <a> no debería matar el hover CSS, pero por defensividad
+       hacemos override explícito. */
+    .naowee-table tbody tr a.naowee-btn--mute:hover,
+    .naowee-table tbody tr a.naowee-btn--mute:focus-visible {
+      background: var(--orange-bg, #fff3e6) !important;
+      color: var(--accent, #d74009) !important;
+      text-decoration: none !important;
+    }
+    /* v1.10.4: padding inferior del card cuando contiene tabla, para que el
+       hover state de la última row no toque el border del container. */
+    .naowee-table-card > div:last-child {
+      padding-bottom: 8px;
+    }
+    .row-version-pill {
+      display: inline-flex; align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      background: var(--bg-soft, #f5f6fa);
+      color: var(--text-secondary);
+      font-family: var(--font-sans);font-variant-numeric:tabular-nums;
+    }
+    .row-version-pill--bumped {
+      background: var(--orange-bg, #fff3e6);
+      color: var(--accent, #d74009);
+    }
+
+    /* v1.12.7: empty state migrado al canónico .naowee-empty-state (DS
+       v1.8.0) con el override IVC global (icon 40×40) en components.css.
+       Las reglas locales custom .actos-empty quedan removidas para
+       cumplir con la consistencia pedida por Doug. */
+
+    /* v1.13.19: estilos de .btn-aprobar promovidos a shared/components.css
+       como CTA verde canónico con glow. Doug: "todos los botones verdes
+       ponles ese estilo que ya sea canónico no tenga que volver a repetirlo". */
+  </style>
+</head>
+<body>
+
+  <div class="shell" id="app-shell"></div>
+
+  <template id="page-content">
+    <div class="page-inner" id="pageInner">
+      <!-- Renderizado por JS según ?id= -->
+    </div>
+  </template>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       Modal: Devolver acto para corrección — el coordinador NO corrige
+       directamente, devuelve al profesional con causales. Trigger un nuevo
+       versionamiento (INS-004 loop). Feedback Doug v1.10.2.
+       ═══════════════════════════════════════════════════════════════════ -->
+  <div class="naowee-modal-overlay" id="modalCorregirOverlay" role="dialog" aria-modal="true" aria-labelledby="modalCorregirTitle">
+    <div class="naowee-modal" style="width:95vw; max-width: 560px;">
+      <div class="naowee-modal__header">
+        <div class="naowee-modal__title-group">
+          <h2 class="naowee-modal__title" id="modalCorregirTitle">Devolver acto para corrección</h2>
+          <p class="naowee-modal__subtitle" id="modalCorregirSub">El profesional generará una nueva versión del acto.</p>
+        </div>
+        <button type="button" class="naowee-modal__dismiss" id="modalCorregirClose" aria-label="Cerrar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="naowee-modal__body">
+
+        <div class="naowee-message naowee-message--caution" style="margin-bottom: 16px;">
+          <div class="naowee-message__header">
+            <span class="naowee-message__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </span>
+            <span class="naowee-message__title">Esto generará una nueva versión</span>
+          </div>
+          <div class="naowee-message__text">
+            El trámite volverá al estado <strong>En validación</strong> y el profesional asignado generará una nueva versión del acto que pasará nuevamente por su revisión.
+          </div>
+        </div>
+
+        <div class="naowee-textfield naowee-textfield--textarea">
+          <label class="naowee-textfield__label" for="corregirCausales">Indicaciones para el profesional <span style="color:#c01818;">*</span></label>
+          <div class="naowee-textfield__input-wrap" style="height:auto; padding: 10px 12px;">
+            <textarea class="naowee-textfield__input" id="corregirCausales" maxlength="800" rows="5" placeholder="Indique las correcciones que el profesional debe aplicar al acto administrativo…" style="min-height:120px; resize:vertical; line-height:1.55; border:0; outline:none; width:100%; background:transparent; font-family:inherit; font-size:14px; color:inherit;"></textarea>
+          </div>
+          <p class="naowee-textfield__helper">Estas indicaciones quedarán visibles para el profesional al reabrir el trámite.</p>
+        </div>
+
+      </div>
+      <div class="naowee-modal__footer naowee-modal__footer--end" style="gap: 10px;">
+        <button type="button" class="naowee-btn naowee-btn--mute" id="modalCorregirCancel">Cancelar</button>
+        <button type="button" class="naowee-btn naowee-btn--loud" id="modalCorregirConfirm" disabled>Devolver al profesional</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../shared/data.js?v=1.13.56"></script>
+  <script src="../shared/shell.js?v=1.13.56"></script>
+  <script src="../shared/ivc-store.js?v=1.13.56"></script>
+  <script src="../shared/naowee-footer.js?v=1.13.56" defer></script>
+
+  <script>
+    /* ═══════════════════════════════════════════════════════════════════
+       Aprobación de actos — Coordinador IVC
+       v1.10.0 (2026-05-26)
+
+       Rutas (single-file):
+       · actos.html         → LIST (tabla de trámites PendienteCOO)
+       · actos.html?id=…    → DETAIL (acto en viewport + aside + CTAs)
+
+       Acciones del coordinador en DETAIL:
+       · Aprobar  → estado pasa a 'PendienteFirma' (aprobado COO, pendiente firma Director)
+       · Corregir → modal con causales → estado vuelve a 'En validación'
+                    con observación que indica que es para regenerar versión
+                    del acto. El profesional asignado recibe el trámite y
+                    debe finalizar nuevamente para generar v2 del acto.
+       ═══════════════════════════════════════════════════════════════════ */
+
+    var state = {
+      tramite: null,
+      tramites: []
+    };
+
+    /* ─── Init ─────────────────────────────────────────────────────────── */
+    document.addEventListener('DOMContentLoaded', function () {
+      window.IVCData.setPerfil('coordinador');
+
+      var template = document.getElementById('page-content');
+      var shellRoot = document.getElementById('app-shell');
+      shellRoot.innerHTML = template.innerHTML;
+
+      window.IVCShell.init({ title: null, activeNav: 'actos-coord' });
+
+      IVCStore.init();
+      loadFromStore();
+
+      /* Live updates desde otras tabs */
+      IVCStore.on('store:changed-external', function () {
+        loadFromStore();
+        route();
+      });
+
+      wireModalCorregir();
+      route();
+    });
+
+    function loadFromStore() {
+      state.tramites = IVCStore.getTramites({ area: 'aficionado' }) || [];
+    }
+
+    function route() {
+      var params = new URLSearchParams(location.search);
+      var id = params.get('id');
+      var host = document.getElementById('pageInner');
+      if (!host) return;
+      if (id) {
+        state.tramite = state.tramites.find(function (t) { return t.id === id; }) || null;
+        if (!state.tramite) {
+          renderEmpty(host, 'Trámite no encontrado', 'El identificador no es válido o el trámite ya no está disponible.');
+          return;
+        }
+        renderDetail(host);
+      } else {
+        state.tramite = null;
+        renderList(host);
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       LIST VIEW — Tabs: Por aprobar (PendienteCOO) / Aprobados (Cumple)
+       ═══════════════════════════════════════════════════════════════════ */
+    function renderList(host) {
+      var params = new URLSearchParams(location.search);
+      var activeTab = params.get('tab') === 'aprobados' ? 'aprobados' : 'por-aprobar';
+
+      var pendientes = state.tramites.filter(function (t) { return t.estado === 'PendienteCOO'; });
+      var aprobados  = state.tramites.filter(function (t) { return t.estado === 'PendienteFirma'; });
+
+      /* Stats */
+      var enSegunda = pendientes.filter(function (t) { return _versionActo(t) >= 2; }).length;
+      var aprobadosHoy = aprobados.filter(function (t) {
+        var ultEvento = (t.historico || []).slice().reverse()
+          .find(function (h) { return h.estado === 'Cumple' && (h.actor || '').toLowerCase().indexOf('coordinador') >= 0; });
+        if (!ultEvento) return false;
+        var hoy = new Date().toISOString().slice(0, 10);
+        return ultEvento.fecha === hoy;
+      }).length;
+
+      var listadoActivo = activeTab === 'aprobados' ? aprobados : pendientes;
+      /* v1.10.4: title fijo "Actos" — la diferenciación por estado vive en
+         los tabs internos y en el subtitle dinámico (count + contexto). */
+      var subtitleText = activeTab === 'aprobados'
+        ? aprobados.length + ' trámites aprobados · enviados a firma del Director'
+        : pendientes.length + ' trámites por aprobar · Loop COO INS-004';
+
+      host.innerHTML =
+        '<header class="page-title-block">' +
+          '<h1 class="page-title">Aprobación de actos administrativos</h1>' +
+          '<p class="page-subtitle">Revise los actos generados por los profesionales antes de que pasen a firma del Director del IVC.</p>' +
+        '</header>' +
+
+        '<section class="stat-grid">' +
+          '<div class="naowee-stat-card naowee-stat-card--accent">' +
+            '<span class="naowee-stat-card__label">Pendientes COO</span>' +
+            '<span class="naowee-stat-card__value">' + pendientes.length + '</span>' +
+            '<span class="naowee-stat-card__hint">Actos esperando su revisión</span>' +
+          '</div>' +
+          '<div class="naowee-stat-card naowee-stat-card--info">' +
+            '<span class="naowee-stat-card__label">En segunda revisión</span>' +
+            '<span class="naowee-stat-card__value">' + enSegunda + '</span>' +
+            '<span class="naowee-stat-card__hint">Versión 2 o superior</span>' +
+          '</div>' +
+          '<div class="naowee-stat-card naowee-stat-card--success">' +
+            '<span class="naowee-stat-card__label">Aprobados hoy</span>' +
+            '<span class="naowee-stat-card__value">' + aprobadosHoy + '</span>' +
+            '<span class="naowee-stat-card__hint">Enviados a firma del Director</span>' +
+          '</div>' +
+        '</section>' +
+
+        /* v1.10.4: card unificado con tabs DENTRO. Título genérico "Actos"
+           (no "Actos por aprobar") porque la card alberga ambos estados. */
+        '<section class="naowee-table-card">' +
+          '<div class="naowee-table-card__head">' +
+            '<div class="naowee-table-card__head-text">' +
+              '<h2 class="naowee-table-card__title">Actos</h2>' +
+              '<p class="naowee-table-card__subtitle">' + subtitleText + '</p>' +
+            '</div>' +
+          '</div>' +
+          /* Tabs Por aprobar / Aprobados — viven dentro del card, debajo del head. */
+          '<nav class="actos-tabs-wrap actos-tabs-wrap--in-card" role="tablist">' +
+            /* v1.13.12: iconos clipboard-check / check-circle. */
+            '<button type="button" class="actos-tab' + (activeTab === 'por-aprobar' ? ' is-selected' : '') + '" role="tab" onclick="window._switchTab(\'por-aprobar\')">' +
+              '<svg class="ivc-tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' +
+              'Por aprobar' +
+              '<span class="actos-tab__count">' + pendientes.length + '</span>' +
+            '</button>' +
+            '<button type="button" class="actos-tab' + (activeTab === 'aprobados' ? ' is-selected' : '') + '" role="tab" onclick="window._switchTab(\'aprobados\')">' +
+              '<svg class="ivc-tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' +
+              'Aprobados' +
+              '<span class="actos-tab__count">' + aprobados.length + '</span>' +
+            '</button>' +
+          '</nav>' +
+          (listadoActivo.length === 0
+            ? _renderListEmpty(activeTab)
+            : _renderListTable(listadoActivo, activeTab)) +
+        '</section>';
+    }
+
+    /* v1.10.2: switch de tab — actualiza URL con ?tab y re-renderiza. */
+    window._switchTab = function (tab) {
+      var url = new URL(location.href);
+      if (tab === 'por-aprobar') {
+        url.searchParams.delete('tab');
+      } else {
+        url.searchParams.set('tab', tab);
+      }
+      history.replaceState({}, '', url.toString());
+      route();
+    };
+
+    function _renderListEmpty(activeTab) {
+      var copy = activeTab === 'aprobados'
+        ? { title: 'Sin actos aprobados aún', sub: 'Cuando apruebe actos administrativos, aparecerán aquí mientras esperan firma del Director del IVC.' }
+        : { title: 'Sin actos por aprobar',   sub: 'Cuando los profesionales generen actos administrativos por trámites que cumplen, aparecerán aquí esperando su visto bueno (COO) antes de pasar a firma del Director.' };
+      return '<div class="naowee-empty-state">' +
+        '<div class="naowee-empty-state__icon">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>' +
+        '</div>' +
+        '<div class="naowee-empty-state__title">' + escHtml(copy.title) + '</div>' +
+        '<div class="naowee-empty-state__description">' + escHtml(copy.sub) + '</div>' +
+      '</div>';
+    }
+
+    function _renderListTable(tramites, activeTab) {
+      var isAprobados = activeTab === 'aprobados';
+      var fechaColLabel = isAprobados ? 'Fecha aprobación' : 'Fecha del acto';
+      var actionLabel = isAprobados ? 'Ver acto →' : 'Revisar acto →';
+
+      return '<div style="overflow-x:auto;">' +
+        '<table class="naowee-table">' +
+          '<thead>' +
+            '<tr>' +
+              '<th>Radicado</th>' +
+              '<th>Tipo</th>' +
+              '<th>Organismo</th>' +
+              '<th>Profesional</th>' +
+              '<th>' + fechaColLabel + '</th>' +
+              '<th>Versión</th>' +
+              '<th>' + (isAprobados ? 'Estado' : 'Plazo') + '</th>' +
+              /* v1.10.5: ACCIONES centrado horizontalmente alineado con el CTA. */
+              '<th style="text-align:center;">Acciones</th>' +
+            '</tr>' +
+          '</thead>' +
+          '<tbody>' +
+            tramites.map(function (t) {
+              var version = _versionActo(t);
+              var versionPillClass = version >= 2 ? 'row-version-pill row-version-pill--bumped' : 'row-version-pill';
+              var profesional = t.profesionalNombre || '—';
+
+              var fechaTxt = '—';
+              var lastStatusCell = '—';
+
+              /* v1.13.14: fecha en línea principal + hora gris debajo. */
+              function _fechaConHora(fecha, hora) {
+                if (!fecha) return '—';
+                return '<div>' + formatDate(fecha) + '</div>' +
+                       (hora ? '<div style="font-size:11.5px;color:var(--text-secondary);margin-top:2px;font-feature-settings:\'tnum\';">' + hora + '</div>' : '');
+              }
+              if (isAprobados) {
+                var evAprob = (t.historico || []).slice().reverse()
+                  .find(function (h) { return h.estado === 'Cumple'; });
+                if (evAprob) fechaTxt = _fechaConHora(evAprob.fecha, evAprob.hora);
+                lastStatusCell = '<span class="naowee-badge naowee-badge--positive naowee-badge--quiet naowee-badge--small">Pendiente firma Director</span>';
+              } else {
+                var evActo = _findEventoActo(t);
+                if (evActo) fechaTxt = _fechaConHora(evActo.fecha, evActo.hora);
+                var plazo = (typeof t.plazoDias === 'number') ? t.plazoDias : 15;
+                var plazoTxt = plazo <= 0 ? 'Vencido' : (plazo + ' días');
+                var plazoCls = plazo <= 0 ? 'row-plazo--negative' : (plazo <= 5 ? 'row-plazo--caution' : 'row-plazo--positive');
+                lastStatusCell = '<span class="row-plazo ' + plazoCls + '">' + plazoTxt + '</span>';
+              }
+
+              return '<tr class="row-clickable" data-id="' + escHtml(t.id) + '" onclick="window.location.href=\'actos.html?id=' + encodeURIComponent(t.id) + '\'">' +
+                '<td><span style="font-family:var(--font-sans);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;">' + escHtml(t.id) + '</span></td>' +
+                '<td>' + escHtml(t.tipoTramite || 'Otorgamiento') + '</td>' +
+                '<td><div style="font-weight:500;">' + escHtml(t.organismo || '—') + '</div><div style="font-size:11.5px;color:var(--text-secondary);font-family:var(--font-sans);font-variant-numeric:tabular-nums;margin-top:2px;">NIT ' + escHtml(t.nit || '—') + '</div></td>' +
+                '<td>' + escHtml(profesional) + '</td>' +
+                '<td>' + fechaTxt + '</td>' +
+                '<td><span class="' + versionPillClass + '">v' + version + '</span></td>' +
+                '<td>' + lastStatusCell + '</td>' +
+                /* v1.10.5: CTA centrado en la celda — mismo eje que el TH "Acciones". */
+                '<td style="text-align:center;">' +
+                  '<a href="actos.html?id=' + encodeURIComponent(t.id) + '" class="naowee-btn naowee-btn--mute naowee-btn--small" style="text-decoration: none;" onclick="event.stopPropagation();">' + actionLabel + '</a>' +
+                '</td>' +
+              '</tr>';
+            }).join('') +
+          '</tbody>' +
+        '</table>' +
+      '</div>';
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       DETAIL VIEW — state-aware (PendienteCOO con CTAs · Cumple read-only)
+       ═══════════════════════════════════════════════════════════════════ */
+    function renderDetail(host) {
+      var t = state.tramite;
+      var plazo = (typeof t.plazoDias === 'number') ? t.plazoDias : 15;
+      var plazoCls = plazo <= 0 ? 'negative' : plazo <= 5 ? 'caution' : 'positive';
+      var plazoTxt = plazo <= 0 ? 'Vencido' : (plazo + ' días');
+      var venceTxt = computeVence(t.fechaRadicacion, 15);
+
+      var evActo = _findEventoActo(t);
+      var profesionalNombre = t.profesionalNombre || (evActo && (evActo.actor || '').replace(/\s*\([^)]*\)\s*$/, '')) || '—';
+      var version = _versionActo(t);
+
+      /* v1.10.2: state-aware — PendienteCOO requiere acción, PendienteFirma es read-only.
+         v1.11.0: PendienteFirma reemplaza al antiguo 'Cumple' como estado intermedio
+         entre aprobación COO y firma Director. */
+      var isReadOnly = t.estado === 'PendienteFirma';
+      var estadoBadge = isReadOnly
+        ? '<span class="naowee-badge naowee-badge--positive naowee-badge--quiet">Aprobado · pendiente firma Director</span>'
+        : '<span class="naowee-badge naowee-badge--caution naowee-badge--quiet">En aprobación COO</span>';
+      var versionBadge = '<span class="naowee-badge naowee-badge--neutral naowee-badge--quiet">v' + version + (version >= 2 ? ' · regenerado' : '') + '</span>';
+
+      host.innerHTML =
+        /* Back */
+        '<a href="actos.html' + (isReadOnly ? '?tab=aprobados' : '') + '" class="back-link">' +
+          '<svg class="back-link__chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>' +
+          'Volver a aprobación de actos' +
+        '</a>' +
+
+        /* Hero */
+        '<section class="actos-hero">' +
+          '<div>' +
+            '<div class="actos-hero__rad">' + escHtml(t.id) + '</div>' +
+            '<h1 class="actos-hero__title">' + escHtml(t.organismo || '—') + '</h1>' +
+            '<div class="actos-hero__meta">' +
+              '<span>NIT <strong>' + escHtml(t.nit || '—') + '</strong></span>' +
+              '<span>Trámite: <strong>' + escHtml(t.tipoTramite || 'Otorgamiento') + '</strong></span>' +
+              '<span>Radicado: <strong>' + formatDate(t.fechaRadicacion) + '</strong></span>' +
+              (evActo ? '<span>Acto generado: <strong>' + formatDate(evActo.fecha) + ' · ' + (evActo.hora || '') + '</strong></span>' : '') +
+            '</div>' +
+            '<div class="actos-hero__badges">' + estadoBadge + versionBadge + '</div>' +
+          '</div>' +
+          '<div class="actos-hero__right">' +
+            '<div class="actos-hero__right-label">Plazo restante</div>' +
+            '<div class="actos-hero__right-value actos-hero__right-value--' + plazoCls + '">' + plazoTxt + '</div>' +
+            '<div class="actos-hero__right-sub">Vence ' + venceTxt + '</div>' +
+          '</div>' +
+        '</section>' +
+
+        /* Grid 2 cols */
+        '<div class="actos-detail-grid">' +
+          /* COL 1: acto en viewport + footer integrado */
+          _renderActoCard(t, isReadOnly) +
+          /* COL 2: aside (info + trazabilidad) */
+          _renderAside(t, profesionalNombre) +
+        '</div>';
+
+      /* v1.10.3: post-render — detectar si la trazabilidad excede el alto
+         y mostrar el toggle "Ver más" sólo cuando aplica. */
+      _initTrazaScroll();
+    }
+
+    /* v1.10.3: setup del scroll box + toggle. Si el contenido no excede el
+       max-height collapsed, ocultamos el toggle (no agrega valor). */
+    function _initTrazaScroll() {
+      var box = document.getElementById('trazaScrollBox');
+      var wrap = document.getElementById('trazaScrollWrap');
+      var toggle = document.getElementById('trazaToggle');
+      if (!box || !wrap || !toggle) return;
+
+      /* scrollHeight = alto del contenido; clientHeight = alto visible.
+         Si scroll > client → hay overflow → mostrar toggle + fade edge. */
+      var hasOverflow = box.scrollHeight - box.clientHeight > 4;
+      toggle.style.display = hasOverflow ? 'inline-flex' : 'none';
+      wrap.classList.toggle('has-overflow', hasOverflow);
+    }
+
+    /* v1.10.3: toggle expand/collapse del scroll box. */
+    window._toggleTraza = function () {
+      var box = document.getElementById('trazaScrollBox');
+      var toggle = document.getElementById('trazaToggle');
+      var label = toggle && toggle.querySelector('.traza-toggle__label');
+      if (!box || !toggle) return;
+      var isExpanded = box.classList.toggle('is-expanded');
+      toggle.classList.toggle('is-expanded', isExpanded);
+      if (label) label.textContent = isExpanded ? 'Ver menos' : 'Ver más';
+    };
+
+    function _renderActoCard(t, isReadOnly) {
+      var numActo = _numActo(t);
+      var version = _versionActo(t);
+      var versionStr = version >= 2 ? ' (v' + version + ')' : '';
+      var fileName = 'acto-otorgamiento-' + t.id + (version >= 2 ? '-v' + version : '') + '.pdf';
+
+      var headTitle = isReadOnly
+        ? 'Acto administrativo · aprobado COO'
+        : 'Acto administrativo en revisión' + versionStr;
+
+      var docFooterTxt = isReadOnly
+        ? '[Aprobado por el Coordinador IVC · Pendiente firma electrónica del Director del IVC]'
+        : '[Pendiente revisión COO · Una vez aprobado por el Coordinador IVC, será firmado electrónicamente por el Director del IVC]';
+
+      /* v1.10.2: footer integrado en el card — para PendienteCOO muestra
+         CTAs (devolver + aprobar); para Cumple muestra read-only status. */
+      var footerHtml = isReadOnly
+        ? '<div class="acto-viewport-card__footer acto-viewport-card__footer--readonly">' +
+            '<span class="acto-viewport-card__footer-status">' +
+              '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' +
+              'Acto aprobado por el Coordinador IVC · Pendiente firma del Director' +
+            '</span>' +
+          '</div>'
+        : '<div class="acto-viewport-card__footer">' +
+            '<div class="acto-viewport-card__footer-hint">' +
+              'Si lo aprueba, el acto pasará al Director del IVC para firma. Si lo devuelve, el profesional generará una nueva versión.' +
+            '</div>' +
+            '<div class="acto-viewport-card__footer-actions">' +
+              '<button type="button" class="naowee-btn naowee-btn--mute" onclick="window.openCorregirModal()">' +
+                '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 14 20 9 15 4"/><path d="M20 9H8a5 5 0 0 0-5 5v3"/></svg>' +
+                'Devolver para corrección' +
+              '</button>' +
+              '<button type="button" class="btn-aprobar" onclick="window.aprobarActo()">' +
+                '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' +
+                'Aprobar y enviar a firma del Director' +
+              '</button>' +
+            '</div>' +
+          '</div>';
+
+      return '<div class="acto-viewport-card">' +
+        '<div class="acto-viewport-card__head">' +
+          '<div class="acto-viewport-card__head-title">' + headTitle + '</div>' +
+          '<div class="acto-viewport-card__head-actions">' +
+            /* v1.10.5: Descargar PDF — naowee-btn--quiet canónico DS + small. */
+            '<a href="#" class="naowee-btn naowee-btn--quiet naowee-btn--small" onclick="event.preventDefault(); window._mockDownload(\'' + fileName + '\');">' +
+              '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' +
+              'Descargar PDF' +
+            '</a>' +
+          '</div>' +
+        '</div>' +
+        '<div class="acto-viewport-card__body">' +
+          '<article class="acto-doc">' +
+            '<header class="acto-doc__header">' +
+              '<div class="acto-doc__ministerio">República de Colombia · Ministerio del Deporte</div>' +
+              '<div class="acto-doc__resolucion">RESOLUCIÓN NÚMERO ' + numActo + ' DE 2026</div>' +
+              '<p class="acto-doc__porlacual">"Por la cual se otorga el Reconocimiento Deportivo a ' + escHtml(t.organismo || '—') + '"</p>' +
+            '</header>' +
+            '<div class="acto-doc__body">' +
+              '<p><strong>EL MINISTRO DEL DEPORTE</strong>, en uso de sus facultades legales, y en particular las conferidas por el Decreto 1387 de 1970, la Ley 181 de 1995 y el Decreto 1085 de 2015,</p>' +
+              '<p><strong>CONSIDERANDO:</strong></p>' +
+              '<p>1. Que ' + escHtml(t.organismo || '—') + ', identificada con NIT ' + escHtml(t.nit || '—') + ', radicó solicitud bajo el número ' + escHtml(t.id) + ' el ' + formatDateLong(t.fechaRadicacion) + '.</p>' +
+              '<p>2. Que la documentación aportada por el organismo fue revisada por el profesional IVC asignado, quien certificó el cumplimiento de la totalidad de los requisitos exigidos por el Artículo 2.1.1.2 del Decreto 1387 de 1970.</p>' +
+              '<p>3. Que en virtud de lo anterior, procede el reconocimiento deportivo solicitado.</p>' +
+              '<p><strong>RESUELVE:</strong></p>' +
+              '<p><strong>ARTÍCULO PRIMERO.</strong> Otorgar Reconocimiento Deportivo a ' + escHtml(t.organismo || '—') + ' en los términos de la legislación vigente.</p>' +
+              '<p><strong>ARTÍCULO SEGUNDO.</strong> Disponer la inscripción del organismo en el Registro Nacional Deportivo, una vez ejecutoriado el presente acto.</p>' +
+              '<p><strong>ARTÍCULO TERCERO.</strong> Notificar al organismo en los términos del Código de Procedimiento Administrativo y de lo Contencioso Administrativo.</p>' +
+            '</div>' +
+            '<footer class="acto-doc__footer">' + docFooterTxt + '</footer>' +
+          '</article>' +
+        '</div>' +
+        footerHtml +
+      '</div>';
+    }
+
+    function _renderAside(t, profesionalNombre) {
+      var historicoOrdenado = (t.historico || []).slice().reverse();
+      var initials = profesionalNombre.replace(/\([^)]*\)/g, '').trim().split(/\s+/).slice(0, 2)
+        .map(function (p) { return p.charAt(0).toUpperCase(); }).join('') || '?';
+
+      /* Conteo de docs validados */
+      var docs = Array.isArray(t.documentos) ? t.documentos : [];
+      var docsCumple = docs.filter(function (d) { return d.validacion === 'si'; }).length;
+      var docsTotal = docs.length;
+
+      return '<aside class="actos-aside">' +
+        /* Profesional que generó el acto */
+        '<div class="actos-aside__card">' +
+          '<h3 class="actos-aside__card-title">Profesional que generó el acto</h3>' +
+          '<div class="actos-aside__actor">' +
+            '<div class="actos-aside__avatar">' + initials + '</div>' +
+            '<div>' +
+              '<div class="actos-aside__actor-name">' + escHtml(profesionalNombre) + '</div>' +
+              '<div class="actos-aside__actor-role">Profesional IVC · Validación de requisitos</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+
+        /* Resumen de la validación */
+        '<div class="actos-aside__card">' +
+          '<h3 class="actos-aside__card-title">Resumen de la validación</h3>' +
+          '<div class="actos-aside__row">' +
+            '<span class="actos-aside__row-key">Veredicto del profesional</span>' +
+            '<span class="actos-aside__row-val" style="color: var(--green, #1f8923);">CUMPLE ✓</span>' +
+          '</div>' +
+          '<div class="actos-aside__row">' +
+            '<span class="actos-aside__row-key">Documentos validados</span>' +
+            '<span class="actos-aside__row-val">' + docsCumple + ' / ' + docsTotal + (docsTotal > 0 ? '' : ' (mock)') + '</span>' +
+          '</div>' +
+          '<div class="actos-aside__row">' +
+            '<span class="actos-aside__row-key">Versión del acto</span>' +
+            '<span class="actos-aside__row-val">v' + _versionActo(t) + '</span>' +
+          '</div>' +
+          '<div class="actos-aside__row">' +
+            '<span class="actos-aside__row-key">Tipo de organismo</span>' +
+            '<span class="actos-aside__row-val">' + escHtml(_tipoOrgLabel(t.tipoOrganismo)) + '</span>' +
+          '</div>' +
+        '</div>' +
+
+        /* v1.10.3: Trazabilidad con alto fijo + scroll interno + ver más/menos.
+           Para historicos largos (>4 entries), el container scrollea internamente.
+           Toggle expande el max-height para ver más contexto sin perder el scroll. */
+        '<div class="actos-aside__card">' +
+          '<h3 class="actos-aside__card-title">Trazabilidad completa</h3>' +
+          '<div class="traza-scroll-wrap" id="trazaScrollWrap">' +
+            '<div class="traza-scroll-box" id="trazaScrollBox">' +
+              '<ol class="traza-list">' +
+                historicoOrdenado.map(function (h, i) {
+                  var cls = i === 0 ? 'traza-list__item traza-list__item--active' : 'traza-list__item';
+                  return '<li class="' + cls + '">' +
+                    '<div class="traza-list__item-actor">' + escHtml(h.actor || '—') + '</div>' +
+                    '<div class="traza-list__item-action">' + escHtml(h.accion || '—') + '</div>' +
+                    '<div class="traza-list__item-date">' + formatDate(h.fecha) + ' · ' + (h.hora || '') + '</div>' +
+                  '</li>';
+                }).join('') +
+              '</ol>' +
+            '</div>' +
+          '</div>' +
+          /* Toggle aparece solo si hay overflow real — wired post-render. */
+          '<button type="button" class="traza-toggle" id="trazaToggle" style="display:none;" onclick="window._toggleTraza()">' +
+            '<span class="traza-toggle__label">Ver más</span>' +
+            '<svg class="traza-toggle__chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>' +
+          '</button>' +
+        '</div>' +
+      '</aside>';
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       ACCIONES — Aprobar / Corregir
+       ═══════════════════════════════════════════════════════════════════ */
+    window.aprobarActo = function () {
+      var t = state.tramite;
+      if (!t) return;
+      /* v1.11.1: el actor se lee del perfil activo de IVCData.PERFILES en lugar
+         de hardcoded. Así el historico refleja al coordinador real (Carolina Méndez)
+         y futuras adiciones (nuevos coordinadores) no requieren tocar este string. */
+      var perfilCoord = (window.IVCData && window.IVCData.PERFILES && window.IVCData.PERFILES['coordinador']) || {};
+      var actor = (perfilCoord.nombre || 'Coordinador IVC') + ' (Coordinador IVC)';
+      var version = _versionActo(t);
+      var detalle = 'Acto v' + version + ' aprobado (COO). Enviado al Director del IVC para firma electrónica.';
+      /* v1.11.0: tras aprobación COO, estado pasa a PendienteFirma (no Cumple).
+         El Director recibe el trámite en su bandeja y al firmar lo lleva a Firmado. */
+      IVCStore.actualizarEstado(t.id, 'PendienteFirma', actor, detalle);
+      _showSnackbar('Acto administrativo aprobado. Enviado al Director del IVC para firma electrónica.', 'success');
+      setTimeout(function () { window.location.href = 'actos.html'; }, 1200);
+    };
+
+    window.openCorregirModal = function () {
+      var t = state.tramite;
+      if (!t) return;
+      document.getElementById('modalCorregirSub').textContent =
+        t.id + ' · ' + (t.organismo || '');
+      document.getElementById('corregirCausales').value = '';
+      document.getElementById('modalCorregirConfirm').disabled = true;
+      document.getElementById('modalCorregirOverlay').classList.add('open');
+      setTimeout(function () { document.getElementById('corregirCausales').focus(); }, 60);
+    };
+
+    function wireModalCorregir() {
+      var overlay = document.getElementById('modalCorregirOverlay');
+      var ta = document.getElementById('corregirCausales');
+      var confirmBtn = document.getElementById('modalCorregirConfirm');
+
+      function close() { overlay.classList.remove('open'); }
+      document.getElementById('modalCorregirClose').addEventListener('click', close);
+      document.getElementById('modalCorregirCancel').addEventListener('click', close);
+      overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+
+      /* Gate del CTA: confirmar requiere ≥10 caracteres de causales */
+      ta.addEventListener('input', function () {
+        confirmBtn.disabled = ta.value.trim().length < 10;
+      });
+
+      confirmBtn.addEventListener('click', function () {
+        var t = state.tramite;
+        if (!t) return;
+        var causales = ta.value.trim();
+        if (causales.length < 10) return;
+        var version = _versionActo(t);
+        /* v1.11.1: actor dinámico desde IVCData.PERFILES (consistencia con aprobar). */
+        var perfilCoord = (window.IVCData && window.IVCData.PERFILES && window.IVCData.PERFILES['coordinador']) || {};
+        var actor = (perfilCoord.nombre || 'Coordinador IVC') + ' (Coordinador IVC)';
+        /* Devolver al profesional: estado vuelve a 'En validación' con causales.
+           El profesional asignado recibe el trámite y al re-finalizar generará
+           la versión v+1 del acto. */
+        var detalle = 'Acto v' + version + ' devuelto para corrección (COO). Causales: ' + causales;
+        IVCStore.actualizarEstado(t.id, 'En validación', actor, detalle);
+        close();
+        _showSnackbar('Acto devuelto al profesional para corrección. Se generará una nueva versión.', 'success');
+        setTimeout(function () { window.location.href = 'actos.html'; }, 1200);
+      });
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       Helpers
+       ═══════════════════════════════════════════════════════════════════ */
+    function renderEmpty(host, title, sub) {
+      host.innerHTML =
+        '<a href="actos.html" class="back-link">' +
+          '<svg class="back-link__chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>' +
+          'Volver a aprobación de actos' +
+        '</a>' +
+        '<div class="naowee-empty-state" style="max-width:560px; margin:48px auto;">' +
+          '<div class="naowee-empty-state__icon">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>' +
+          '</div>' +
+          '<div class="naowee-empty-state__title">' + escHtml(title) + '</div>' +
+          '<div class="naowee-empty-state__description">' + escHtml(sub) + '</div>' +
+          '<div class="naowee-empty-state__action">' +
+            '<a class="naowee-btn naowee-btn--quiet" href="actos.html">Volver al listado</a>' +
+          '</div>' +
+        '</div>';
+    }
+
+    /* Encuentra el evento histórico donde se generó el acto (PendienteCOO). */
+    function _findEventoActo(t) {
+      var historico = t.historico || [];
+      for (var i = historico.length - 1; i >= 0; i--) {
+        var h = historico[i];
+        if (h.estado === 'PendienteCOO' || (h.accion || '').toLowerCase().indexOf('acto administrativo') >= 0) {
+          return h;
+        }
+      }
+      return null;
+    }
+
+    /* Cuenta cuántas veces el acto ha sido generado (cada PendienteCOO en historico). */
+    function _versionActo(t) {
+      var count = (t.historico || []).filter(function (h) {
+        return h.estado === 'PendienteCOO';
+      }).length;
+      return Math.max(1, count);
+    }
+
+    /* Mock: número de acto consecutivo basado en el suffix del radicado. */
+    function _numActo(t) {
+      var m = /(\d+)$/.exec(t.id || '');
+      var n = m ? parseInt(m[1], 10) : 1;
+      return '2026-' + String(n).padStart(3, '0');
+    }
+
+    function _tipoOrgLabel(tipo) {
+      return ({
+        liga: 'Liga deportiva',
+        asociacion: 'Asociación deportiva',
+        federacion: 'Federación deportiva'
+      })[tipo] || (tipo || '—');
+    }
+
+    function formatDate(iso) {
+      if (!iso) return '—';
+      var p = iso.split('-');
+      var months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      return p[2] + ' ' + months[parseInt(p[1], 10) - 1] + ' ' + p[0];
+    }
+
+    function formatDateLong(iso) {
+      if (!iso) return '—';
+      var p = iso.split('-');
+      var months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+      return p[2] + ' de ' + months[parseInt(p[1], 10) - 1] + ' de ' + p[0];
+    }
+
+    function computeVence(fechaRadIso, plazoDiasInicial) {
+      if (!fechaRadIso) return '—';
+      var d = new Date(fechaRadIso);
+      d.setDate(d.getDate() + plazoDiasInicial);
+      return formatDate(d.toISOString().slice(0, 10));
+    }
+
+    function escHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+      });
+    }
+
+    /* Snackbar canónico (mirror del de consultar.html) */
+    var SNACKBAR_ICON_CHECK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>';
+    function _showSnackbar(msg, variant) {
+      if (window.IVCShell && typeof window.IVCShell.showSnackbar === 'function') {
+        window.IVCShell.showSnackbar(msg, variant || 'success');
+        return;
+      }
+      /* Fallback */
+      var t = document.createElement('div');
+      t.textContent = msg;
+      t.style.cssText = 'position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#282834; color:#fff; padding:12px 20px; border-radius:10px; font-size:13px; z-index:9999;';
+      document.body.appendChild(t);
+      setTimeout(function () { t.remove(); }, 3000);
+    }
+    window._mockDownload = function (filename) {
+      _showSnackbar('Descargando ' + filename + ' (mock)', 'success');
+    };
+  </script>
+</body>
+</html>

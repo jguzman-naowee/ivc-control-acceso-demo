@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Apelaciones · Jurídica</title>
+  <link rel="stylesheet" href="../shared/fonts/google-sans.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/naowee-tech/naowee-design-system@v1.8.0/dist/design-system.css">
+  <link rel="stylesheet" href="../shared/tokens.css?v=1.13.56">
+  <link rel="stylesheet" href="../shared/components.css?v=1.13.57">
+  <link rel="stylesheet" href="../shared/shell.css?v=1.13.56">
+  <link rel="stylesheet" href="../shared/naowee-footer.css?v=1.13.56">
+  <style>/* FOOTER POINTER FIX INLINE — v1.12.5 defensive — Doug reportó que el cache de file:// servía CSS viejo y el footer flotante seguía bloqueando hover/click sobre las tablas. Esta regla está inline en el HTML para vencer al CSS externo cacheado. */ .naowee-floating-footer { pointer-events: none !important; } .naowee-floating-footer__version, .naowee-floating-footer__logo, .naowee-floating-footer__text, .naowee-floating-footer__sep { pointer-events: auto !important; }</style>
+
+  <style>
+    /* ═══════════════════════════════════════════════════════════════════
+       Jurídica — Apelaciones (Fase 6 del flujo V4)
+       v1.12.0 (2026-05-26)
+
+       Jurídica recibe trámites en estado EnApelacion. Resuelve cada caso
+       con un fallo: favorable (acto queda vigente) o desfavorable (trámite
+       cerrado en firme · NoCumple). Lane "FIN externo · JUR" en el diagrama.
+       ═══════════════════════════════════════════════════════════════════ */
+    .page-title-block { margin-bottom: 4px; }
+    .page-title { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -.5px; color: var(--text-primary); line-height: 1.2; }
+    .page-subtitle { margin: 6px 0 0; font-size: 14px; color: var(--text-secondary); font-weight: 500; }
+    .page-inner { max-width: 1480px !important; }
+    .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 24px 0; }
+    @media (max-width: 900px) { .stat-grid { grid-template-columns: 1fr; } }
+    @media (min-width: 901px) and (max-width: 1200px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+
+    .naowee-table tbody tr.row-clickable { cursor: pointer; transition: background var(--duration-fast, .12s) ease; }
+    .naowee-table tbody tr.row-clickable:hover { background: #fafbfd; }
+    .naowee-table-card > div:last-child { padding-bottom: 8px; }
+    .row-radicado { font-family: var(--font-sans);font-variant-numeric:tabular-nums; font-size: 13px; font-weight: 700; }
+
+    /* v1.12.7: empty state migrado al canónico .naowee-empty-state — ver
+       components.css#v1.12.7 (icono 40×40 + tipografía DS). */
+
+    /* Modal resolver apelación — 2 opciones tipo card
+       v1.13.25 (Doug 27/05/2026): "quítale el stroke a las cajas y haz
+       el gris más claro". Removed border + lifted fill (#fafbfd, gray
+       más claro). Para el estado seleccionado: se conserva el tinte
+       cromático del bg (orange/green/red) y se añade un inset ring
+       sutil de 1.5px como signaling sin volver a meter border real. */
+    .resolucion-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 16px 0; }
+    @media (max-width: 600px) { .resolucion-grid { grid-template-columns: 1fr; } }
+    .resolucion-card {
+      display: flex; flex-direction: column; gap: 8px;
+      padding: 20px 18px;
+      background: #fafbfd;
+      border: 0;
+      border-radius: 14px;
+      cursor: pointer; text-align: left; font-family: inherit;
+      transition: background .15s, transform .08s, box-shadow .15s;
+    }
+    .resolucion-card:hover { background: #f3f4f8; transform: translateY(-1px); }
+    .resolucion-card.is-selected {
+      background: var(--orange-bg, #fff3e6);
+      box-shadow: inset 0 0 0 1.5px var(--accent, #d74009);
+    }
+    .resolucion-card--favorable.is-selected {
+      background: var(--green-bg, #e6f4e7);
+      box-shadow: inset 0 0 0 1.5px var(--green, #1f8923);
+    }
+    .resolucion-card--desfavorable.is-selected {
+      background: #fff0ee;
+      box-shadow: inset 0 0 0 1.5px #c01818;
+    }
+    .resolucion-card__title { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+    .resolucion-card__desc { font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; }
+    .resolucion-card__chip {
+      align-self: flex-start; font-size: 10.5px; font-weight: 700;
+      letter-spacing: .3px; padding: 4px 10px; border-radius: 999px;
+      text-transform: uppercase;
+    }
+    .resolucion-card__chip--green { background: var(--green-bg, #e6f4e7); color: var(--green, #1f8923); }
+    .resolucion-card__chip--red   { background: #fff0ee; color: #c01818; }
+
+    .notif-modal-body__row { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .notif-modal-body__row:last-child { border-bottom: 0; }
+    .notif-modal-body__key { color: var(--text-secondary); flex: 0 0 160px; }
+    .notif-modal-body__val { color: var(--text-primary); font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="shell" id="app-shell"></div>
+  <template id="page-content"><div class="page-inner" id="pageInner"></div></template>
+
+  <!-- v1.13.16 (Doug 27/05/2026): Modal "Expediente del trámite" — read-only
+       review de TODO lo que ha pasado con este trámite para que Jurídica
+       tenga contexto antes de resolver la apelación. -->
+  <div class="naowee-modal-overlay" id="modalExpediente" role="dialog" aria-modal="true">
+    <div class="naowee-modal" style="width:95vw; max-width: 880px; max-height: 88vh; display:flex; flex-direction:column;">
+      <div class="naowee-modal__header" style="flex-shrink:0;">
+        <div class="naowee-modal__title-group">
+          <h2 class="naowee-modal__title">Expediente del trámite</h2>
+          <p class="naowee-modal__subtitle" id="expedienteSub">—</p>
+        </div>
+        <button type="button" class="naowee-modal__dismiss" onclick="window._closeExpediente()" aria-label="Cerrar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="naowee-modal__body" id="expedienteBody" style="flex:1 1 auto; overflow-y:auto; padding: 20px 28px;">
+        <!-- llenado dinámicamente por _openExpediente -->
+      </div>
+      <div class="naowee-modal__footer naowee-modal__footer--end" style="flex-shrink:0; padding: 16px 28px; border-top: 1px solid var(--border); gap: 10px;">
+        <button type="button" class="naowee-btn naowee-btn--loud" id="expedienteResolverBtn">Resolver apelación →</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="naowee-modal-overlay" id="modalResolver" role="dialog" aria-modal="true">
+    <div class="naowee-modal" style="width:95vw; max-width: 720px;">
+      <div class="naowee-modal__header">
+        <div class="naowee-modal__title-group">
+          <h2 class="naowee-modal__title">Resolver apelación</h2>
+          <p class="naowee-modal__subtitle" id="resolverSub">Determine si el recurso prospera o no.</p>
+        </div>
+        <button type="button" class="naowee-modal__dismiss" onclick="window._closeResolver()" aria-label="Cerrar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="naowee-modal__body">
+        <div id="resolverDetails" style="margin-bottom: 16px;"></div>
+        <div class="resolucion-grid" id="resolverGrid">
+          <button type="button" class="resolucion-card resolucion-card--favorable" data-res="favorable">
+            <div class="resolucion-card__title">Apelación favorable</div>
+            <div class="resolucion-card__desc">El recurso de apelación prospera. El acto administrativo queda vigente y el organismo es inscrito en el Registro Nacional Deportivo.</div>
+            <span class="resolucion-card__chip resolucion-card__chip--green">→ Vigente</span>
+          </button>
+          <button type="button" class="resolucion-card resolucion-card--desfavorable" data-res="desfavorable">
+            <div class="resolucion-card__title">Apelación NO prospera</div>
+            <div class="resolucion-card__desc">El recurso de apelación no prospera. El trámite queda cerrado en firme y el acto de no cumplimiento se mantiene vigente.</div>
+            <span class="resolucion-card__chip resolucion-card__chip--red">→ No cumple (firme)</span>
+          </button>
+        </div>
+        <div class="naowee-textfield naowee-textfield--textarea" style="margin-top: 14px;">
+          <label class="naowee-textfield__label" for="resolverObs">Fundamento del fallo <span style="color:#c01818;">*</span></label>
+          <div class="naowee-textfield__input-wrap" style="height:auto; padding: 10px 12px;">
+            <textarea class="naowee-textfield__input" id="resolverObs" maxlength="800" rows="4" placeholder="Describa el fundamento jurídico de la resolución…" style="min-height:96px; resize:vertical; line-height:1.55; border:0; outline:none; width:100%; background:transparent; font-family:inherit; font-size:14px; color:inherit;"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="naowee-modal__footer naowee-modal__footer--end" style="gap: 10px;">
+        <button type="button" class="naowee-btn naowee-btn--mute" onclick="window._closeResolver()">Cancelar</button>
+        <button type="button" class="naowee-btn naowee-btn--loud" id="resolverBtn" disabled>Resolver apelación</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../shared/data.js?v=1.13.56"></script>
+  <script src="../shared/shell.js?v=1.13.56"></script>
+  <script src="../shared/ivc-store.js?v=1.13.56"></script>
+  <script src="../shared/naowee-footer.js?v=1.13.56" defer></script>
+
+  <script>
+    var state = { tramites: [], resolverId: null, selectedRes: null };
+
+    document.addEventListener('DOMContentLoaded', function () {
+      window.IVCData.setPerfil('juridica');
+      var template = document.getElementById('page-content');
+      var shellRoot = document.getElementById('app-shell');
+      shellRoot.innerHTML = template.innerHTML;
+      window.IVCShell.init({ title: null, activeNav: 'bandeja-jur' });
+
+      IVCStore.init();
+      load();
+      IVCStore.on('store:changed-external', function () { load(); render(); });
+      IVCStore.on('tramite:estado-cambiado',  function () { load(); render(); });
+
+      wireResolver();
+      render();
+    });
+
+    function load() {
+      var todas = IVCStore.getTramites({ area: 'aficionado' }) || [];
+      state.tramites = todas.filter(function (t) { return t.estado === 'EnApelacion'; });
+    }
+
+    function render() {
+      var host = document.getElementById('pageInner');
+      var todas = IVCStore.getTramites({ area: 'aficionado' }) || [];
+      var resueltos = todas.filter(function (t) {
+        var ev = (t.historico || []).slice().reverse()
+          .find(function (h) { return (h.actor || '').indexOf('Jurídica') >= 0 && (h.observacion || '').match(/(prospera|FAVOR|favorable)/i); });
+        return !!ev;
+      });
+      var hoy = new Date().toISOString().slice(0, 10);
+      var resueltosHoy = resueltos.filter(function (t) {
+        var ev = (t.historico || []).slice().reverse()
+          .find(function (h) { return (h.actor || '').indexOf('Jurídica') >= 0 && h.fecha === hoy; });
+        return !!ev;
+      }).length;
+
+      host.innerHTML =
+        '<header class="page-title-block">' +
+          '<h1 class="page-title">Apelaciones</h1>' +
+          '<p class="page-subtitle">Recursos de apelación interpuestos por organismos sobre actos administrativos del IVC. Resuelva con fallo favorable o desfavorable conforme a derecho.</p>' +
+        '</header>' +
+
+        '<section class="stat-grid">' +
+          '<div class="naowee-stat-card naowee-stat-card--accent">' +
+            '<span class="naowee-stat-card__label">Por resolver</span>' +
+            '<span class="naowee-stat-card__value">' + state.tramites.length + '</span>' +
+            '<span class="naowee-stat-card__hint">Apelaciones pendientes de fallo</span>' +
+          '</div>' +
+          '<div class="naowee-stat-card naowee-stat-card--success">' +
+            '<span class="naowee-stat-card__label">Resueltas hoy</span>' +
+            '<span class="naowee-stat-card__value">' + resueltosHoy + '</span>' +
+            '<span class="naowee-stat-card__hint">Fallos jurídicos emitidos</span>' +
+          '</div>' +
+          '<div class="naowee-stat-card naowee-stat-card--info">' +
+            '<span class="naowee-stat-card__label">Total acumulado</span>' +
+            '<span class="naowee-stat-card__value">' + resueltos.length + '</span>' +
+            '<span class="naowee-stat-card__hint">Fallos emitidos</span>' +
+          '</div>' +
+        '</section>' +
+
+        '<section class="naowee-table-card">' +
+          '<div class="naowee-table-card__head">' +
+            '<div class="naowee-table-card__head-text">' +
+              '<h2 class="naowee-table-card__title">Apelaciones por resolver</h2>' +
+              '<p class="naowee-table-card__subtitle">' + state.tramites.length + ' recursos · FIN externo · JUR</p>' +
+            '</div>' +
+          '</div>' +
+          (state.tramites.length === 0
+            ? '<div class="naowee-empty-state">' +
+                '<div class="naowee-empty-state__icon">' +
+                  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>' +
+                '</div>' +
+                '<div class="naowee-empty-state__title">Sin apelaciones por resolver</div>' +
+                '<div class="naowee-empty-state__description">Cuando los organismos interpongan recursos de apelación tras una notificación electrónica, aparecerán aquí para que el área jurídica del Ministerio resuelva con fallo favorable o desfavorable.</div>' +
+              '</div>'
+            : renderTable())+
+        '</section>';
+    }
+
+    function renderTable() {
+      return '<div style="overflow-x:auto;"><table class="naowee-table"><thead><tr>' +
+        '<th>Radicado</th><th>Tipo</th><th>Organismo</th><th>Profesional IVC</th><th>Fecha apelación</th><th style="text-align:center;">Acciones</th>' +
+      '</tr></thead><tbody>' +
+        state.tramites.map(function (t) {
+          var evApel = (t.historico || []).slice().reverse().find(function (h) { return h.estado === 'EnApelacion'; }) || {};
+          var fechaApel = evApel.fecha ? evApel.fecha + ' · ' + (evApel.hora || '') : '—';
+          return '<tr>' +
+            '<td><span class="row-radicado">' + escHtml(t.id) + '</span></td>' +
+            '<td>' + escHtml(t.tipoTramite || 'Otorgamiento') + '</td>' +
+            '<td><div style="font-weight:500;">' + escHtml(t.organismo) + '</div>' +
+                '<div style="font-size:11.5px;color:var(--text-secondary);font-family:var(--font-sans);font-variant-numeric:tabular-nums;margin-top:2px;">NIT ' + escHtml(t.nit || '—') + '</div></td>' +
+            '<td>' + escHtml(t.profesionalNombre || '—') + '</td>' +
+            '<td>' + fechaApel + '</td>' +
+            /* v1.13.16: 2 acciones — Ver expediente (mute icon) + Resolver. */
+            '<td style="text-align:center;">' +
+              '<div style="display:inline-flex; gap:8px; align-items:center;">' +
+                '<button type="button" class="naowee-btn naowee-btn--mute naowee-btn--small" onclick="window._openExpediente(\'' + escHtml(t.id) + '\')" title="Ver expediente del trámite">' +
+                  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' +
+                  '<span style="margin-left:4px;">Ver expediente</span>' +
+                '</button>' +
+                '<button type="button" class="naowee-btn naowee-btn--loud naowee-btn--small" onclick="window._openResolver(\'' + escHtml(t.id) + '\')">Resolver apelación</button>' +
+              '</div>' +
+            '</td>' +
+          '</tr>';
+        }).join('') +
+      '</tbody></table></div>';
+    }
+
+    /* v1.13.16 (Doug 27/05/2026): Modal Expediente — review completo del
+       trámite para que Jurídica tenga contexto antes de resolver. */
+    function _docBadge(v) {
+      if (v === 'cumple') return '<span class="naowee-badge naowee-badge--positive naowee-badge--quiet naowee-badge--small">Cumple</span>';
+      if (v === 'obs')    return '<span class="naowee-badge naowee-badge--caution naowee-badge--quiet naowee-badge--small">Parcial</span>';
+      if (v === 'no')     return '<span class="naowee-badge naowee-badge--negative naowee-badge--quiet naowee-badge--small">No cumple</span>';
+      return '<span class="naowee-badge naowee-badge--neutral naowee-badge--quiet naowee-badge--small">Pendiente</span>';
+    }
+    function _eventBadge(accion) {
+      var a = (accion || '').toLowerCase();
+      if (a.indexOf('subsanación') >= 0)                            return { label: 'Subsanación', variant: 'informative' };
+      if (a.indexOf('no cumple') >= 0 || a.indexOf('rechaz') >= 0) return { label: 'No cumple', variant: 'negative' };
+      if (a.indexOf('parcial') >= 0 || a.indexOf('devuelt') >= 0) return { label: 'Parcial', variant: 'caution' };
+      if (a.indexOf('apelación') >= 0)                              return { label: 'Apelación', variant: 'caution' };
+      if (a.indexOf('acto') >= 0 && a.indexOf('generado') >= 0)    return { label: 'Acto generado', variant: 'positive' };
+      if (a.indexOf('aprob') >= 0 && a.indexOf('coordinador') >= 0) return { label: 'Aprobado COO', variant: 'positive' };
+      if (a.indexOf('firma') >= 0)                                  return { label: 'Firma', variant: 'positive' };
+      if (a.indexOf('notificad') >= 0)                              return { label: 'Notificado', variant: 'informative' };
+      if (a.indexOf('vigente') >= 0)                                return { label: 'Vigente', variant: 'positive' };
+      if (a.indexOf('asignad') >= 0)                                return { label: 'Asignación', variant: 'informative' };
+      if (a.indexOf('radicad') >= 0)                                return { label: 'Radicado', variant: 'informative' };
+      return null;
+    }
+    function _formatDate(iso) {
+      if (!iso) return '—';
+      var p = iso.split('-');
+      var meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+      return p[2] + ' ' + meses[parseInt(p[1],10)-1] + ' ' + p[0];
+    }
+    window._openExpediente = function (id) {
+      var t = state.tramites.find(function (x) { return x.id === id; });
+      if (!t) return;
+      document.getElementById('expedienteSub').textContent = t.id + ' · ' + t.organismo;
+
+      /* Evento de la apelación interpuesta — qué dijo el organismo. */
+      var evApel = (t.historico || []).slice().reverse().find(function (h) { return h.estado === 'EnApelacion'; }) || {};
+      var causalApel = evApel.observacion || evApel.accion || 'Sin causal registrada.';
+
+      /* Construir tabla de documentos. */
+      var docs = Array.isArray(t.documentos) ? t.documentos : [];
+      var docsHtml = docs.length === 0
+        ? '<p style="color:var(--text-secondary); font-style:italic; margin:0;">Sin documentos registrados en el expediente.</p>'
+        : '<table class="naowee-table" style="width:100%; border-collapse: collapse;">' +
+          '<thead><tr style="background: var(--bg-soft,#f5f6fa);"><th style="padding:10px 12px; text-align:left; font-size:11px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; color:var(--text-secondary);">Documento</th><th style="padding:10px 12px; text-align:left; font-size:11px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; color:var(--text-secondary);">Estado</th><th style="padding:10px 12px; text-align:left; font-size:11px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; color:var(--text-secondary);">Observación profesional</th></tr></thead>' +
+          '<tbody>' +
+            docs.map(function (d) {
+              return '<tr style="border-bottom:1px solid var(--border);">' +
+                '<td style="padding:12px; font-size:13px; font-weight:500;">' + escHtml(d.titulo || d.id) + '</td>' +
+                '<td style="padding:12px;">' + _docBadge(d.validacion) + '</td>' +
+                '<td style="padding:12px; font-size:12.5px; color:var(--text-secondary); line-height:1.4;">' + escHtml(d.observacion || '—') + '</td>' +
+              '</tr>';
+            }).join('') +
+          '</tbody></table>';
+
+      /* Trazabilidad completa — pattern collapsable. */
+      var historico = (t.historico || []).slice().reverse();
+      var trazaHtml = historico.map(function (ev, i) {
+        var badge = _eventBadge(ev.accion || ev.titulo);
+        var badgeHtml = badge ? ' <span class="naowee-badge naowee-badge--' + badge.variant + ' naowee-badge--quiet naowee-badge--small" style="margin-left:6px;vertical-align:middle;">' + badge.label + '</span>' : '';
+        var muted = i === 0 ? '' : ' ivc-timeline__item--muted';
+        return '<li class="ivc-timeline__item' + muted + '">' +
+          '<span class="ivc-timeline__dot"></span>' +
+          '<span class="ivc-timeline__title">' + escHtml(ev.accion || ev.titulo || '—') + badgeHtml + '</span>' +
+          '<span class="ivc-timeline__meta">' + escHtml(_formatDate(ev.fecha) + (ev.hora ? ' · ' + ev.hora : '')) + '</span>' +
+          (ev.actor ? '<span class="ivc-timeline__actor">' + escHtml(ev.actor) + '</span>' : '') +
+        '</li>';
+      }).join('');
+
+      /* Section title style helper. */
+      var sectionTitle = function (label) {
+        return '<h3 style="font-size:11.5px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; color:#9a9db0; margin: 24px 0 12px 0;">' + label + '</h3>';
+      };
+
+      document.getElementById('expedienteBody').innerHTML =
+        /* INFO GENERAL */
+        sectionTitle('Información general') +
+        '<div style="display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 18px 32px;">' +
+          '<div><div style="font-size:11px; font-weight:600; letter-spacing:.3px; color:#9a9db0; text-transform:uppercase; margin-bottom:4px;">Radicado</div><div style="font-family:var(--font-sans);font-variant-numeric:tabular-nums; font-weight:700; font-size:13px;">' + escHtml(t.id) + '</div></div>' +
+          '<div><div style="font-size:11px; font-weight:600; letter-spacing:.3px; color:#9a9db0; text-transform:uppercase; margin-bottom:4px;">Tipo trámite</div><div style="font-size:14px; font-weight:500;">' + escHtml(t.tipoTramite || 'Otorgamiento') + '</div></div>' +
+          '<div><div style="font-size:11px; font-weight:600; letter-spacing:.3px; color:#9a9db0; text-transform:uppercase; margin-bottom:4px;">Organismo</div><div style="font-size:14px; font-weight:500;">' + escHtml(t.organismo) + '<div style="font-size:11.5px; color:var(--text-secondary); font-family:var(--font-sans);font-variant-numeric:tabular-nums; margin-top:2px;">NIT ' + escHtml(t.nit || '—') + '</div></div></div>' +
+          '<div><div style="font-size:11px; font-weight:600; letter-spacing:.3px; color:#9a9db0; text-transform:uppercase; margin-bottom:4px;">Profesional IVC asignado</div><div style="font-size:14px; font-weight:500;">' + escHtml(t.profesionalNombre || '—') + '</div></div>' +
+          '<div><div style="font-size:11px; font-weight:600; letter-spacing:.3px; color:#9a9db0; text-transform:uppercase; margin-bottom:4px;">Fecha radicación</div><div style="font-size:14px; font-weight:500;">' + escHtml(_formatDate(t.fechaRadicacion)) + '</div></div>' +
+          '<div><div style="font-size:11px; font-weight:600; letter-spacing:.3px; color:#9a9db0; text-transform:uppercase; margin-bottom:4px;">Fecha apelación</div><div style="font-size:14px; font-weight:500;">' + escHtml(_formatDate(evApel.fecha) + (evApel.hora ? ' · ' + evApel.hora : '')) + '</div></div>' +
+        '</div>' +
+
+        /* CAUSAL DE APELACIÓN */
+        sectionTitle('Causal de apelación interpuesta') +
+        '<div class="naowee-message naowee-message--caution" style="margin:0;">' +
+          '<div class="naowee-message__header">' +
+            '<div class="naowee-message__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>' +
+            '<div class="naowee-message__title">Recurso interpuesto por ' + escHtml(t.organismo) + '</div>' +
+          '</div>' +
+          '<div class="naowee-message__text">' + escHtml(causalApel) + '</div>' +
+        '</div>' +
+
+        /* ACTO ADMINISTRATIVO */
+        sectionTitle('Acto administrativo objeto de la apelación') +
+        '<div style="display:flex; align-items:center; gap:12px; padding:14px 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface);">' +
+          '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent,#d74009)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/></svg>' +
+          '<div style="flex:1; min-width:0;">' +
+            '<div style="font-weight:600; font-size:13.5px;">acto-otorgamiento-' + escHtml(t.id) + '-firmado.pdf</div>' +
+            '<div style="font-size:11.5px; color:var(--text-secondary);">312 KB · PDF · Firmado por el Director del IVC</div>' +
+          '</div>' +
+          /* v1.13.17: botón con estilo botón, sin underline textlink. */
+          '<button type="button" onclick="event.preventDefault();" class="naowee-btn naowee-btn--mute naowee-btn--small" style="text-decoration:none;">' +
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' +
+            'Descargar PDF' +
+          '</button>' +
+        '</div>' +
+
+        /* DOCUMENTOS DE LA VALIDACIÓN */
+        sectionTitle('Documentos del expediente (validación del profesional)') +
+        docsHtml +
+
+        /* TRAZABILIDAD COMPLETA */
+        sectionTitle('Trazabilidad completa') +
+        '<div class="ivc-traza-wrap" id="expTrazaWrap">' +
+          '<div class="ivc-traza-box" id="expTrazaBox">' +
+            '<ol class="ivc-timeline">' + trazaHtml + '</ol>' +
+          '</div>' +
+          '<button type="button" class="ivc-traza-toggle" id="expTrazaToggle" style="display:none;" onclick="window._toggleExpTraza()">' +
+            '<span class="ivc-traza-toggle__label">Ver más</span>' +
+            '<svg class="ivc-traza-toggle__chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>' +
+          '</button>' +
+        '</div>';
+
+      /* Hook del Resolver desde dentro del expediente */
+      document.getElementById('expedienteResolverBtn').onclick = function () {
+        _closeExpediente();
+        window._openResolver(t.id);
+      };
+      document.getElementById('modalExpediente').classList.add('open');
+      /* Detectar overflow para mostrar "Ver más" */
+      setTimeout(function () {
+        var box = document.getElementById('expTrazaBox');
+        var wrap = document.getElementById('expTrazaWrap');
+        var toggle = document.getElementById('expTrazaToggle');
+        if (!box || !wrap || !toggle) return;
+        var hasOverflow = box.scrollHeight > box.clientHeight + 4;
+        wrap.classList.toggle('has-overflow', hasOverflow);
+        toggle.style.display = hasOverflow ? 'inline-flex' : 'none';
+      }, 0);
+    };
+    window._closeExpediente = function () {
+      document.getElementById('modalExpediente').classList.remove('open');
+    };
+    window._toggleExpTraza = function () {
+      var box = document.getElementById('expTrazaBox');
+      var toggle = document.getElementById('expTrazaToggle');
+      var lbl = toggle && toggle.querySelector('.ivc-traza-toggle__label');
+      if (!box || !toggle) return;
+      var isExpanded = box.classList.toggle('is-expanded');
+      toggle.classList.toggle('is-expanded', isExpanded);
+      if (lbl) lbl.textContent = isExpanded ? 'Ver menos' : 'Ver más';
+    };
+
+    window._openResolver = function (id) {
+      state.resolverId = id;
+      state.selectedRes = null;
+      var t = state.tramites.find(function (x) { return x.id === id; });
+      if (!t) return;
+      document.getElementById('resolverSub').textContent = t.id + ' · ' + t.organismo;
+      /* v1.13.17: 2×2 grid de info-boxes (Doug). Patrón canónico shared. */
+      document.getElementById('resolverDetails').innerHTML =
+        '<div class="ivc-info-grid">' +
+          '<div class="ivc-info-box"><span class="ivc-info-box__label">Radicado</span><span class="ivc-info-box__value" style="font-family:var(--font-sans);font-variant-numeric:tabular-nums; font-weight:700; font-size:13px;">' + escHtml(t.id) + '</span></div>' +
+          '<div class="ivc-info-box"><span class="ivc-info-box__label">Tipo trámite</span><span class="ivc-info-box__value">' + escHtml(t.tipoTramite || '—') + '</span></div>' +
+          '<div class="ivc-info-box"><span class="ivc-info-box__label">Organismo</span><span class="ivc-info-box__value">' + escHtml(t.organismo) + '<div style="font-size:11.5px; color:var(--text-secondary); font-family:var(--font-sans);font-variant-numeric:tabular-nums; font-weight:400; margin-top:2px;">NIT ' + escHtml(t.nit || '—') + '</div></span></div>' +
+          '<div class="ivc-info-box"><span class="ivc-info-box__label">Profesional IVC</span><span class="ivc-info-box__value">' + escHtml(t.profesionalNombre || '—') + '</span></div>' +
+        '</div>' +
+        '<h3 style="font-size:11.5px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; color:#9a9db0; margin: 20px 0 6px 0;">Acciones necesarias</h3>';
+
+      /* Reset modal state */
+      var cards = document.querySelectorAll('#resolverGrid .resolucion-card');
+      for (var i = 0; i < cards.length; i++) cards[i].classList.remove('is-selected');
+      document.getElementById('resolverObs').value = '';
+      document.getElementById('resolverBtn').disabled = true;
+
+      document.getElementById('modalResolver').classList.add('open');
+    };
+    window._closeResolver = function () {
+      document.getElementById('modalResolver').classList.remove('open');
+      state.resolverId = null;
+      state.selectedRes = null;
+    };
+
+    function wireResolver() {
+      var cards = document.querySelectorAll('#resolverGrid .resolucion-card');
+      var obsEl = document.getElementById('resolverObs');
+      var btn = document.getElementById('resolverBtn');
+
+      function updateBtnState() {
+        var hasSelection = !!state.selectedRes;
+        var hasObs = obsEl.value.trim().length >= 10;
+        btn.disabled = !(hasSelection && hasObs);
+      }
+
+      for (var i = 0; i < cards.length; i++) {
+        (function (card) {
+          card.addEventListener('click', function () {
+            for (var j = 0; j < cards.length; j++) cards[j].classList.remove('is-selected');
+            card.classList.add('is-selected');
+            state.selectedRes = card.getAttribute('data-res');
+            updateBtnState();
+          });
+        })(cards[i]);
+      }
+
+      obsEl.addEventListener('input', updateBtnState);
+
+      btn.addEventListener('click', function () {
+        if (!state.resolverId || !state.selectedRes) return;
+        var perfil = (window.IVCData && window.IVCData.PERFILES && window.IVCData.PERFILES['juridica']) || {};
+        var actor = (perfil.nombre || 'Jurídica') + ' (Jurídica)';
+        var obs = obsEl.value.trim();
+        IVCStore.resolverApelacion(state.resolverId, state.selectedRes, actor, obs);
+        window._closeResolver();
+        var msg = state.selectedRes === 'favorable'
+          ? 'Apelación resuelta a FAVOR. Acto administrativo queda vigente.'
+          : 'Apelación NO PROSPERA. Trámite queda cerrado en firme.';
+        _showSnackbar(msg, 'success');
+      });
+
+      document.getElementById('modalResolver').addEventListener('click', function (ev) {
+        if (ev.target === this) window._closeResolver();
+      });
+    }
+
+    function escHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+      });
+    }
+    function _showSnackbar(msg, variant) {
+      if (window.IVCShell && typeof window.IVCShell.showSnackbar === 'function') {
+        window.IVCShell.showSnackbar(msg, variant || 'success');
+        return;
+      }
+      var t = document.createElement('div');
+      t.textContent = msg;
+      t.style.cssText = 'position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#282834; color:#fff; padding:12px 20px; border-radius:10px; font-size:13px; z-index:9999;';
+      document.body.appendChild(t);
+      setTimeout(function () { t.remove(); }, 3000);
+    }
+  </script>
+</body>
+</html>

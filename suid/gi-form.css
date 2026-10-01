@@ -1,0 +1,112 @@
+/* Formulario del infractor: interacción dinámica (DC-250, DC-251, DC-252). Prefijo gf-. */
+.gi-form [hidden] { display: none !important; }
+.gi-form .gi-lbl, .gi-form .gi-help, .gi-form .gi-ferr, .gi-form .gi-n, .gi-form .gi-sec__head p, .gi-form .gi-sub__t { font-size: 14px; }
+.gi-form .gi-n { color: var(--text-secondary); }
+.gi-form .gi-help { color: var(--text-secondary); }
+.gi-form .gi-in { height: 44px; }
+.gi-form .gi-ta { height: auto; }
+.gi-form .gi-lbl--req::after { order: 2; }
+
+/* Datos calculados: solo etiqueta y valor (DC-289/290) */
+.gf-ro { gap: 4px; }
+.gf-ro .gi-lbl { font-weight: 600; color: var(--text-secondary); }
+.gf-val { display: block; font-size: 16px; font-weight: 600; line-height: 1.4; color: var(--text-primary); overflow-wrap: anywhere; }
+.gf-val--sub { font-size: 14px; font-weight: 500; color: var(--text-secondary); }
+.gf-ro > .naowee-badge, .gf-ro > div { align-self: flex-start; }
+
+/* Selección única: chips que son radios reales */
+.gf-seg { display: flex; flex-wrap: wrap; gap: 8px; }
+.gf-opt { position: relative; margin: 0; }
+.gf-sr { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; }
+.gf-opt span { display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-sizing: border-box; min-height: 44px; min-width: 56px; padding: 0 16px; border: 1px solid var(--border-strong); border-radius: 999px; background: #fff; color: var(--text-primary); font-size: 14px; font-weight: 600; cursor: pointer; user-select: none; }
+.gf-opt:hover span { background: var(--bg-soft); }
+.gf-sr:checked + span { background: var(--accent-bg); border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.gf-sr:checked + span::before { content: ''; width: 5px; height: 10px; border: solid var(--accent); border-width: 0 2px 2px 0; transform: rotate(45deg) translateY(-1px); }
+.gf-sr:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.gf-seg.is-invalid { outline: 2px solid var(--red); outline-offset: 4px; border-radius: 8px; }
+.gf-pais, .gf-meses { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.gf-pais .gi-in { width: auto; flex: 1 1 140px; }
+.gf-mesesin { width: 110px; flex: 0 0 110px; }
+
+/* Interruptor (switch) */
+.gf-swf { justify-content: center; }
+.gf-sw { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 6px 12px; border: 1px solid var(--border-dark); border-radius: 10px; background: #fff; color: var(--text-primary); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+.gf-sw:hover { background: var(--bg-soft); }
+.gf-sw:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.gf-sw b { flex: 1; font-weight: 600; }
+.gf-sw em { min-width: 24px; font-style: normal; font-weight: 700; color: var(--text-secondary); text-align: right; }
+.gf-sw__trk { position: relative; flex: 0 0 44px; height: 24px; border-radius: 999px; background: var(--text-secondary); transition: background .15s; }
+.gf-sw__trk i { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform .15s; }
+.gf-sw[aria-checked="true"] .gf-sw__trk { background: var(--green); }
+.gf-sw[aria-checked="true"] .gf-sw__trk i { transform: translateX(20px); }
+.gf-sw[aria-checked="true"] em { color: #14551a; }
+.gf-sw[aria-disabled="true"] { cursor: not-allowed; background: var(--bg-soft); }
+
+/* Conductas con búsqueda */
+.gf-filter { margin-bottom: 4px; }
+.gf-checks { gap: 6px; }
+.gf-checks .gi-chip { align-items: center; min-height: 44px; border: 1px solid var(--border); border-radius: 10px; padding: 6px 12px; font-size: 14px; }
+.gf-checks .gi-chip:has(input:checked) { border-color: var(--accent); background: var(--accent-bg); box-shadow: inset 0 0 0 1px var(--accent); }
+.gf-checks .gi-chip input { width: 20px; height: 20px; margin: 0; flex: 0 0 20px; }
+.gf-ta-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.gf-base { min-height: 44px; }
+
+/* Evento ya cargado */
+.gf-evs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; padding: 10px 12px; border: 1px solid var(--blue-border); border-radius: 10px; background: var(--blue-bg); color: #144a85; font-size: 14px; line-height: 1.4; }
+.gf-evbtn { min-height: 44px; padding: 0 14px; border: 1px solid #144a85; border-radius: 999px; background: #fff; color: #144a85; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; text-align: left; }
+.gf-evbtn:hover { background: #e3eefc; }
+.gf-evbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Vigencia en vivo */
+.gf-vig { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 20px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-soft); }
+.gf-vig__c { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.gf-vig__k { display: block; font-size: 14px; font-weight: 600; color: var(--text-secondary); }
+.gf-vig strong { font-size: 20px; font-weight: 800; color: var(--text-primary); }
+.gf-vig .gi-help { margin: 0; }
+
+/* DC-252: cabecera de sección con avance y badge */
+.gi-form .gi-sec__head { align-items: center; }
+.gf-sec__txt { flex: 1; min-width: 0; }
+.gf-sec__st { display: flex; align-items: center; gap: 10px; margin-left: auto; flex-shrink: 0; }
+.gf-count { font-size: 14px; font-weight: 600; color: var(--text-secondary); }
+.gf-done { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid var(--green-border); border-radius: 999px; background: var(--green-bg); color: #14551a; font-size: 14px; font-weight: 700; line-height: 1; }
+
+/* DC-251: stepper con avance total y por sección */
+.gi-steps { gap: 6px; }
+.gf-total { display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+.gf-total__pct { display: flex; align-items: baseline; gap: 6px; font-size: 14px; color: var(--text-secondary); font-weight: 600; }
+.gf-total__pct strong { font-size: 24px; font-weight: 800; color: var(--text-primary); }
+.gf-total small, .gi-step small { display: block; font-size: 14px; font-weight: 500; line-height: 1.3; color: var(--text-secondary); }
+.gf-bar { height: 10px; box-sizing: border-box; border: 1px solid var(--border-strong); border-radius: 999px; background: #eceef7; overflow: hidden; }
+.gf-bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .25s; }
+.gf-bar.is-full > i { background: var(--green); }
+.gi-step { align-items: flex-start; min-height: 44px; }
+.gi-step > div { flex: 1; min-width: 0; }
+.gi-step b { display: block; font-size: 14px; font-weight: 600; line-height: 1.3; color: var(--text-primary); }
+.gi-step small { margin: 2px 0 6px; }
+.gi-step > span { flex-shrink: 0; }
+.gi-step .gf-bar { height: 8px; }
+.gf-ck { display: none; flex: 0 0 16px; margin-top: 4px; color: var(--green); }
+.gi-step.is-done .gf-ck { display: block; }
+.gi-step.is-done > span { background: var(--green); color: #fff; }
+.gi-step.is-on { box-shadow: inset 3px 0 0 var(--accent); }
+.gf-barpct, #gfBarPct { color: var(--text-primary); }
+
+@media (max-width: 1000px) {
+  .gi-steps { display: flex; position: static; flex-direction: row; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
+  .gf-total { flex: 0 0 200px; margin-bottom: 0; }
+  .gi-step { flex: 0 0 170px; border: 1px solid var(--border); background: #fff; }
+  .gi-step[hidden] { display: none; }
+}
+@media (max-width: 800px) {
+  .gf-vig { grid-template-columns: 1fr; }
+  .gf-sp { display: none; }
+  .gi-form .gi-sec__head { flex-wrap: wrap; }
+  .gf-sec__st { flex-basis: 100%; margin-left: 42px; }
+  .gf-pais .gi-in, .gf-mesesin { flex: 1 1 100%; width: 100%; }
+}
+@media (max-width: 600px) { .gf-hintlong { display: none; } }
+.gi-form .naowee-badge { font-size: 14px; }
+@media (prefers-reduced-motion: reduce) { .gf-bar > i, .gf-sw__trk, .gf-sw__trk i { transition: none; } }
+.gi-form .gi-f > .gi-lbl { flex-wrap: wrap; row-gap: 4px; }
+.gf-vig__k .gi-n, .gf-ro .gi-n { margin-right: 8px; }

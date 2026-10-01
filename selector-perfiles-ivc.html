@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IVC · Prototipo interactivo · ivc-v1.1.1</title>
+  <link rel="stylesheet" href="shared/fonts/google-sans.css">
+
+  <!-- Naowee Design System (CDN oficial v1.8.0) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/naowee-tech/naowee-design-system@v1.8.0/dist/design-system.css">
+
+  <link rel="stylesheet" href="shared/tokens.css">
+  <link rel="stylesheet" href="shared/components.css">
+  <link rel="stylesheet" href="shared/shell.css">
+  <style>
+    /* Landing-specific layout */
+    body { background: linear-gradient(180deg, #fafbff 0%, #f5f6fa 100%); }
+
+    .landing {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 48px 32px 80px;
+      display: flex;
+      flex-direction: column;
+      gap: 56px;
+    }
+
+    .landing-topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .landing-logo {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--azul);
+      text-decoration: none;
+      letter-spacing: -.5px;
+    }
+    .landing-logo__suffix {
+      color: var(--naranja);
+      font-size: 14px;
+      background: var(--orange-bg);
+      padding: 3px 10px;
+      border-radius: var(--radius-sm);
+      letter-spacing: .5px;
+    }
+
+    .landing-version-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-full);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: var(--text-secondary);
+      box-shadow: var(--shadow-sm);
+    }
+    .landing-version-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--naranja);
+      animation: pulseDot 2s ease-in-out infinite;
+    }
+
+    .landing-hero {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      animation: fadeInUp .6s var(--ease-out) backwards;
+    }
+
+    .landing-hero__eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: .8px;
+    }
+
+    .landing-hero__title {
+      margin: 0;
+      font-size: clamp(34px, 4vw, 52px);
+      font-weight: 800;
+      letter-spacing: -1.2px;
+      color: var(--text-primary);
+      line-height: 1.05;
+      max-width: 720px;
+    }
+
+    .landing-hero__title em {
+      font-style: normal;
+      color: var(--accent);
+      background: linear-gradient(180deg, transparent 60%, rgba(215, 64, 9, .15) 60%);
+      padding: 0 4px;
+    }
+
+    .landing-hero__subtitle {
+      margin: 0;
+      font-size: 18px;
+      color: var(--text-secondary);
+      max-width: 640px;
+      line-height: 1.5;
+    }
+
+    .landing-hero__meta {
+      display: flex;
+      gap: 24px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 8px;
+    }
+    .landing-hero__meta strong { color: var(--text-primary); font-weight: 700; }
+
+    .landing-section { display: flex; flex-direction: column; gap: 20px; }
+    .landing-section__title {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* Perfiles grid — bento asimétrico */
+    .perfiles-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr 1fr 1fr;
+      gap: 16px;
+    }
+
+    .perfil-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: transform var(--duration-normal) var(--ease-out),
+                  box-shadow var(--duration-normal) var(--ease-out),
+                  border-color var(--duration-fast);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .perfil-card--featured {
+      background: linear-gradient(135deg, var(--azul) 0%, #0c3d76 100%);
+      color: var(--text-inverse);
+      border-color: var(--azul);
+    }
+
+    .perfil-card--featured .perfil-card__rol,
+    .perfil-card--featured .perfil-card__desc { color: rgba(255, 255, 255, .8); }
+
+    .perfil-card--disabled {
+      opacity: .65;
+      background: var(--surface-alt);
+    }
+
+    .perfil-card:hover:not(.perfil-card--disabled) {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 32px rgba(0, 43, 91, .12);
+    }
+
+    .perfil-card--featured:hover {
+      box-shadow: 0 20px 48px rgba(0, 43, 91, .35);
+    }
+
+    .perfil-card__head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .perfil-card__avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .perfil-card__nombre {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .perfil-card__rol {
+      margin: 2px 0 0;
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .perfil-card__desc {
+      margin: 0;
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      flex: 1;
+    }
+
+    .perfil-card__cta { margin-top: auto; }
+
+    .perfil-card__phase-pill {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: var(--radius-full);
+      background: var(--bg);
+      color: var(--text-secondary);
+      letter-spacing: .5px;
+      text-transform: uppercase;
+    }
+
+    .perfil-card--featured .perfil-card__phase-pill {
+      background: var(--naranja);
+      color: var(--text-inverse);
+    }
+
+    /* How to use */
+    .howto-list {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      counter-reset: howto;
+    }
+
+    .howto-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      counter-increment: howto;
+      position: relative;
+    }
+
+    .howto-item::before {
+      content: counter(howto, decimal-leading-zero);
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: 1px;
+    }
+
+    .howto-item__title {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .howto-item__desc {
+      margin: 0;
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .landing-cta-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    /* Footer */
+    .landing-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 32px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .landing-footer__badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: var(--azul);
+      color: var(--text-inverse);
+      border-radius: var(--radius-full);
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: .4px;
+    }
+    .landing-footer__badge::before {
+      content: '';
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--naranja);
+    }
+
+    @media (max-width: 900px) {
+      .perfiles-grid { grid-template-columns: 1fr 1fr; }
+      .howto-list { grid-template-columns: 1fr; }
+      .landing { padding: 24px 16px 56px; gap: 32px; }
+    }
+
+    @media print {
+      body { background: white; }
+      .landing-cta-row, .perfil-card__cta { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <main class="landing">
+    <div class="landing-topbar">
+      <a class="landing-logo" href="index.html">
+        <span>naowee</span><span class="landing-logo__suffix">IVC</span>
+      </a>
+      <span class="landing-version-badge">Prototipo interactivo · ivc-v1.1.1</span>
+    </div>
+
+    <section class="landing-hero">
+      <span class="landing-hero__eyebrow">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Fase 1 · Happy path Usuario Externo
+      </span>
+      <h1 class="landing-hero__title">
+        IVC — <em>Otorgamiento de Reconocimiento Deportivo</em>
+      </h1>
+      <p class="landing-hero__subtitle">
+        Demo navegable del flujo de radicación para validar con Danna + Juanma + sponsor. Tour guiado reactivo al estado del trámite, datos del dominio real (Liga de Atletismo de Bolívar), 7 documentos del Decreto 1387/1970.
+      </p>
+      <div class="landing-hero__meta">
+        <span><strong>4</strong> pantallas Fase 1</span>
+        <span>·</span>
+        <span><strong>8</strong> pasos en el tour</span>
+        <span>·</span>
+        <span>Tiempos legales <strong>confirmados</strong></span>
+      </div>
+    </section>
+
+    <section class="landing-section">
+      <h2 class="landing-section__title">Perfiles disponibles en el demo</h2>
+      <div class="perfiles-grid">
+
+        <!-- v1.5.3 (25/05/2026): Coordinador es ahora el perfil principal
+             del demo. El Usuario Externo se accede directo desde el botón
+             "Abrir formulario público" abajo (no es un "perfil simulado"). -->
+        <article class="perfil-card perfil-card--featured" data-perfil-card="coordinador">
+          <span class="perfil-card__phase-pill">Fase 2 · Activo</span>
+          <div class="perfil-card__head">
+            <div class="perfil-card__avatar" style="background:rgba(255,255,255,.2);color:white">CM</div>
+            <div>
+              <p class="perfil-card__nombre">Carolina Méndez</p>
+              <p class="perfil-card__rol">Coordinadora · Deporte Aficionado</p>
+            </div>
+          </div>
+          <p class="perfil-card__desc">
+            Recibe los trámites radicados, los asigna a profesionales del área y hace seguimiento de SLAs. Gestiona la bandeja de asignación, validación e histórico.
+          </p>
+          <div class="perfil-card__cta">
+            <button type="button" class="naowee-btn naowee-btn--loud naowee-btn--large" id="ctaStart" style="width:100%">
+              Iniciar como Coordinadora de Deporte →
+            </button>
+          </div>
+        </article>
+
+        <article class="perfil-card perfil-card--disabled">
+          <span class="perfil-card__phase-pill">Fase 1 · Público</span>
+          <div class="perfil-card__head">
+            <div class="perfil-card__avatar" style="background:#eef5ff;color:#002B5B">LB</div>
+            <div>
+              <p class="perfil-card__nombre">Usuario Externo</p>
+              <p class="perfil-card__rol">Organismo deportivo · Sin login</p>
+            </div>
+          </div>
+          <p class="perfil-card__desc">
+            El flujo público arranca radicando un trámite. No es un perfil interno — accede directo al formulario público de radicación desde el botón abajo.
+          </p>
+          <div class="perfil-card__cta">
+            <a href="usuario-externo/formulario-fase-1.html" class="naowee-btn naowee-btn--quiet naowee-btn--small" style="width:100%">
+              Abrir formulario público →
+            </a>
+          </div>
+        </article>
+
+        <article class="perfil-card perfil-card--disabled">
+          <span class="perfil-card__phase-pill">Fase 3</span>
+          <div class="perfil-card__head">
+            <div class="perfil-card__avatar" style="background:#eef5ff;color:#1f78d1">CP</div>
+            <div>
+              <p class="perfil-card__nombre">Profesional IVC</p>
+              <p class="perfil-card__rol">Carlos Pérez · Deporte Aficionado</p>
+            </div>
+          </div>
+          <p class="perfil-card__desc">
+            Valida requisitos, marca cumplimiento y genera el acto administrativo. Disponible en próxima fase.
+          </p>
+        </article>
+
+        <article class="perfil-card perfil-card--disabled">
+          <span class="perfil-card__phase-pill">Fase 4</span>
+          <div class="perfil-card__head">
+            <div class="perfil-card__avatar" style="background:#fff3e6;color:#d74009">MR</div>
+            <div>
+              <p class="perfil-card__nombre">Director Deporte Aficionado</p>
+              <p class="perfil-card__rol">María Helena Ramos</p>
+            </div>
+          </div>
+          <p class="perfil-card__desc">
+            Firma electrónica del acto administrativo y notificación al organismo.
+          </p>
+        </article>
+
+      </div>
+    </section>
+
+    <section class="landing-section">
+      <h2 class="landing-section__title">¿Cómo usar este demo?</h2>
+      <div class="howto-list">
+        <div class="howto-item">
+          <h3 class="howto-item__title">Selecciona "Iniciar como Coordinadora de Deporte"</h3>
+          <p class="howto-item__desc">Entra al perfil de Coordinador IVC y verás la bandeja de asignación con los trámites radicados.</p>
+        </div>
+        <div class="howto-item">
+          <h3 class="howto-item__title">El tour te guía paso a paso</h3>
+          <p class="howto-item__desc">Aparece un tooltip reactivo que avanza según vayas completando acciones. Si lo cierras, puedes reiniciarlo desde el chip DEMO.</p>
+        </div>
+        <div class="howto-item">
+          <h3 class="howto-item__title">Usa el chip "DEMO · Cambiar perfil"</h3>
+          <p class="howto-item__desc">El chip flotante abajo a la derecha te permite cambiar de rol simulado. En Fase 2 verás Profesional, Coordinador y Director.</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="landing-cta-row">
+      <button type="button" class="naowee-btn naowee-btn--loud naowee-btn--large" id="ctaStart2">
+        Iniciar como Coordinadora de Deporte →
+      </button>
+      <button type="button" class="naowee-btn naowee-btn--mute" id="ctaReset">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/></svg>
+        Reiniciar demo
+      </button>
+    </div>
+
+    <footer class="landing-footer">
+      <span>Prototipo interno Naowee — para validación con cliente Ministerio del Deporte.</span>
+      <span class="landing-footer__badge">ivc-v1.1.1</span>
+    </footer>
+  </main>
+
+  <!-- Scripts -->
+  <script src="shared/data.js"></script>
+  <script src="shared/shell.js"></script>
+  <script>
+    /* Landing-specific behavior */
+    function goStart() {
+      /* v1.5.3 (25/05/2026): default ahora es Coordinador (perfil interno).
+         Usuario Externo se accede directo desde el card "Abrir formulario público". */
+      window.IVCData.setPerfil('coordinador');
+      window.location.href = 'coordinador/bandeja.html';
+    }
+    document.getElementById('ctaStart').addEventListener('click', goStart);
+    document.getElementById('ctaStart2').addEventListener('click', goStart);
+    document.getElementById('ctaReset').addEventListener('click', function () {
+      if (window.confirm('¿Reiniciar el demo? Se borrarán los datos del trámite y el estado del tour.')) {
+        window.IVCData.fullReset();
+        window.IVCShell.showSnackbar('Demo reiniciado.', 'success');
+      }
+    });
+  </script>
+</body>
+</html>

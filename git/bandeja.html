@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Avisos · GIT Comunicaciones</title>
+  <link rel="stylesheet" href="../shared/fonts/google-sans.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/naowee-tech/naowee-design-system@v1.8.0/dist/design-system.css">
+  <link rel="stylesheet" href="../shared/tokens.css?v=1.13.56">
+  <link rel="stylesheet" href="../shared/components.css?v=1.13.57">
+  <link rel="stylesheet" href="../shared/shell.css?v=1.13.56">
+  <link rel="stylesheet" href="../shared/naowee-footer.css?v=1.13.56">
+  <style>/* FOOTER POINTER FIX INLINE — v1.12.5 defensive — Doug reportó que el cache de file:// servía CSS viejo y el footer flotante seguía bloqueando hover/click sobre las tablas. Esta regla está inline en el HTML para vencer al CSS externo cacheado. */ .naowee-floating-footer { pointer-events: none !important; } .naowee-floating-footer__version, .naowee-floating-footer__logo, .naowee-floating-footer__text, .naowee-floating-footer__sep { pointer-events: auto !important; }</style>
+
+  <style>
+    /* ═══════════════════════════════════════════════════════════════════
+       GIT Comunicaciones — Notificación por aviso (vencidos 5d hábiles)
+       v1.12.0 (2026-05-26) · CPACA Art 67-69
+
+       GIT recibe trámites en NotifOficinas con plazo vencido (>5 días hábiles
+       sin que el organismo asistiera). Notifica por aviso (publicación) y
+       marca el trámite como notificado. Estado → NotifElectronica.
+       ═══════════════════════════════════════════════════════════════════ */
+    .page-title-block { margin-bottom: 4px; }
+    .page-title { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -.5px; color: var(--text-primary); line-height: 1.2; }
+    .page-subtitle { margin: 6px 0 0; font-size: 14px; color: var(--text-secondary); font-weight: 500; }
+    .page-inner { max-width: 1480px !important; }
+    .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 24px 0; }
+    @media (max-width: 900px) { .stat-grid { grid-template-columns: 1fr; } }
+    @media (min-width: 901px) and (max-width: 1200px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+
+    .naowee-table tbody tr.row-clickable { cursor: pointer; transition: background var(--duration-fast, .12s) ease; }
+    .naowee-table tbody tr.row-clickable:hover { background: #fafbfd; }
+    .naowee-table-card > div:last-child { padding-bottom: 8px; }
+    .row-radicado { font-family: var(--font-sans);font-variant-numeric:tabular-nums; font-size: 13px; font-weight: 700; }
+
+    /* v1.12.7: empty state migrado al canónico .naowee-empty-state — ver
+       components.css#v1.12.7 (icono 40×40 + tipografía DS). */
+
+    .notif-modal-body__row { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .notif-modal-body__row:last-child { border-bottom: 0; }
+    .notif-modal-body__key { color: var(--text-secondary); flex: 0 0 140px; }
+    .notif-modal-body__val { color: var(--text-primary); font-weight: 600; }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       v1.13.30 (Doug 27/05/2026): CSS DEFENSIVE para el botón Publicar
+       aviso. Doug reportó que ni el hover ni el click funcionaban en su
+       browser. Aquí defendemos con specificity alta + !important.
+
+       - Pointer-events: auto !important para descartar overlay invisible
+       - Hover glow naranja explícito, no depende del DS CDN
+       - Position relative + z-index 5 para subir sobre cualquier overlay
+       - Cursor pointer para feedback visual de interactividad */
+    .git-publish-btn {
+      position: relative !important;
+      z-index: 5 !important;
+      pointer-events: auto !important;
+      cursor: pointer !important;
+      transition: box-shadow .2s ease, transform .1s ease !important;
+    }
+    .git-publish-btn:hover {
+      box-shadow: 0 6px 18px rgba(215, 64, 9, 0.32),
+                  0 2px 6px rgba(215, 64, 9, 0.18) !important;
+      transform: translateY(-1px) !important;
+    }
+    .git-publish-btn:active {
+      transform: translateY(0) !important;
+      box-shadow: 0 2px 6px rgba(215, 64, 9, 0.18) !important;
+    }
+    /* Reset modal overlay defensively — si alguna sesión previa dejó .open
+       stuck, este reset garantiza display: none al cargar. JS también
+       elimina la clase pero defendemos con CSS. */
+    body.git-bandeja-fresh-load .naowee-modal-overlay:not(.git-force-open) {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="shell" id="app-shell"></div>
+  <template id="page-content"><div class="page-inner" id="pageInner"></div></template>
+
+  <div class="naowee-modal-overlay" id="modalConfirmAviso" role="dialog" aria-modal="true">
+    <div class="naowee-modal" style="width:95vw; max-width: 580px;">
+      <div class="naowee-modal__header">
+        <div class="naowee-modal__title-group">
+          <h2 class="naowee-modal__title">Publicar notificación por aviso</h2>
+          <p class="naowee-modal__subtitle" id="confirmAvisoSub">CPACA Art 67-69 — vencido plazo de 5 días hábiles.</p>
+        </div>
+        <button type="button" class="naowee-modal__dismiss" onclick="window._closeConfirmAviso()" aria-label="Cerrar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="naowee-modal__body">
+        <div class="naowee-message naowee-message--caution" style="margin-bottom: 12px;">
+          <div class="naowee-message__header">
+            <span class="naowee-message__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </span>
+            <span class="naowee-message__title">La publicación del aviso ES la notificación legal</span>
+          </div>
+          <div class="naowee-message__text">
+            CPACA Art 67-69 — vencido el plazo personal sin asistencia del organismo, <strong>no se envía correo electrónico</strong>. La publicación del aviso en el sitio web del Ministerio durante 5 días hábiles surte la notificación de pleno derecho.
+          </div>
+        </div>
+        <div class="naowee-message naowee-message--informative" style="margin-bottom: 16px;">
+          <div class="naowee-message__header">
+            <span class="naowee-message__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            </span>
+            <span class="naowee-message__title">¿Qué pasa después?</span>
+          </div>
+          <div class="naowee-message__text">
+            Al confirmar, el aviso queda publicado y el trámite avanza al flujo de respuesta. El organismo podrá entrar a su portal y elegir entre <strong>renunciar a términos</strong> (acto vigente desde el día siguiente) o <strong>interponer recursos</strong> (apelación o reposición) dentro de los 10 días siguientes.
+          </div>
+        </div>
+        <div id="confirmAvisoDetails"></div>
+      </div>
+      <div class="naowee-modal__footer naowee-modal__footer--end" style="gap: 10px;">
+        <button type="button" class="naowee-btn naowee-btn--mute" onclick="window._closeConfirmAviso()">Cancelar</button>
+        <button type="button" class="naowee-btn naowee-btn--loud" id="confirmAvisoBtn">Publicar aviso</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../shared/data.js?v=1.13.56"></script>
+  <script src="../shared/shell.js?v=1.13.56"></script>
+  <script src="../shared/ivc-store.js?v=1.13.56"></script>
+  <script src="../shared/naowee-footer.js?v=1.13.56" defer></script>
+
+  <script>
+    var state = { tramites: [], confirmId: null };
+
+    document.addEventListener('DOMContentLoaded', function () {
+      /* v1.13.30: defensive force-close del modal por si quedó stuck
+         con .open class de una sesión anterior. */
+      var modalEl = document.getElementById('modalConfirmAviso');
+      if (modalEl) {
+        modalEl.classList.remove('open');
+        modalEl.classList.remove('git-force-open');
+      }
+      document.body.classList.add('git-bandeja-fresh-load');
+
+      window.IVCData.setPerfil('git');
+      var template = document.getElementById('page-content');
+      var shellRoot = document.getElementById('app-shell');
+      shellRoot.innerHTML = template.innerHTML;
+      window.IVCShell.init({ title: null, activeNav: 'bandeja-git' });
+
+      IVCStore.init();
+      load();
+      IVCStore.on('store:changed-external', function () { load(); render(); });
+      IVCStore.on('tramite:estado-cambiado',  function () { load(); render(); });
+
+      wireConfirm();
+      render();
+    });
+
+    function load() {
+      var todas = IVCStore.getTramites({ area: 'aficionado' }) || [];
+      /* GIT ve trámites en NotifOficinas con plazo vencido (plazoDias < 0). */
+      state.tramites = todas.filter(function (t) {
+        return t.estado === 'NotifOficinas' && (typeof t.plazoDias === 'number' && t.plazoDias < 0);
+      });
+    }
+
+    function render() {
+      var host = document.getElementById('pageInner');
+      var notificados = (IVCStore.getTramites({ area: 'aficionado' }) || []).filter(function (t) {
+        var ev = (t.historico || []).slice().reverse()
+          .find(function (h) { return (h.observacion || '').indexOf('aviso') >= 0 && (h.observacion || '').indexOf('GIT') >= 0; });
+        return !!ev;
+      });
+      var hoy = new Date().toISOString().slice(0, 10);
+      var hoyCount = notificados.filter(function (t) {
+        var ev = (t.historico || []).slice().reverse()
+          .find(function (h) { return (h.observacion || '').indexOf('aviso') >= 0 && h.fecha === hoy; });
+        return !!ev;
+      }).length;
+
+      host.innerHTML =
+        '<header class="page-title-block">' +
+          '<h1 class="page-title">Notificaciones por aviso</h1>' +
+          '<p class="page-subtitle">Trámites con plazo de notificación personal vencido (>5 días hábiles sin asistencia del organismo). Se notifica por aviso publicado según CPACA Art 67-69.</p>' +
+        '</header>' +
+
+        '<section class="stat-grid">' +
+          '<div class="naowee-stat-card naowee-stat-card--accent">' +
+            '<span class="naowee-stat-card__label">Pendientes aviso</span>' +
+            '<span class="naowee-stat-card__value">' + state.tramites.length + '</span>' +
+            '<span class="naowee-stat-card__hint">Por publicar aviso</span>' +
+          '</div>' +
+          '<div class="naowee-stat-card naowee-stat-card--success">' +
+            '<span class="naowee-stat-card__label">Publicados hoy</span>' +
+            '<span class="naowee-stat-card__value">' + hoyCount + '</span>' +
+            '<span class="naowee-stat-card__hint">Avisos surtidos</span>' +
+          '</div>' +
+          '<div class="naowee-stat-card naowee-stat-card--info">' +
+            '<span class="naowee-stat-card__label">Total acumulado</span>' +
+            '<span class="naowee-stat-card__value">' + notificados.length + '</span>' +
+            '<span class="naowee-stat-card__hint">Notificados por aviso</span>' +
+          '</div>' +
+        '</section>' +
+
+        '<section class="naowee-table-card">' +
+          '<div class="naowee-table-card__head">' +
+            '<div class="naowee-table-card__head-text">' +
+              '<h2 class="naowee-table-card__title">Trámites por publicar aviso</h2>' +
+              '<p class="naowee-table-card__subtitle">' + state.tramites.length + ' trámites · CPACA Art 67-69</p>' +
+            '</div>' +
+          '</div>' +
+          (state.tramites.length === 0
+            ? '<div class="naowee-empty-state">' +
+                '<div class="naowee-empty-state__icon">' +
+                  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>' +
+                '</div>' +
+                '<div class="naowee-empty-state__title">Sin trámites por publicar aviso</div>' +
+                '<div class="naowee-empty-state__description">Cuando trámites con notificación en oficinas venzan el plazo de 5 días hábiles sin asistencia del organismo, aparecerán aquí para surtir notificación por aviso (CPACA Art 67-69).</div>' +
+              '</div>'
+            : renderTable())+
+        '</section>';
+
+      /* v1.13.30: bind clicks DIRECTAMENTE en cada botón después de
+         inyectar el HTML. requestAnimationFrame asegura que el DOM
+         esté pintado antes de buscar los botones. */
+      requestAnimationFrame(bindButtonClicks);
+    }
+
+    /* v1.13.30 (Doug 27/05/2026): solución bruta — bind DIRECTO a cada
+       botón (sin delegación) + clase .git-publish-btn con CSS defensive
+       que garantiza pointer-events:auto + hover glow !important. Doug
+       reportó "ni hover glow ni clic" — esto no puede fallar porque:
+       1. No depende del DS CDN (CSS local con !important)
+       2. No depende de delegation (cada botón tiene su listener)
+       3. Force-cleans .open class del modal al cargar */
+    function renderTable() {
+      return '<div style="overflow-x:auto;"><table class="naowee-table"><thead><tr>' +
+        '<th>Radicado</th><th>Tipo</th><th>Organismo</th><th>Profesional IVC</th><th>Días vencidos</th><th style="text-align:center;">Acciones</th>' +
+      '</tr></thead><tbody>' +
+        state.tramites.map(function (t) {
+          var dias = Math.abs(typeof t.plazoDias === 'number' ? t.plazoDias : 0);
+          return '<tr>' +
+            '<td><span class="row-radicado">' + escHtml(t.id) + '</span></td>' +
+            '<td>' + escHtml(t.tipoTramite || 'Otorgamiento') + '</td>' +
+            '<td><div style="font-weight:500;">' + escHtml(t.organismo) + '</div>' +
+                '<div style="font-size:11.5px;color:var(--text-secondary);font-family:var(--font-sans);font-variant-numeric:tabular-nums;margin-top:2px;">NIT ' + escHtml(t.nit || '—') + '</div></td>' +
+            '<td>' + escHtml(t.profesionalNombre || '—') + '</td>' +
+            '<td><span class="row-plazo row-plazo--negative">' + dias + ' días vencidos</span></td>' +
+            '<td style="text-align:center;">' +
+              '<button type="button" class="naowee-btn naowee-btn--loud naowee-btn--small git-publish-btn" data-id="' + escHtml(t.id) + '">Publicar aviso</button>' +
+            '</td>' +
+          '</tr>';
+        }).join('') +
+      '</tbody></table></div>';
+    }
+
+    function openConfirmAviso(id) {
+      state.confirmId = id;
+      var t = state.tramites.find(function (x) { return x.id === id; });
+      if (!t) { console.warn('[GIT] tramite no encontrado:', id); return; }
+      document.getElementById('confirmAvisoSub').textContent = t.id + ' · ' + t.organismo;
+      document.getElementById('confirmAvisoDetails').innerHTML =
+        '<div class="notif-modal-body__row"><span class="notif-modal-body__key">Radicado</span><span class="notif-modal-body__val">' + escHtml(t.id) + '</span></div>' +
+        '<div class="notif-modal-body__row"><span class="notif-modal-body__key">Organismo</span><span class="notif-modal-body__val">' + escHtml(t.organismo) + '</span></div>' +
+        '<div class="notif-modal-body__row"><span class="notif-modal-body__key">NIT</span><span class="notif-modal-body__val">' + escHtml(t.nit || '—') + '</span></div>' +
+        '<div class="notif-modal-body__row"><span class="notif-modal-body__key">Profesional IVC</span><span class="notif-modal-body__val">' + escHtml(t.profesionalNombre || '—') + '</span></div>' +
+        '<div class="notif-modal-body__row"><span class="notif-modal-body__key">Canal</span><span class="notif-modal-body__val">Aviso (CPACA Art 67-69)</span></div>';
+      var m = document.getElementById('modalConfirmAviso');
+      /* Asegurar que pueda renderizarse (clase defensive lo oculta hasta
+         que retiramos la guarda y agregamos .git-force-open). */
+      document.body.classList.remove('git-bandeja-fresh-load');
+      m.classList.add('git-force-open');
+      m.classList.add('open');
+    }
+    function closeConfirmAviso() {
+      var m = document.getElementById('modalConfirmAviso');
+      m.classList.remove('open');
+      m.classList.remove('git-force-open');
+      state.confirmId = null;
+    }
+    /* Expose globals para compat. */
+    window._openConfirmAviso = openConfirmAviso;
+    window._closeConfirmAviso = closeConfirmAviso;
+
+    /* v1.13.30: bind DIRECTO en cada botón después de render. No depende
+       de delegación. Cada vez que renderizamos la tabla, re-bindeamos. */
+    function bindButtonClicks() {
+      var buttons = document.querySelectorAll('.git-publish-btn');
+      buttons.forEach(function (btn) {
+        /* Evitar binds duplicados — marca el botón. */
+        if (btn.__bound) return;
+        btn.__bound = true;
+        btn.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          var id = btn.getAttribute('data-id');
+          console.log('[GIT] click Publicar aviso →', id);
+          openConfirmAviso(id);
+        });
+      });
+      console.log('[GIT] bound', buttons.length, 'botones Publicar aviso');
+    }
+
+    function wireConfirm() {
+      document.getElementById('confirmAvisoBtn').addEventListener('click', function () {
+        if (!state.confirmId) return;
+        var perfil = (window.IVCData && window.IVCData.PERFILES && window.IVCData.PERFILES['git']) || {};
+        var actor = (perfil.nombre || 'GIT Comunicaciones') + ' (GIT Comunicaciones)';
+        IVCStore.marcarNotificadoOficinas(state.confirmId, 'aviso', actor);
+        closeConfirmAviso();
+        _showSnackbar('Aviso publicado. El organismo queda notificado y puede responder renuncia a términos.', 'success');
+      });
+      document.getElementById('modalConfirmAviso').addEventListener('click', function (ev) {
+        if (ev.target === this) closeConfirmAviso();
+      });
+      /* ESC cierra el modal — UX standard. */
+      document.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Escape' &&
+            document.getElementById('modalConfirmAviso').classList.contains('open')) {
+          closeConfirmAviso();
+        }
+      });
+    }
+
+    function escHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+      });
+    }
+    function _showSnackbar(msg, variant) {
+      if (window.IVCShell && typeof window.IVCShell.showSnackbar === 'function') {
+        window.IVCShell.showSnackbar(msg, variant || 'success');
+        return;
+      }
+      var t = document.createElement('div');
+      t.textContent = msg;
+      t.style.cssText = 'position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#282834; color:#fff; padding:12px 20px; border-radius:10px; font-size:13px; z-index:9999;';
+      document.body.appendChild(t);
+      setTimeout(function () { t.remove(); }, 3000);
+    }
+  </script>
+</body>
+</html>

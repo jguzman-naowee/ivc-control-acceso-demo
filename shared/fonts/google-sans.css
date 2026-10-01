@@ -1,0 +1,21 @@
+/* Google Sans (fuente del SDK de Naowee), autocontenida para no depender de prototype/svn.
+   Solo hay 400/500/700: 100-400 -> Regular, 500-600 -> Medium, 700-900 -> Bold (sin negritas sintéticas). */
+@font-face { font-family: 'Google Sans'; font-style: normal; font-weight: 100 400; font-display: swap;
+  src: url('google-sans/GoogleSans-Regular.woff') format('woff'); }
+@font-face { font-family: 'Google Sans'; font-style: normal; font-weight: 500 600; font-display: swap;
+  src: url('google-sans/GoogleSans-Medium.woff') format('woff'); }
+@font-face { font-family: 'Google Sans'; font-style: normal; font-weight: 700 900; font-display: swap;
+  src: url('google-sans/GoogleSans-Bold.woff') format('woff'); }
+
+/* html:root gana al :root del DS legacy (CDN) sin importar el orden de carga. */
+html:root {
+  --font-sans: 'Google Sans', system-ui, -apple-system, sans-serif;
+  --font: var(--font-sans);
+  --font-family: var(--font-sans);
+  --naowee-font-family: var(--font-sans);
+  --font-family-primary: var(--font-sans);
+  --font-family-display: var(--font-sans);
+}
+
+html, body { font-family: var(--font-sans); }
+button, input, select, textarea, optgroup { font-family: inherit; }

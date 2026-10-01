@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IVC-2026-001 · Detalle del trámite · IVC Naowee</title>
+  <link rel="stylesheet" href="../shared/fonts/google-sans.css">
+
+  <!-- Naowee Design System (CDN oficial v1.8.0) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/naowee-tech/naowee-design-system@v1.8.0/dist/design-system.css">
+
+  <link rel="stylesheet" href="../shared/tokens.css">
+  <link rel="stylesheet" href="../shared/components.css">
+  <link rel="stylesheet" href="../shared/shell.css">
+  <style>
+    /* Hero card */
+    .tramite-hero {
+      background: linear-gradient(135deg, var(--surface) 0%, var(--surface-alt) 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 28px 32px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 28px;
+      align-items: start;
+      box-shadow: var(--shadow-card);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .tramite-hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: linear-gradient(180deg, var(--naranja) 0%, var(--accent) 100%);
+    }
+
+    .tramite-hero__main { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+    .tramite-hero__radicado {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .tramite-hero__radicado-num {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -.5px;
+      font-family: var(--font-sans);font-variant-numeric:tabular-nums;
+      color: var(--azul);
+    }
+
+    .tramite-hero__tipo {
+      font-size: 15px;
+      color: var(--text-secondary);
+      margin: 0;
+      font-weight: 500;
+    }
+
+    .tramite-hero__tipo strong { color: var(--text-primary); font-weight: 700; }
+
+    .tramite-hero__estado-row {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    .tramite-hero__countdown {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      background: var(--orange-bg);
+      border: 1px solid var(--orange-border);
+      border-radius: var(--radius-lg);
+      padding: 14px 18px;
+      min-width: 180px;
+    }
+
+    .tramite-hero__countdown-num {
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1;
+      letter-spacing: -.5px;
+    }
+
+    .tramite-hero__countdown-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    /* Detail layout */
+    .detail-layout {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 24px;
+      align-items: start;
+    }
+
+    @media (max-width: 900px) {
+      .detail-layout { grid-template-columns: 1fr; }
+      .tramite-hero { grid-template-columns: 1fr; }
+      .tramite-hero__countdown { align-items: flex-start; }
+    }
+
+    /* Sidebar acciones */
+    .actions-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: sticky;
+      top: calc(var(--header-h) + 24px);
+    }
+
+    .actions-card-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .actions-list { display: flex; flex-direction: column; gap: 6px; }
+    .actions-list .naowee-btn { justify-content: flex-start; width: 100%; }
+
+    /* Docs cargados */
+    .docs-loaded-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .docs-loaded-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      background: var(--green-bg);
+      border: 1px solid var(--green-border);
+      border-radius: var(--radius-md);
+      font-size: 13px;
+    }
+    .docs-loaded-item svg { color: var(--green); flex-shrink: 0; }
+    .docs-loaded-item__name { flex: 1; font-weight: 600; color: var(--text-primary); }
+    .docs-loaded-item__action { color: var(--accent); font-weight: 600; font-size: 12px; }
+  </style>
+</head>
+<body>
+
+  <div class="shell" id="app-shell"></div>
+
+  <template id="page-content">
+    <div class="page-inner">
+
+      <!-- Hero card del trámite -->
+      <section class="tramite-hero" data-tour="numero-radicado">
+        <div class="tramite-hero__main">
+          <div class="tramite-hero__radicado">
+            <span class="tramite-hero__radicado-num" id="heroRadicado">IVC-2026-001</span>
+            <span class="naowee-badge naowee-badge--informative naowee-badge--quiet naowee-badge--xl" id="heroEstado">Radicado</span>
+          </div>
+          <p class="tramite-hero__tipo"><strong>Otorgamiento de Reconocimiento Deportivo</strong> · Liga de Atletismo de Bolívar</p>
+          <div class="tramite-hero__estado-row">
+            <span class="naowee-status-pill naowee-status-pill--info">Tipología: Trámite</span>
+            <span class="naowee-status-pill naowee-status-pill--pending">Validación en curso</span>
+            <span class="naowee-status-pill">Radicado <strong style="margin-left:4px" id="heroFecha">—</strong></span>
+          </div>
+        </div>
+        <div class="tramite-hero__countdown">
+          <span class="tramite-hero__countdown-num" id="heroDias">15</span>
+          <span class="tramite-hero__countdown-label">días hábiles restantes</span>
+        </div>
+      </section>
+
+      <!-- Info banner (v1.1.4 — variant canónica `--informative`) -->
+      <div class="naowee-message naowee-message--informative" id="infoBanner">
+        <div class="naowee-message__header">
+          <span class="naowee-message__icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          </span>
+          <div class="naowee-message__content">
+            <p class="naowee-message__title">Tu trámite está en validación</p>
+            <p class="naowee-message__text">El Ministerio del Deporte tiene 15 días hábiles para validar los requisitos (Ley 1437/2011 CPACA). Recibirás notificación al correo registrado cuando haya un cambio de estado.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Caution banner (oculto por default — para Fase 2 cuando estado pase a Subsanación) -->
+      <div class="naowee-message naowee-message--caution" id="cautionBanner" hidden>
+        <span class="naowee-message__icon">⚠️</span>
+        <div class="naowee-message__content">
+          <p class="naowee-message__title">Hay observaciones por subsanar</p>
+          <p class="naowee-message__text">El Profesional IVC encontró observaciones en 2 de los documentos. Tienes 10 días hábiles para responder (Decreto 1387/1970 Art. 2.1.1.3).</p>
+        </div>
+      </div>
+
+      <!-- Layout 2 col: timeline + acciones -->
+      <div class="detail-layout">
+
+        <!-- Timeline -->
+        <section class="naowee-card ivc-card-sectioned">
+          <div class="naowee-card__header">
+            <div>
+              <h2 class="naowee-card__title">Timeline del trámite</h2>
+              <p class="naowee-card__subtitle">12 pasos del flujo V2 oficial. Avanza automáticamente conforme el Ministerio procesa.</p>
+            </div>
+          </div>
+          <div class="naowee-card__body">
+            <ol class="naowee-timeline" id="timelineList"></ol>
+          </div>
+        </section>
+
+        <!-- Sidebar de acciones + docs -->
+        <aside class="actions-sidebar">
+
+          <section class="naowee-card ivc-card-sectioned">
+            <div class="naowee-card__header">
+              <h3 class="naowee-card__title">Acciones disponibles</h3>
+            </div>
+            <div class="naowee-card__body">
+              <div class="actions-list">
+                <button type="button" class="naowee-btn naowee-btn--quiet" id="btnVerRadicado">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  Ver radicado (PDF)
+                </button>
+                <button type="button" class="naowee-btn naowee-btn--quiet" id="btnDescargarComprobante">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Descargar comprobante
+                </button>
+                <button type="button" class="naowee-btn naowee-btn--mute" id="btnAgregarObservacion">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                  Agregar observación
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section class="naowee-card ivc-card-sectioned">
+            <div class="naowee-card__header">
+              <h3 class="naowee-card__title">Documentos cargados</h3>
+              <p class="naowee-card__subtitle"><span id="docsCount">7</span> de 7</p>
+            </div>
+            <div class="naowee-card__body">
+              <div class="docs-loaded-list" id="docsLoadedList"></div>
+            </div>
+          </section>
+
+          <section class="naowee-card ivc-card-sectioned">
+            <div class="naowee-card__header">
+              <h3 class="naowee-card__title">Fundamento legal</h3>
+            </div>
+            <div class="naowee-card__body">
+              <p style="margin:0 0 8px;font-size:13px;color:var(--text-secondary)">
+                <strong style="color:var(--text-primary)">Decreto 1387/1970</strong> Art. 2.1.1.2 — Requisitos del Otorgamiento.
+              </p>
+              <p style="margin:0 0 8px;font-size:13px;color:var(--text-secondary)">
+                <strong style="color:var(--text-primary)">Ley 181/1995</strong> Art. 45-46 — Sistema Nacional del Deporte.
+              </p>
+              <p style="margin:0;font-size:13px;color:var(--text-secondary)">
+                <strong style="color:var(--text-primary)">Ley 1437/2011</strong> CPACA — Procedimiento administrativo.
+              </p>
+            </div>
+          </section>
+
+        </aside>
+      </div>
+
+    </div>
+  </template>
+
+  <!-- Scripts -->
+  <script src="../shared/data.js"></script>
+  <script src="../shared/shell.js"></script>
+  <script src="../shared/demo-tour.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var template = document.getElementById('page-content');
+      var shellRoot = document.getElementById('app-shell');
+      shellRoot.innerHTML = template.innerHTML;
+
+      var t = window.IVCData.getTramite();
+      if (!t || !t.radicado) {
+        /* Si no hay trámite radicado, redirigir al dashboard */
+        window.location.href = 'dashboard.html';
+        return;
+      }
+
+      /* Header sin breadcrumb (Doug fix #2) — hero con radicado IVC-2026-001 ya vive en el body */
+      window.IVCShell.init({
+        title: null,
+        activeNav: 'tramites'
+      });
+
+      renderHero(t);
+      renderTimeline();
+      renderDocs(t);
+
+      /* Wire actions */
+      document.getElementById('btnVerRadicado').addEventListener('click', function () {
+        window.IVCShell.showSnackbar('Generando PDF del radicado IVC-2026-001...', 'success');
+      });
+      document.getElementById('btnDescargarComprobante').addEventListener('click', function () {
+        window.IVCShell.showSnackbar('Comprobante descargado.', 'success');
+      });
+      document.getElementById('btnAgregarObservacion').addEventListener('click', function () {
+        window.IVCShell.showSnackbar('Función disponible cuando el trámite esté en estado Subsanación.');
+      });
+
+      /* Mount tour */
+      window.IVCTour.mount({ pageId: 'usuario-externo/tramite-detalle.html' });
+    });
+
+    function renderHero(t) {
+      document.getElementById('heroRadicado').textContent = t.id;
+      document.getElementById('heroFecha').textContent = formatDate(t.fechaRadicacion);
+      var dias = window.IVCData.diasRestantes();
+      document.getElementById('heroDias').textContent = dias != null ? dias : '—';
+      document.getElementById('heroEstado').textContent = t.estado;
+    }
+
+    function renderTimeline() {
+      var timeline = window.IVCData.getTimeline();
+      var html = timeline.map(function (p) {
+        var statusClass = p.estado === 'complete' ? 'is-complete'
+                        : p.estado === 'current' ? 'is-current'
+                        : '';
+        var marker = p.estado === 'complete'
+          ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+          : p.estado === 'current'
+            ? '🟡'
+            : String(p.id);
+
+        var meta = '';
+        if (p.estado === 'complete' && p.fecha) {
+          meta = '<p class="naowee-timeline__meta">' + formatDate(p.fecha) + ' · Completado</p>';
+        } else if (p.estado === 'current') {
+          meta = '<p class="naowee-timeline__meta">En proceso · Esperando asignación de profesional</p>';
+        }
+
+        return '<li class="naowee-timeline__item ' + statusClass + '">' +
+          '<div class="naowee-timeline__marker">' + marker + '</div>' +
+          '<div class="naowee-timeline__content">' +
+            '<h4 class="naowee-timeline__title">Paso ' + p.id + ' · ' + p.titulo + '</h4>' +
+            meta +
+            '<span class="naowee-timeline__role">' + p.rol + '</span>' +
+          '</div>' +
+        '</li>';
+      }).join('');
+      document.getElementById('timelineList').innerHTML = html;
+    }
+
+    function renderDocs(t) {
+      var docsDef = window.IVCData.DOCUMENTOS_DECRETO_1387;
+      var uploaded = (t && t.documentos) || [];
+      var loadedDefs = docsDef.filter(function (d) { return uploaded.indexOf(d.id) >= 0; });
+
+      document.getElementById('docsCount').textContent = loadedDefs.length;
+
+      var html = loadedDefs.map(function (d) {
+        return '<div class="docs-loaded-item">' +
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' +
+          '<span class="docs-loaded-item__name">' + d.titulo + '</span>' +
+          '<span class="docs-loaded-item__action">Ver</span>' +
+        '</div>';
+      }).join('');
+
+      if (!html) {
+        html = '<p style="font-size:13px;color:var(--text-secondary);margin:0">No hay documentos cargados.</p>';
+      }
+      document.getElementById('docsLoadedList').innerHTML = html;
+    }
+
+    function formatDate(iso) {
+      if (!iso) return '—';
+      var parts = iso.split('-');
+      if (parts.length !== 3) return iso;
+      var months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      return parts[2] + ' ' + months[parseInt(parts[1], 10) - 1] + ' ' + parts[0];
+    }
+  </script>
+</body>
+</html>

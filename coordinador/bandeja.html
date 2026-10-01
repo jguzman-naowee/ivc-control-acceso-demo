@@ -1,0 +1,3611 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bandeja de asignación · Coordinador IVC</title>
+  <link rel="stylesheet" href="../shared/fonts/google-sans.css">
+
+  <!-- Naowee DS canónico v1.8.0 — provee .naowee-btn, .naowee-badge, .naowee-table,
+       .naowee-modal, .naowee-textfield, .naowee-dropdown, .naowee-card, .naowee-message,
+       .naowee-searchbox, .naowee-checkbox, .naowee-radio, .naowee-helper, .naowee-shake. -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/naowee-tech/naowee-design-system@v1.8.0/dist/design-system.css">
+
+  <link rel="stylesheet" href="../shared/tokens.css?v=1.13.56">
+  <link rel="stylesheet" href="../shared/components.css?v=1.13.57">
+  <link rel="stylesheet" href="../shared/shell.css?v=1.13.56">
+  <link rel="stylesheet" href="../shared/naowee-footer.css?v=1.13.56">
+  <style>/* FOOTER POINTER FIX INLINE — v1.12.5 defensive — Doug reportó que el cache de file:// servía CSS viejo y el footer flotante seguía bloqueando hover/click sobre las tablas. Esta regla está inline en el HTML para vencer al CSS externo cacheado. */ .naowee-floating-footer { pointer-events: none !important; } .naowee-floating-footer__version, .naowee-floating-footer__logo, .naowee-floating-footer__text, .naowee-floating-footer__sep { pointer-events: auto !important; }</style>
+  <style>
+    /* Page-local: estilos mínimos del page-title y del grid de stats — mismos
+       que dashboard.html (no se duplica el patrón en components.css para no
+       inventar clases). */
+    .page-title-block { margin-bottom: 4px; }
+    .page-title {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -.5px;
+      color: var(--text-primary);
+      line-height: 1.2;
+    }
+    .page-subtitle {
+      margin: 6px 0 0;
+      font-size: 14px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    /* v1.5.0: aprovechar más ancho horizontal. El .page-inner canónico
+       tiene max-width:1200px. Para bandeja (tabla con 9 cols) ampliamos. */
+    .page-inner { max-width: 1480px !important; }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    @media (max-width: 900px) { .stat-grid { grid-template-columns: 1fr; } }
+    @media (min-width: 901px) and (max-width: 1200px) {
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .stat-grid > :first-child { grid-column: span 2; }
+    }
+
+    /* Toolbar dentro del card de tabla — searchbox + filters + bulk button.
+       Todo en un solo row horizontal (Doug 23/05/2026: sin wrap).
+       v1.4.4 (23/05/2026): reducido padding-top de 12px → 4px para acercar
+       al header (que ya tiene su propio padding-bottom). border-top reducido
+       a sutil; el divider canónico __divider fue eliminado para no duplicar. */
+    /* v1.4.5 (23/05/2026): spacing simétrico entre divider y contenido arriba/abajo.
+       El __head canónico tiene padding-bottom 10px; el toolbar paga padding-top 14px
+       para visualmente quedar centrado el divider entre title y searchbox. */
+    .bandeja-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+    }
+    .bandeja-toolbar__search {
+      flex: 0 1 320px;
+      min-width: 240px;
+      max-width: 360px;
+    }
+    .bandeja-toolbar__spacer { flex: 1 1 auto; }
+    .bandeja-toolbar__filters {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .bandeja-toolbar__filters .naowee-dropdown {
+      width: 180px;
+      flex-shrink: 0;
+    }
+    .bandeja-toolbar__bulk { flex-shrink: 0; }
+
+    /* Responsive: en mobile, wrap permitido */
+    @media (max-width: 900px) {
+      .bandeja-toolbar { flex-wrap: wrap; }
+      .bandeja-toolbar__filters { flex-wrap: wrap; }
+      .bandeja-toolbar__filters .naowee-dropdown { width: auto; min-width: 160px; flex: 1 1 160px; }
+    }
+
+    /* Fix: las options del dropdown usan <button> en este page-scope
+       (no <div> como en Fase 1). UA-default le da bg gris/border que rompe
+       el look canónico. Reset al patrón del DS (background:transparent del
+       wrapper __menu hereda; el __option sin estilos UA). */
+    .naowee-dropdown__menu .naowee-dropdown__option {
+      background: transparent;
+      border: 0;
+      appearance: none;
+      -webkit-appearance: none;
+      width: 100%;
+      text-align: left;
+      font: inherit;
+      color: var(--naowee-color-text-primary, #282834);
+    }
+    .naowee-dropdown__menu .naowee-dropdown__option:focus { outline: none; }
+    .naowee-dropdown__menu .naowee-dropdown__option:hover {
+      background: var(--naowee-color-background-secondary, #F4F5F9);
+    }
+    .naowee-dropdown__menu .naowee-dropdown__option--selected {
+      background: var(--naowee-color-interactive-fill-quiet-idle, #fff3e6);
+      color: var(--naowee-color-text-accent, #d74009);
+      font-weight: var(--naowee-font-weight-semibold, 600);
+    }
+
+    /* Row styles — column hierarchy */
+    .row-radicado {
+      font-family: var(--font-sans);font-variant-numeric:tabular-nums;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    /* v1.13.7: chip para trámites HIJO de reposición — muestra el rad del
+       padre debajo. Patrón paridad con .row-organismo__sub (NIT debajo).
+
+       v1.13.51 (Doug 27/05/2026): revert al estilo sin container — menos
+       invasivo. Sólo texto morado + flecha icon inline (la flecha que a
+       Doug le gustó). Google Sans (no monospace). */
+    .row-radicado-parent {
+      display: flex;          /* línea propia DEBAJO del radicado negro */
+      align-items: center;
+      gap: 3px;
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--purple, #7c3aed);
+      margin-top: 4px;
+      letter-spacing: .1px;
+      white-space: nowrap;   /* una sola línea — no envolver "Hijo de IVC-…" */
+    }
+    .row-radicado-parent svg {
+      width: 12px; height: 12px;
+      flex-shrink: 0;
+      stroke-width: 2.2;
+    }
+
+    /* ── v1.13.51: Tab Trazabilidad (modal detalle) — vínculo padre→hijo en
+       layout de ÁRBOL vertical (padre arriba → flecha abajo → hijo debajo).
+       Doug: badges con más respiro del radicado, flecha menos pegada.
+       El timeline reusa .ivc-timeline (shared). */
+    .ivc-traza-link {
+      display: flex; flex-direction: column; align-items: flex-start;
+      gap: 0;
+      padding: 6px 0 2px;
+    }
+    .ivc-traza-link__node {
+      display: flex; flex-direction: row; align-items: center;
+      gap: 12px;  /* radicado ←→ badge, lado a lado */
+      flex-wrap: wrap;
+      width: 100%;
+    }
+    .ivc-traza-link__tag {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .4px;
+      padding: 3px 10px; border-radius: 9999px;
+      flex-shrink: 0;
+    }
+    .ivc-traza-link__tag--parent { background: #f4efff; color: var(--purple, #7c3aed); }
+    .ivc-traza-link__tag--child  { background: var(--orange-bg, #fff3e6); color: var(--accent, #d74009); }
+    .ivc-traza-link__rad {
+      font-family: var(--font-sans);font-variant-numeric:tabular-nums;
+      font-size: 16px; font-weight: 700; color: var(--text-primary, #282834);
+      letter-spacing: .2px;
+    }
+    /* Flecha conectora vertical (apunta hacia abajo: padre → hijo). */
+    .ivc-traza-link__arrow {
+      width: 20px; height: 20px; flex-shrink: 0;
+      color: var(--purple, #7c3aed);
+      margin: 10px 0 10px 8px;   /* respiro vertical + leve indent tipo árbol */
+    }
+    .ivc-traza-note {
+      margin: 12px 0 0; font-size: 12.5px; line-height: 1.5;
+      color: var(--text-secondary, #646587);
+    }
+    .ivc-traza-note strong { color: var(--purple, #7c3aed); font-weight: 700; }
+
+    /* Aprobaciones — lista de actores que firmaron/aprobaron el origen. */
+    .ivc-traza-approvers { display: flex; flex-direction: column; gap: 8px; }
+    .ivc-traza-approver {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 12px;
+      background: #fafbfd; border-radius: 10px;
+    }
+    .ivc-traza-approver__avatar {
+      width: 32px; height: 32px; flex-shrink: 0;
+      border-radius: 50%;
+      background: var(--green-bg, #e6f4e7); color: var(--green, #1f8923);
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700;
+    }
+    .ivc-traza-approver__body { display: flex; flex-direction: column; gap: 1px; flex: 1 1 auto; min-width: 0; }
+    .ivc-traza-approver__actor { font-size: 13px; font-weight: 700; color: var(--text-primary, #282834); }
+    .ivc-traza-approver__action { font-size: 11.5px; color: var(--text-secondary, #646587); line-height: 1.4; }
+    .ivc-traza-approver__date {
+      font-size: 11px; color: var(--text-secondary, #646587);
+      font-family: var(--font-sans);font-variant-numeric:tabular-nums;
+      flex-shrink: 0; text-align: right;
+    }
+
+    .ivc-traza-cta { margin-top: 16px; }
+    .row-organismo {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+    .row-organismo__sub {
+      display: block;
+      font-size: 11.5px;
+      color: var(--text-secondary);
+      font-weight: 400;
+      margin-top: 2px;
+      font-family: var(--font-sans);font-variant-numeric:tabular-nums;
+    }
+    .row-tipo { color: var(--text-secondary); }
+    /* v1.4.4 (23/05/2026): Plazo como label con color semántico (no badge).
+       Doug feedback: Plazo y Estado competían visualmente porque ambos eran
+       badges con pill. Solución: Estado conserva badge canónico; Plazo se
+       convierte en texto con color + font-weight 600. */
+    .row-plazo {
+      font-size: 13px;
+      font-weight: 600;
+      font-feature-settings: 'tnum';
+    }
+    .row-plazo--positive { color: var(--green, #1f8923); }
+    .row-plazo--caution  { color: var(--accent, #d74009); }
+    .row-plazo--negative { color: #c0392b; }
+
+    /* v1.4.8 rev2: tooltip SIN portal — usar el DS canónico nativo, pero
+       garantizando que ningún padre lo clipea. Forzar overflow:visible en
+       containers, y z-index alto en el __content para que vuele encima de
+       todo. Este enfoque es más robusto que el portal pattern (que tenía
+       race conditions con mouseout). */
+    .naowee-table-card,
+    .naowee-table-card__body,
+    .row-actions,
+    .row-actions .naowee-tooltip {
+      overflow: visible !important;
+    }
+    .naowee-tooltip__content {
+      z-index: 9999 !important;
+    }
+    /* El DS canónico ya hace hover→opacity:1; reforzar por si algún padre
+       fuerza opacity:0 en su contexto (defensive). */
+    .naowee-tooltip:hover .naowee-tooltip__content,
+    .naowee-tooltip:focus-within .naowee-tooltip__content {
+      opacity: 1 !important;
+      pointer-events: none;
+    }
+
+    /* v1.4.6: reducir espacio entre el CTA del header y el divider del toolbar.
+       El __head canónico (components.css L613) tiene padding 12px 20px 10px;
+       en este page-scope reducimos el padding-bottom para acercar al divider. */
+    .naowee-table-card > .naowee-table-card__head { padding-bottom: 4px; }
+    .row-date {
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-feature-settings: 'tnum';
+    }
+    .row-asignado {
+      color: var(--text-primary);
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .row-asignado--vacio { color: var(--text-muted); font-weight: 400; }
+    .row-actions {
+      display: flex;
+      gap: 6px;
+      justify-content: flex-end;
+      align-items: center;
+    }
+    /* v1.12.1: forzar hover canónico de los icon buttons (--mute --icon)
+       — peach naranja del DS Naowee. Override defensivo por si algún padre
+       está pisando el hover. Doug reportó "las acciones no se les hace hover". */
+    .row-actions .naowee-btn--mute:hover,
+    .row-actions .naowee-btn--mute:focus-visible {
+      background: var(--orange-bg, #fff3e6) !important;
+      color: var(--accent, #d74009) !important;
+    }
+    /* v1.12.3 defensive removido en v1.12.4 — el CSS canónico del tour ya
+       tiene pointer-events:none. Override !important causaba más confusión. */
+    .row-checkbox-cell { width: 36px; padding-left: 18px; }
+
+    /* v1.13.0 (Doug 27/05/2026): profesional dropdown — semáforo de carga
+       según los trámites activos asignados. Reemplaza el suffix "(N activos)"
+       en el texto por un badge a la derecha con color semáforo:
+         · ≤ 6 trámites → verde (baja carga)
+         · 7-10         → naranja (carga media)
+         · ≥ 11         → rojo  (sobrecarga)
+       El layout pone el nombre a la izquierda y el badge alineado a la
+       derecha del option para evitar el chiquero textual del label largo. */
+    .prof-opt-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      width: 100%;
+      min-width: 0;
+    }
+    .prof-opt-name {
+      flex: 1 1 auto;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .prof-opt-badge {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 28px;
+      height: 22px;
+      padding: 0 8px;
+      border-radius: 999px;
+      font-size: 11.5px;
+      font-weight: 700;
+      font-feature-settings: 'tnum';
+      letter-spacing: .2px;
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .prof-opt-badge--low  { background: var(--green-bg, #e6f4e7);  color: var(--green, #1f8923); }
+    .prof-opt-badge--mid  { background: var(--orange-bg, #fff3e6); color: var(--accent, #d74009); }
+    .prof-opt-badge--high { background: #fff0ee;                   color: #c01818; }
+
+    /* Footer count info — minimal, page-scoped */
+    .bandeja-footer-info {
+      padding: 12px 20px;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      border-top: 1px solid var(--border);
+    }
+
+    /* v1.5.3 rev (25/05/2026): Modal Asignación Masiva — UI/UX Pro Max.
+       Doug pidió:
+       - Trámites seleccionados como chips (escala a bulk grande)
+       - Caution + info fusionados en un summary compacto
+       - Sin --scrollable forzando height enorme */
+
+    /* Section title — gris uppercase letterspaced (paridad cross-secciones).
+       v1.5.3 rev7 (25/05/2026): aplicar al h3 directamente para que TODOS
+       los titles compartan el mismo estilo (no solo los con __title-text). */
+    .masivo-section { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+    .masivo-section:first-child { margin-top: 0; }
+    .masivo-section__title {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .6px;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .masivo-section__title-text { color: inherit; font-size: inherit; font-weight: inherit; letter-spacing: inherit; text-transform: inherit; }
+    .masivo-section__count {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 24px; height: 22px;
+      padding: 0 8px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 700;
+      font-feature-settings: 'tnum';
+      margin-left: 8px;
+    }
+    /* Chips de trámites seleccionados (escalable a muchos) */
+    .masivo-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      max-height: 96px;       /* ≈3 filas — scroll si hay muchos */
+      overflow-y: auto;
+      padding: 12px;
+      background: var(--bg-soft);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      margin: 8px 0 0;
+    }
+    .masivo-chips:empty::after {
+      content: 'Ningún trámite seleccionado';
+      color: var(--text-secondary);
+      font-size: 12.5px;
+      font-style: italic;
+    }
+    .masivo-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 9999px;
+      font-family: var(--font-sans);font-variant-numeric:tabular-nums;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-primary);
+      transition: background var(--duration-fast), border-color var(--duration-fast);
+    }
+    .masivo-chip:hover { border-color: var(--accent); background: var(--orange-bg, #fff3e6); }
+    /* Scrollbar custom sutil */
+    .masivo-chips::-webkit-scrollbar { width: 6px; }
+    .masivo-chips::-webkit-scrollbar-thumb { background: var(--border-dark, #d0d4e6); border-radius: 3px; }
+    .masivo-chips::-webkit-scrollbar-track { background: transparent; }
+
+    /* v1.5.3 rev2: .masivo-summary* removido — Doug pidió 1 sola pieza
+       canónica .naowee-message (variant dinámico caution/informative).
+       El JS toggle entre los dos variants en updateCargaWarning('masivo'). */
+
+    /* v1.5.3 rev5 (25/05/2026): Modal "Distribuir trámites" — grid de
+       profesionales + lista con .naowee-dropdown canónico por fila.
+       Doug: usar componente DS, no select nativos. UI pro max. */
+
+    /* v1.5.3 rev6 (25/05/2026): cards en row con scroll horizontal nativo.
+       Antes eran grid-fixed 4-cols → con más profesionales (futuro) no había
+       forma de verlos. Ahora flex con min-width: 200px + overflow-x:auto. */
+    .ivc-prof-grid {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 10px;
+      margin-bottom: 18px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding-bottom: 6px;       /* espacio para el scrollbar */
+      scroll-snap-type: x proximity;
+      -webkit-overflow-scrolling: touch;
+    }
+    /* Scrollbar custom sutil */
+    .ivc-prof-grid::-webkit-scrollbar { height: 6px; }
+    .ivc-prof-grid::-webkit-scrollbar-thumb { background: var(--border-dark, #d0d4e6); border-radius: 3px; }
+    .ivc-prof-grid::-webkit-scrollbar-track { background: transparent; }
+
+    .ivc-prof-card {
+      flex: 0 0 200px;            /* ancho fijo para que entren ~3 visibles + scroll */
+      scroll-snap-align: start;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+    }
+    .ivc-prof-card--active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(215, 64, 9, .08);
+    }
+    .ivc-prof-card__avatar {
+      flex-shrink: 0;
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -.3px;
+    }
+    .ivc-prof-card__info { flex: 1; min-width: 0; }
+    .ivc-prof-card__name {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.2;
+    }
+    .ivc-prof-card__count-label {
+      font-size: 10.5px;
+      color: var(--text-secondary);
+      letter-spacing: .3px;
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+    .ivc-prof-card__count {
+      flex-shrink: 0;
+      min-width: 26px; height: 26px;
+      padding: 0 8px;
+      background: var(--bg-soft);
+      color: var(--text-secondary);
+      border-radius: 9999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 800;
+      font-feature-settings: 'tnum';
+    }
+    .ivc-prof-card--active .ivc-prof-card__count {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    /* Lista de trámites con dropdown canónico */
+    .ivc-distribuir-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 280px;
+      overflow-y: auto;
+      padding: 2px;
+    }
+    .ivc-distribuir-row {
+      display: grid;
+      grid-template-columns: 1fr 220px;
+      gap: 14px;
+      align-items: center;
+      padding: 10px 14px;
+      background: var(--bg-soft);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      transition: border-color var(--duration-fast);
+    }
+    .ivc-distribuir-row:hover { border-color: var(--border-dark, #d0d4e6); }
+    .ivc-distribuir-row__id {
+      font-family: var(--font-sans);font-variant-numeric:tabular-nums;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: .3px;
+    }
+    .ivc-distribuir-row__org {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 500;
+      margin-top: 2px;
+    }
+    /* El .naowee-dropdown dentro del row se ajusta al ancho */
+    .ivc-distribuir-row .naowee-dropdown__trigger {
+      height: 36px;
+      font-size: 12.5px;
+    }
+
+    /* Modal-local layout LEGACY (mantener para compat, no usado en masivo) */
+    .masivo-summary-list {
+      max-height: 140px;
+      overflow-y: auto;
+      background: var(--bg-soft);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      margin: 8px 0 0;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      font-family: var(--font-sans);font-variant-numeric:tabular-nums;
+      line-height: 1.7;
+    }
+    .masivo-section {
+      margin: 0 0 22px;
+    }
+    .masivo-section__title {
+      margin: 0 0 10px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+      text-transform: uppercase;
+      letter-spacing: .3px;
+    }
+    .masivo-radio-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* v1.5.1 (25/05/2026): bulk-hint hereda el color del botón padre
+       (blanco cuando --loud habilitado, disabled-text cuando disabled).
+       Antes era --text-muted hardcoded → se veía gris dentro del botón naranja. */
+    .bulk-hint {
+      font-size: 11.5px;
+      color: inherit;
+      opacity: 0.85;
+      margin-left: 4px;
+      font-weight: 700;
+    }
+    /* Botón masiva disabled: paridad con el patrón loud:disabled del DS */
+    #btnAsignacionMasiva[disabled],
+    #btnAsignacionMasiva:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    /* ═══ Scope IVC custom — solo para patrones que NO existen en el DS ═══ */
+
+    /* Timeline (histórico) — scope custom porque DS no tiene timeline component */
+    .ivc-timeline {
+      list-style: none;
+      margin: 0;
+      padding: 0 0 4px 0;
+      position: relative;
+    }
+    .ivc-timeline::before {
+      content: '';
+      position: absolute;
+      left: 9px;
+      top: 6px;
+      bottom: 6px;
+      width: 2px;
+      background: var(--border);
+    }
+    .ivc-timeline__item {
+      position: relative;
+      padding: 0 0 18px 32px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+    .ivc-timeline__item:last-child { padding-bottom: 0; }
+    .ivc-timeline__dot {
+      position: absolute;
+      left: 4px;
+      top: 4px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent, #d74009);
+      box-shadow: 0 0 0 3px #fff, 0 0 0 4px var(--accent, #d74009);
+    }
+    .ivc-timeline__item--muted .ivc-timeline__dot {
+      background: var(--text-muted, #9ca3af);
+      box-shadow: 0 0 0 3px #fff, 0 0 0 4px var(--border-dark, #d0d4e6);
+    }
+    .ivc-timeline__title {
+      display: block;
+      font-weight: 700;
+      color: var(--text-primary);
+      font-size: 13.5px;
+      margin-bottom: 2px;
+    }
+    .ivc-timeline__meta {
+      display: block;
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-family: var(--font-sans);font-variant-numeric:tabular-nums;
+    }
+    .ivc-timeline__actor {
+      display: block;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* v1.5.8 (25/05/2026): Modal Histórico — alto fijo + scroll interno
+       (feedback Doug). Antes el modal crecía sin límite y ocupaba toda la
+       pantalla cuando había muchos eventos. */
+    #modalHistoricoOverlay .naowee-modal,
+    #modalDetalleOverlay .naowee-modal {
+      display: flex;
+      flex-direction: column;
+      max-height: 85vh;
+    }
+    #modalHistoricoOverlay .naowee-modal__header,
+    #modalDetalleOverlay .naowee-modal__header {
+      flex-shrink: 0;
+    }
+    #modalHistoricoOverlay .naowee-modal__body,
+    #modalDetalleOverlay .naowee-modal__body {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      min-height: 0;
+    }
+
+    /* v1.6.5 (26/05/2026): alto FLEXIBLE en lugar de fijo.
+       Antes (v1.6.0–v1.6.4): height fija → tabs cortos con mensaje "no requiere"
+       creaban 400-500px de espacio en blanco. Ahora:
+       - min-height 280px → baseline para que el modal nunca colapse demasiado
+       - max-height 70vh → contenido largo (Estructura F3) scrollea internamente
+       - height: auto → el modal RESPIRA al cambiar de tab dentro de ese rango */
+    #modalDetalleOverlay .naowee-modal__body {
+      height: auto;
+      min-height: 280px;
+      max-height: 70vh;
+      padding: 28px 40px 40px;
+    }
+
+    /* v1.6.9 (26/05/2026): bloques de detalle ahora usan el componente
+       canónico .naowee-accordion del DS (con __title + __action label
+       + __chevron). Overrides scoped al modal body:
+       - __action label en naranja accent (en lugar de text-link-idle)
+       - __chevron en naranja accent (en lugar de icon-secondary gris)
+       - __title pequeño/gris claro/letterspaced (override del 14px default)
+       - max-height en open subido a 4000px para que las tablas grandes
+         (Estructura F3 con 7 columnas) no queden recortadas. */
+    #modalDetalleBody .naowee-accordion__item {
+      border-bottom: 1px solid var(--border);
+    }
+    #modalDetalleBody .naowee-accordion__item:last-child {
+      border-bottom: 0;
+    }
+    #modalDetalleBody .naowee-accordion__header {
+      padding: 14px 0;
+      gap: 12px;
+    }
+    #modalDetalleBody .naowee-accordion__header:hover {
+      background: transparent;
+      margin: 0;
+      padding-left: 0;
+      padding-right: 0;
+    }
+    #modalDetalleBody .naowee-accordion__title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .6px;
+      text-transform: uppercase;
+      color: #9a9db0;
+      transition: color .15s ease;
+    }
+    #modalDetalleBody .naowee-accordion__header:hover .naowee-accordion__title {
+      color: var(--text-secondary);
+    }
+    #modalDetalleBody .naowee-accordion__action {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent, #d74009);
+      letter-spacing: 0;
+      text-transform: none;
+    }
+    #modalDetalleBody .naowee-accordion__chevron {
+      width: 16px;
+      height: 16px;
+      color: var(--accent, #d74009);
+    }
+    #modalDetalleBody .naowee-accordion__body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height .3s ease;
+    }
+    #modalDetalleBody .naowee-accordion__item--open .naowee-accordion__body {
+      max-height: 4000px;
+    }
+    #modalDetalleBody .naowee-accordion__content {
+      padding-bottom: 18px;
+    }
+    /* Empty state del tab (cuando NO hay datos en toda la tab) */
+    #modalDetalleBody > .ivc-detail-empty {
+      padding: 32px 4px;
+      text-align: center;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    /* v1.7.9 (26/05/2026): tabs canónicos DS sobre la base del v1.7.8 +
+       padding para que respiren:
+         - padding-top: 12px  → separa del divider del header
+         - padding-left/right: 24px → primer/último tab sin pegarse al borde
+         - height: 60px = 48 (tab) + 12 (padding-top) [box-sizing: border-box] */
+    #modalDetalleOverlay #modalDetalleTabs.naowee-tabs {
+      flex-shrink: 0;
+      overflow-x: visible;
+      border-bottom: 0;
+      position: relative;
+      box-sizing: border-box;
+      height: 60px;
+      min-height: 60px;
+      padding: 12px 24px 0;      /* top 12 — lateral 24 — bottom 0 (divider via ::after) */
+      background: transparent;   /* mata el background: var(--bg) legacy */
+      border-radius: 0;          /* mata el border-radius legacy */
+      gap: 0;                    /* mata el gap legacy */
+    }
+    #modalDetalleOverlay #modalDetalleTabs.naowee-tabs::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: var(--border);
+      pointer-events: none;
+    }
+    #modalDetalleOverlay #modalDetalleTabs.naowee-tabs > .naowee-tab::after {
+      border-radius: 0;
+    }
+    /* v1.8.1 (26/05/2026): UX/UI redesign del modal — feedback Doug:
+       - Sub-block titles NO uppercase (compitiendo con accordion titles que ya son uppercase).
+       - Field labels NO uppercase, lowercase regular, lighter weight (legibilidad).
+       - Solo el accordion title (section anchor) se mantiene en uppercase como section marker. */
+    .ivc-detail-subblock { margin: 20px 0 0; }
+    .ivc-detail-subblock__title {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0;
+      text-transform: none;
+      color: var(--text-primary);
+      margin: 0 0 10px;
+    }
+    .ivc-data-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 24px 32px;       /* v1.8.2: row gap 16→24px (más aire entre rows) */
+    }
+    @media (max-width: 900px) { .ivc-data-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 600px) { .ivc-data-grid { grid-template-columns: 1fr; } }
+    .ivc-data-grid__cell { display: flex; flex-direction: column; gap: 2px; }
+    .ivc-data-grid__label {
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0;
+      text-transform: none;
+      color: var(--text-secondary);
+    }
+    .ivc-data-grid__value {
+      font-size: 14px; color: var(--text-primary); font-weight: 500;
+      word-break: break-word;
+      line-height: 1.45;
+    }
+    .ivc-data-grid__value--mono {
+      font-family: var(--font-sans);font-variant-numeric:tabular-nums;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    /* v1.8.1: tablas más limpias — header lowercase, font weight medium,
+       hover sutil en rows, padding más generoso.
+
+       v1.13.53 (Doug 27/05/2026): header = barra gris FLOTANTE con las 4
+       esquinas redondeadas (no solo las de arriba) y SIN divider inferior.
+       border-collapse:separate permite radius en los th; el respiro
+       header→datos lo da el padding-top de la primera fila. */
+    .ivc-detail-table {
+      width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px;
+      margin: 0 0 6px;
+      background: var(--surface);
+    }
+    .ivc-detail-table th {
+      background: var(--bg-soft); text-align: left;
+      padding: 9px 14px;
+      font-size: 11.5px; font-weight: 600;
+      letter-spacing: 0; text-transform: none;
+      color: var(--text-secondary);
+      border: 0;   /* sin divider inferior pegado */
+    }
+    .ivc-detail-table thead th:first-child { border-radius: 8px 0 0 8px; }
+    .ivc-detail-table thead th:last-child  { border-radius: 0 8px 8px 0; }
+    /* respiro entre la barra del header y la primera fila de datos */
+    .ivc-detail-table tbody tr:first-child td { padding-top: 14px; }
+    .ivc-detail-table td {
+      padding: 12px 14px; border-bottom: 1px solid var(--border);
+      color: var(--text-primary); vertical-align: top;
+      font-weight: 500;
+    }
+    .ivc-detail-table tbody tr:last-child td { border-bottom: 0; }
+    .ivc-detail-table tbody tr:hover td { background: rgba(0,0,0,0.015); }
+    .ivc-detail-empty {
+      font-size: 13px; color: var(--text-secondary);
+      font-style: italic; margin: 4px 0;
+    }
+
+    /* v1.8.2 (26/05/2026): file link minimal — sin container, solo
+       nombre del archivo + tamaño + icono download naranja. Tooltip nativo
+       via title="Descargar". Feedback Doug: cards eran demasiado pesados
+       inline. */
+    .ivc-file-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-primary);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      max-width: 100%;
+      line-height: 1.3;
+    }
+    .ivc-file-link__name {
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+    }
+    .ivc-file-link__size {
+      flex-shrink: 0;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 400;
+    }
+    .ivc-file-link__download {
+      flex-shrink: 0;
+      color: var(--accent, #d74009);
+      transition: opacity .15s, transform .15s;
+    }
+    .ivc-file-link:hover .ivc-file-link__download {
+      opacity: 0.7;
+      transform: translateY(1px);
+    }
+
+    /* v1.8.3: usar componente .naowee-message canónico del DS para el
+       veredicto. Sólo agrego margen externo scoped al modal — el resto
+       (colors, icon circle, layout, typography) viene del DS sin overrides. */
+    #modalDetalleBody .naowee-message {
+      margin: 4px 0 24px;
+    }
+
+    /* v1.8.2: actor pill — avatar con iniciales + nombre + rol */
+    .ivc-actor-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .ivc-actor-pill__avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--accent, #d74009);
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .3px;
+      flex-shrink: 0;
+    }
+    .ivc-actor-pill__meta { display: flex; flex-direction: column; min-width: 0; }
+    .ivc-actor-pill__name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 1.2;
+    }
+    .ivc-actor-pill__role {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 1px;
+      line-height: 1.2;
+    }
+
+    /* v1.8.2: simple list — para datos tabulares de 2 columnas
+       (ej. F2 Entidades seccionales). Sin headers, sin background, sólo
+       row dividers sutiles. Más ligero que una tabla. */
+    .ivc-simple-list { list-style: none; padding: 0; margin: 0; }
+    .ivc-simple-list__item {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px;
+      padding: 14px 4px;
+      border-bottom: 1px solid var(--border);
+    }
+    .ivc-simple-list__item:last-child { border-bottom: 0; }
+    .ivc-simple-list__primary {
+      font-size: 14px; font-weight: 600; color: var(--text-primary);
+    }
+    .ivc-simple-list__secondary {
+      font-size: 13.5px; color: var(--text-secondary);
+    }
+
+    /* v1.8.1: lista de documentos validados (cuando state es terminal) */
+    .ivc-validation-list {
+      display: flex; flex-direction: column; gap: 8px;
+      margin: 8px 0 0;
+    }
+    .ivc-validation-list__item {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md, 8px);
+      background: var(--surface);
+    }
+    .ivc-validation-list__num {
+      flex-shrink: 0;
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--bg-soft);
+      font-size: 11px; font-weight: 700;
+      color: var(--text-secondary);
+    }
+    .ivc-validation-list__body { flex: 1; min-width: 0; }
+    .ivc-validation-list__title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+    .ivc-validation-list__obs   { font-size: 12.5px; color: var(--text-secondary); margin-top: 3px; line-height: 1.45; }
+    .ivc-validation-list__badge {
+      flex-shrink: 0;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .ivc-validation-list__badge--cumple   { background: var(--green-bg, #e6f4e7); color: #156d18; }
+    .ivc-validation-list__badge--nocumple { background: var(--red-bg, #fff0ee);   color: #8a1212; }
+    .ivc-validation-list__badge--obs      { background: var(--orange-bg, #fff3e6); color: #c97300; }
+    .ivc-validation-list__item--cumple   { border-left: 3px solid var(--green, #1f8923); }
+    .ivc-validation-list__item--nocumple { border-left: 3px solid #c01818; }
+    .ivc-validation-list__item--obs      { border-left: 3px solid var(--accent, #d74009); }
+
+    /* Datepicker hover state alineado con demo Fase 1 (futuro-proof si se
+       añaden filtros de fecha — no se inyecta markup ahora porque no aplica). */
+    .naowee-datepicker-field__input { cursor: pointer; }
+    .naowee-datepicker-field__input:hover .naowee-datepicker-field__icon,
+    .naowee-datepicker-field__input:hover .naowee-datepicker-field__chevron {
+      color: var(--naowee-color-text-accent, #d74009);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="shell" id="app-shell"></div>
+
+  <template id="page-content">
+    <div class="page-inner">
+
+      <header class="page-title-block">
+        <h1 class="page-title">Bandeja de asignación</h1>
+        <p class="page-subtitle">Asigna las solicitudes radicadas a los profesionales disponibles de tu área.</p>
+      </header>
+
+      <!-- v1.4.5 (23/05/2026): Banner "Remisión automática" eliminado por
+           pedido de Doug — el Coordinador ya conoce el comportamiento del
+           sistema, redundante para la UI. -->
+
+      <!-- Stat cards (3): En remisión / Asignadas / En validación -->
+      <section class="stat-grid">
+        <div class="naowee-stat-card naowee-stat-card--accent">
+          <span class="naowee-stat-card__label">En remisión</span>
+          <span class="naowee-stat-card__value" id="statNoAsignadas">0</span>
+          <span class="naowee-stat-card__hint">Pendientes de asignar</span>
+        </div>
+        <div class="naowee-stat-card naowee-stat-card--success">
+          <span class="naowee-stat-card__label">Asignadas</span>
+          <span class="naowee-stat-card__value" id="statAsignadas">0</span>
+          <span class="naowee-stat-card__hint">Esperando inicio</span>
+        </div>
+        <div class="naowee-stat-card naowee-stat-card--info">
+          <span class="naowee-stat-card__label">En validación</span>
+          <span class="naowee-stat-card__value" id="statEnValidacion">0</span>
+          <span class="naowee-stat-card__hint">En curso por el profesional</span>
+        </div>
+      </section>
+
+      <!-- Bandeja card (patrón canónico .naowee-table-card) -->
+      <section class="naowee-table-card" data-tour="bandeja-coord">
+        <div class="naowee-table-card__head">
+          <div class="naowee-table-card__head-text">
+            <h2 class="naowee-table-card__title">Solicitudes radicadas</h2>
+            <p class="naowee-table-card__subtitle" id="bandejaSubtitle">12 trámites — Deporte Aficionado</p>
+          </div>
+          <div class="naowee-table-card__actions">
+            <!-- v1.5.2: el switch de modo demo se movió al panel del demo-switcher
+                 (Cambiar perfil) siguiendo el patrón de Project v2.0.3. -->
+            <button type="button"
+                    class="naowee-btn naowee-btn--loud"
+                    id="btnAsignacionMasiva"
+                    data-tour="asignacion-masiva">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Asignación masiva
+              <span class="bulk-hint" id="bulkHint">(0)</span>
+            </button>
+          </div>
+        </div>
+        <!-- Toolbar: search + filters
+             v1.4.4 (23/05/2026): quitado el <hr __divider> redundante; el
+             toolbar provee su propio border-top, evitando doble línea. -->
+        <div class="bandeja-toolbar" id="toolbarRoot">
+          <div class="bandeja-toolbar__search">
+            <div class="naowee-searchbox naowee-searchbox--medium" id="searchboxRoot">
+              <div class="naowee-searchbox__input-wrap">
+                <div class="naowee-searchbox__icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </div>
+                <input type="text"
+                       class="naowee-searchbox__input"
+                       placeholder="Buscar por radicado o organismo"
+                       id="searchInput" />
+                <button type="button" class="naowee-searchbox__clear" id="searchClear" aria-label="Limpiar búsqueda">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="bandeja-toolbar__spacer"></div>
+          <div class="bandeja-toolbar__filters">
+            <!-- Filtro Estado -->
+            <div class="naowee-dropdown naowee-dropdown--medium" data-filter="estado" id="ddEstado">
+              <button type="button" class="naowee-dropdown__trigger" aria-haspopup="listbox" aria-expanded="false">
+                <span class="naowee-dropdown__value" data-value-label>Estado</span>
+                <span class="naowee-dropdown__controls">
+                  <span class="naowee-dropdown__chevron">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </span>
+                </span>
+              </button>
+              <div class="naowee-dropdown__menu" role="listbox">
+                <div class="naowee-dropdown__option" role="option" data-val="" tabindex="-1">Todos los estados</div>
+                <div class="naowee-dropdown__option" role="option" data-val="No asignada" tabindex="-1">En remisión</div>
+                <div class="naowee-dropdown__option" role="option" data-val="Asignada" tabindex="-1">Asignada</div>
+                <div class="naowee-dropdown__option" role="option" data-val="En validación" tabindex="-1">En validación</div>
+                <!-- v1.10.0+v1.11.0: estados intermedios del flujo COO + firma Director.
+                     Acciones reales viven en /coordinador/actos.html y /director/bandeja.html. -->
+                <div class="naowee-dropdown__option" role="option" data-val="PendienteCOO" tabindex="-1">En aprobación COO</div>
+                <div class="naowee-dropdown__option" role="option" data-val="PendienteFirma" tabindex="-1">Pendiente firma Director</div>
+                <div class="naowee-dropdown__option" role="option" data-val="Firmado" tabindex="-1">Firmado</div>
+                <div class="naowee-dropdown__option" role="option" data-val="NotifElectronica" tabindex="-1">Notif. electrónica</div>
+                <div class="naowee-dropdown__option" role="option" data-val="NotifOficinas" tabindex="-1">Notif. en oficinas</div>
+                <div class="naowee-dropdown__option" role="option" data-val="Vigente" tabindex="-1">Vigente</div>
+                <div class="naowee-dropdown__option" role="option" data-val="No cumple" tabindex="-1">No cumple</div>
+                <div class="naowee-dropdown__option" role="option" data-val="Cumplimiento parcial" tabindex="-1">Cumplimiento parcial</div>
+              </div>
+            </div>
+            <!-- Filtro Tipo -->
+            <div class="naowee-dropdown naowee-dropdown--medium" data-filter="tipo" id="ddTipo">
+              <button type="button" class="naowee-dropdown__trigger" aria-haspopup="listbox" aria-expanded="false">
+                <span class="naowee-dropdown__value" data-value-label>Tipo de trámite</span>
+                <span class="naowee-dropdown__controls">
+                  <span class="naowee-dropdown__chevron">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </span>
+                </span>
+              </button>
+              <div class="naowee-dropdown__menu" role="listbox">
+                <div class="naowee-dropdown__option" role="option" data-val="" tabindex="-1">Todos los tipos</div>
+                <div class="naowee-dropdown__option" role="option" data-val="Otorgamiento" tabindex="-1">Otorgamiento</div>
+                <div class="naowee-dropdown__option" role="option" data-val="Renovación" tabindex="-1">Renovación</div>
+                <div class="naowee-dropdown__option" role="option" data-val="Actualización" tabindex="-1">Actualización</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabla -->
+        <table class="naowee-table" id="bandejaTable">
+          <thead>
+            <tr>
+              <th class="row-checkbox-cell">
+                <label class="naowee-checkbox" id="checkAllWrap">
+                  <span class="naowee-checkbox__box">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </span>
+                </label>
+              </th>
+              <th>Radicado</th>
+              <th>Tipo</th>
+              <th>Organismo</th>
+              <th>Radicado en</th>
+              <th>Plazo</th>
+              <th>Estado</th>
+              <th>Asignado</th>
+              <th style="text-align:right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="bandejaBody"></tbody>
+        </table>
+
+        <!-- Footer count -->
+        <div class="bandeja-footer-info" id="footerCount">Mostrando 0 de 0</div>
+      </section>
+
+    </div>
+  </template>
+
+  <!-- ═══ Modal: Asignación Masiva ═══ -->
+  <div class="naowee-modal-overlay" id="modalMasivoOverlay" role="dialog" aria-modal="true" aria-labelledby="modalMasivoTitle">
+    <!-- v1.5.3 rev: removido --scrollable (forzaba height:calc(100vh-64px) →
+         espacio vacío gigante cuando el contenido era corto). Doug 25/05/2026. -->
+    <div class="naowee-modal" style="max-width: 640px;">
+      <div class="naowee-modal__header">
+        <div class="naowee-modal__title-group">
+          <h2 class="naowee-modal__title" id="modalMasivoTitle">Asignación masiva de trámites</h2>
+          <p class="naowee-modal__subtitle">Selecciona la estrategia y el profesional responsable.</p>
+        </div>
+        <!-- v1.5.3: X con --mute (Ghost canónico) en lugar de --quiet -->
+        <button type="button" class="naowee-modal__dismiss" id="modalMasivoClose" aria-label="Cerrar modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="naowee-modal__body">
+
+        <!-- v1.5.3 rev: Trámites seleccionados con UI mejorada — chips para
+             scalar a bulk grande. Doug 25/05/2026: pensar en muchos trámites.
+             Patrón: header con badge prominente del count + lista de chips
+             con scroll vertical max 90px (≈3 filas de chips). -->
+        <div class="masivo-section">
+          <h3 class="masivo-section__title">
+            <span class="masivo-section__title-text">Trámites a asignar</span>
+            <span class="masivo-section__count" id="masivoCount">0</span>
+          </h3>
+          <div class="masivo-chips" id="masivoList" aria-live="polite">
+            <!-- chips inyectados por JS -->
+          </div>
+        </div>
+
+        <!-- Sección 2: estrategia -->
+        <div class="masivo-section">
+          <h3 class="masivo-section__title">Estrategia de asignación</h3>
+          <div class="masivo-radio-stack">
+            <label class="naowee-radio naowee-radio--selected" data-estrategia="mismo">
+              <span class="naowee-radio__circle"></span>
+              <span class="naowee-radio__label">Asignar todos al mismo profesional</span>
+            </label>
+            <label class="naowee-radio" data-estrategia="distribuir">
+              <span class="naowee-radio__circle"></span>
+              <span class="naowee-radio__label">Distribuir entre varios profesionales</span>
+            </label>
+            <!-- v1.5.3 rev6: "Asignación manual por cada trámite" removida —
+                 el coord usa los icon-btn de cada fila en la tabla para eso. -->
+          </div>
+        </div>
+
+        <!-- Sección 3: profesional -->
+        <div class="masivo-section" id="masivoProfWrap">
+          <h3 class="masivo-section__title">Profesional</h3>
+          <div class="naowee-dropdown" id="ddProfesional" data-rich="1">
+            <span class="naowee-dropdown__label">Selecciona el profesional</span>
+            <button type="button" class="naowee-dropdown__trigger" aria-haspopup="listbox" aria-expanded="false">
+              <span class="naowee-dropdown__value" data-value-label>
+                <span class="prof-opt-row">
+                  <span class="prof-opt-name">Carlos Pérez</span>
+                  <span class="prof-opt-badge prof-opt-badge--high">12 activos</span>
+                </span>
+              </span>
+              <span class="naowee-dropdown__controls">
+                <span class="naowee-dropdown__chevron">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+              </span>
+            </button>
+            <div class="naowee-dropdown__menu" role="listbox">
+              <div class="naowee-dropdown__option naowee-dropdown__option--selected" role="option" data-val="cp-001" tabindex="-1">
+                <span class="prof-opt-row"><span class="prof-opt-name">Carlos Pérez</span><span class="prof-opt-badge prof-opt-badge--high">12 activos</span></span>
+              </div>
+              <div class="naowee-dropdown__option" role="option" data-val="mg-002" tabindex="-1">
+                <span class="prof-opt-row"><span class="prof-opt-name">María García</span><span class="prof-opt-badge prof-opt-badge--mid">8 activos</span></span>
+              </div>
+              <div class="naowee-dropdown__option" role="option" data-val="al-003" tabindex="-1">
+                <span class="prof-opt-row"><span class="prof-opt-name">Andrés López</span><span class="prof-opt-badge prof-opt-badge--high">15 activos</span></span>
+              </div>
+              <div class="naowee-dropdown__option" role="option" data-val="lr-004" tabindex="-1">
+                <span class="prof-opt-row"><span class="prof-opt-name">Lucía Ramírez</span><span class="prof-opt-badge prof-opt-badge--low">5 activos</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- v1.5.3 rev2 (25/05/2026): un solo .naowee-message canónico cuyo
+             variant cambia dinámicamente (caution si profesional con alta carga,
+             informative si todo OK). Patrón Doug: no inventar containers custom. -->
+        <div class="naowee-message naowee-message--informative" id="masivoSummary" style="margin-top:14px">
+          <div class="naowee-message__header">
+            <span class="naowee-message__icon" id="masivoSummaryIcon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            </span>
+            <span class="naowee-message__title" id="masivoSummaryTitle">Resumen de la asignación</span>
+          </div>
+          <div class="naowee-message__text" id="masivoMsgText">
+            Se asignarán <strong id="msgCount">0</strong> trámites a <strong id="msgProf">Carlos Pérez</strong>. Se registrará fecha, hora y usuario responsable en cada uno.
+          </div>
+          <!-- ocultos: el JS los lee y los inyecta dinámicamente en __text si hay alta carga -->
+          <span hidden id="masivoWarnCarga"></span>
+          <span hidden id="masivoWarnCargaText">—</span>
+        </div>
+
+        <!-- GAP #6 — Helper canónico --negative para validación -->
+        <div class="naowee-helper naowee-helper--negative" id="masivoHelperError" style="display:none; margin-top:10px">
+          <span class="naowee-helper__badge">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+              <path d="M8 5v3.5M8 10.75v.05" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M7.13 2.5L1.78 12.5a1 1 0 00.87 1.5h10.7a1 1 0 00.87-1.5L8.87 2.5a1 1 0 00-1.74 0z" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="naowee-helper__text" id="masivoHelperErrorText">Selecciona un profesional antes de confirmar</span>
+        </div>
+
+      </div>
+      <!-- v1.5.3: Cancelar removido (la X del header ya cierra). -->
+      <div class="naowee-modal__footer naowee-modal__footer--end">
+        <button type="button" class="naowee-btn naowee-btn--loud" id="modalMasivoConfirm">Confirmar asignación</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Modal: Asignación Individual ═══ -->
+  <div class="naowee-modal-overlay" id="modalIndividualOverlay" role="dialog" aria-modal="true" aria-labelledby="modalIndividualTitle">
+    <div class="naowee-modal" style="max-width: 480px;">
+      <div class="naowee-modal__header">
+        <div class="naowee-modal__title-group">
+          <h2 class="naowee-modal__title" id="modalIndividualTitle">Asignar trámite</h2>
+          <p class="naowee-modal__subtitle" id="modalIndividualSub">—</p>
+        </div>
+        <!-- v1.5.3 (25/05/2026): X close con --mute (Ghost canónico) en lugar de --quiet
+             que tenía background naranja desde idle. -->
+        <button type="button" class="naowee-modal__dismiss" id="modalIndividualClose" aria-label="Cerrar modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="naowee-modal__body">
+        <div class="naowee-dropdown" id="ddProfesionalSingle" data-rich="1">
+          <span class="naowee-dropdown__label">Profesional responsable</span>
+          <button type="button" class="naowee-dropdown__trigger" aria-haspopup="listbox" aria-expanded="false">
+            <span class="naowee-dropdown__value" data-value-label>
+              <span class="prof-opt-row">
+                <span class="prof-opt-name">Carlos Pérez</span>
+                <span class="prof-opt-badge prof-opt-badge--high">12 activos</span>
+              </span>
+            </span>
+            <span class="naowee-dropdown__controls">
+              <span class="naowee-dropdown__chevron">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </span>
+          </button>
+          <div class="naowee-dropdown__menu" role="listbox">
+            <div class="naowee-dropdown__option naowee-dropdown__option--selected" role="option" data-val="cp-001" tabindex="-1">
+              <span class="prof-opt-row"><span class="prof-opt-name">Carlos Pérez</span><span class="prof-opt-badge prof-opt-badge--high">12 activos</span></span>
+            </div>
+            <div class="naowee-dropdown__option" role="option" data-val="mg-002" tabindex="-1">
+              <span class="prof-opt-row"><span class="prof-opt-name">María García</span><span class="prof-opt-badge prof-opt-badge--mid">8 activos</span></span>
+            </div>
+            <div class="naowee-dropdown__option" role="option" data-val="al-003" tabindex="-1">
+              <span class="prof-opt-row"><span class="prof-opt-name">Andrés López</span><span class="prof-opt-badge prof-opt-badge--high">15 activos</span></span>
+            </div>
+            <div class="naowee-dropdown__option" role="option" data-val="lr-004" tabindex="-1">
+              <span class="prof-opt-row"><span class="prof-opt-name">Lucía Ramírez</span><span class="prof-opt-badge prof-opt-badge--low">5 activos</span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- v1.5.3 (25/05/2026): caution con title+icon en misma row, body sin gap excesivo.
+             Patrón canónico .naowee-message__header (igual que --informative).
+             GAP #8 — Warning carga alta. -->
+        <div class="naowee-message naowee-message--caution" id="singleWarnCarga" style="display:none; margin-top:14px">
+          <div class="naowee-message__header">
+            <span class="naowee-message__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </span>
+            <span class="naowee-message__title">Profesional con alta carga</span>
+          </div>
+          <div class="naowee-message__text" id="singleWarnCargaText">—</div>
+        </div>
+
+        <p style="margin: 14px 0 0; font-size: 12.5px; color: var(--text-secondary);">
+          Se registrará fecha, hora y usuario responsable. El profesional verá el trámite en su bandeja inmediatamente.
+        </p>
+      </div>
+      <!-- v1.5.3: Cancelar removido (la X del header ya cierra). Solo el CTA loud. -->
+      <div class="naowee-modal__footer naowee-modal__footer--end">
+        <button type="button" class="naowee-btn naowee-btn--loud" id="modalIndividualConfirm">Asignar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Modal: Distribuir entre varios profesionales (v1.5.3 rev4, 25/05/2026)
+       Doug pidió multi-selección manual: cada trámite se asigna a un profesional
+       específico via dropdown inline (no round-robin automático). -->
+  <div class="naowee-modal-overlay" id="modalDistribuirOverlay" role="dialog" aria-modal="true" aria-labelledby="modalDistribuirTitle">
+    <div class="naowee-modal" style="max-width: 720px;">
+      <div class="naowee-modal__header">
+        <div class="naowee-modal__title-group">
+          <h2 class="naowee-modal__title" id="modalDistribuirTitle">Distribuir trámites entre profesionales</h2>
+          <p class="naowee-modal__subtitle">Asigna cada trámite a un profesional específico.</p>
+        </div>
+        <button type="button" class="naowee-modal__dismiss" id="modalDistribuirClose" aria-label="Cerrar modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="naowee-modal__body">
+        <!-- v1.5.3 rev5: grid de profesionales (siempre visible arriba) +
+             lista de trámites con .naowee-dropdown canónico abajo. Doug pidió
+             que el summary sea más rico que un info-message. -->
+        <div class="ivc-prof-grid" id="distribuirProfGrid" role="list" aria-label="Distribución por profesional">
+          <!-- inyectado por JS -->
+        </div>
+
+        <!-- Lista de trámites con dropdown canónico por fila -->
+        <div class="ivc-distribuir-list" id="distribuirList" role="list">
+          <!-- inyectado por JS -->
+        </div>
+      </div>
+      <div class="naowee-modal__footer naowee-modal__footer--end">
+        <button type="button" class="naowee-btn naowee-btn--loud" id="modalDistribuirConfirm">Confirmar distribución</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Modal: Histórico / Trazabilidad (GAP #11)
+       v1.4.5 (23/05/2026): compactado al patrón canónico — sin footer
+       redundante (solo X arriba), max-width 480px, body sin scroll forzado. -->
+  <div class="naowee-modal-overlay" id="modalHistoricoOverlay" role="dialog" aria-modal="true" aria-labelledby="modalHistoricoTitle">
+    <div class="naowee-modal" style="max-width: 480px;">
+      <div class="naowee-modal__header">
+        <div class="naowee-modal__title-group">
+          <h2 class="naowee-modal__title" id="modalHistoricoTitle">Histórico del trámite</h2>
+          <p class="naowee-modal__subtitle" id="modalHistoricoSub">—</p>
+        </div>
+        <button type="button" class="naowee-modal__dismiss" id="modalHistoricoClose" aria-label="Cerrar modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="naowee-modal__body">
+        <!-- v1.13.10: timeline en pattern colapsable .ivc-traza-* (max-height
+             240 + Ver más + bottom fade). Wireup en openModalHistorico. -->
+        <div class="ivc-traza-wrap" id="modalHistTrazaWrap">
+          <div class="ivc-traza-box" id="modalHistTrazaBox">
+            <ol class="ivc-timeline" id="histTimeline"></ol>
+          </div>
+          <button type="button" class="ivc-traza-toggle" id="modalHistTrazaToggle" style="display:none;" onclick="window._toggleModalHistTraza()">
+            <span class="ivc-traza-toggle__label">Ver más</span>
+            <svg class="ivc-traza-toggle__chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- v1.5.9 (25/05/2026) rev3: Modal "Ver detalle del trámite" con TABS canónicos DS.
+       Reemplaza los títulos naranjas por una navegación tab-based para mejor UX.
+       Tabs adaptativos según tipo de organismo (Liga/Federación tienen Asamblea,
+       Asociación no). Width 1200px + grid de 3 columnas. Feedback Doug: UX pro max. -->
+  <div class="naowee-modal-overlay" id="modalDetalleOverlay" role="dialog" aria-modal="true" aria-labelledby="modalDetalleTitle">
+    <div class="naowee-modal" style="width: 95vw; max-width: 1100px;">
+      <div class="naowee-modal__header">
+        <div class="naowee-modal__title-group">
+          <h2 class="naowee-modal__title" id="modalDetalleTitle">Detalle del trámite</h2>
+          <p class="naowee-modal__subtitle" id="modalDetalleSub">—</p>
+        </div>
+        <button type="button" class="naowee-modal__dismiss" id="modalDetalleClose" aria-label="Cerrar modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <!-- v1.7.2: Tabs DS canónicos LITERALES — estructura mínima del playground -->
+      <div class="naowee-tabs" id="modalDetalleTabs" role="tablist" style="width:100%">
+        <!-- tabs populados dinámicamente por openModalDetalle según tipo organismo -->
+      </div>
+      <div class="naowee-modal__body" id="modalDetalleBody"></div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../shared/data.js?v=1.13.56"></script>
+  <script src="../shared/shell.js?v=1.13.56"></script>
+  <script src="../shared/demo-tour.js?v=1.13.56"></script>
+  <script src="../shared/ivc-store.js?v=1.13.56"></script>
+
+  <!-- v1.4.9: Footer flotante canónico (Project v2.0.3 pattern).
+       Doc del patrón: /docs/PATRON-FOOTER-FLOTANTE.md -->
+  <script src="../shared/naowee-footer.js?v=1.13.56" defer></script>
+  <script>
+    /* Estado local del page (no global — solo lo necesita esta pantalla) */
+    var state = {
+      tramites: [],          /* deep-copy de TRAMITES_BANDEJA + plazo + histórico */
+      seleccionados: {},     /* { tramiteId: true } */
+      filtros: { search: '', estado: '', tipo: '' },
+      modalTramiteId: null,  /* trámite del modal individual */
+      estrategia: 'mismo',
+      profesionalIdMasivo: 'cp-001',
+      profesionalIdSingle: 'cp-001',
+      /* v1.5.3 rev4: mapa { tramiteId: profesionalId } para distribución manual */
+      distribuirAsignaciones: {}
+    };
+
+    /* v1.13.3 (Doug 27/05/2026): la carga de cada profesional ahora se
+       computa dinámicamente del store en cada render, en lugar del mapa
+       hardcoded anterior. Cuando se asigna un trámite, IVCStore emite
+       tramite:asignado → refreshProfDropdowns() recalcula y reescribe
+       los badges semáforo en ambos dropdowns.
+
+       PROF_LOAD_BASE: contadores iniciales que representan la "carga
+       histórica" (trámites pasados ya completados, no en el store).
+       Se suma a los activos actuales para mantener cifras creíbles
+       en la demo y no resetear a cero el contador al limpiar el seed. */
+    var PROF_LOAD_BASE = {
+      'cp-001': 11,  /* + activos del seed (003, 009) = 13 */
+      'mg-002': 6,   /* + 005, 011 = 8 */
+      'al-003': 14,  /* + 006 = 15 */
+      'lr-004': 4    /* + 008 = 5 */
+    };
+    var PROF_NAMES = {
+      'cp-001': 'Carlos Pérez',
+      'mg-002': 'María García',
+      'al-003': 'Andrés López',
+      'lr-004': 'Lucía Ramírez'
+    };
+    var ALTA_CARGA_UMBRAL = 8;
+
+    /* Cuenta trámites activos (Asignada / En validación) por profId.
+       Usa el store como fuente de verdad. */
+    function computeProfLoad() {
+      var loads = {};
+      Object.keys(PROF_LOAD_BASE).forEach(function (id) { loads[id] = PROF_LOAD_BASE[id]; });
+      var todos = (window.IVCStore && IVCStore.getTramites) ? IVCStore.getTramites({ area: 'aficionado' }) : [];
+      todos.forEach(function (t) {
+        if (!t.profesionalId) return;
+        if (t.estado !== 'Asignada' && t.estado !== 'En validación') return;
+        loads[t.profesionalId] = (loads[t.profesionalId] || 0) + 1;
+      });
+      return loads;
+    }
+    /* Mapa público (usado por updateCargaWarning + msg distribuir). Se actualiza
+       en cada render via refreshProfDropdowns. */
+    var PROF_LOAD = computeProfLoad();
+
+    function semaforoClass(n) {
+      if (n <= 6) return 'prof-opt-badge--low';
+      if (n <= 10) return 'prof-opt-badge--mid';
+      return 'prof-opt-badge--high';
+    }
+
+    /* Reescribe el badge de cada option en los 2 dropdowns + el trigger
+       seleccionado, usando los nuevos counts del store. */
+    function refreshProfDropdowns() {
+      PROF_LOAD = computeProfLoad();
+      ['ddProfesional', 'ddProfesionalSingle'].forEach(function (ddId) {
+        var dd = document.getElementById(ddId);
+        if (!dd) return;
+        dd.querySelectorAll('.naowee-dropdown__option').forEach(function (opt) {
+          var profId = opt.getAttribute('data-val');
+          var carga = PROF_LOAD[profId] || 0;
+          var name = (PROF_NAMES[profId] || '').trim();
+          var badge = '<span class="prof-opt-badge ' + semaforoClass(carga) + '">' + carga + ' activos</span>';
+          opt.innerHTML = '<span class="prof-opt-row"><span class="prof-opt-name">' + name + '</span>' + badge + '</span>';
+        });
+        /* Sincronizar el trigger con el option seleccionado */
+        var selected = dd.querySelector('.naowee-dropdown__option--selected');
+        var trigVal  = dd.querySelector('.naowee-dropdown__value');
+        if (selected && trigVal) trigVal.innerHTML = selected.innerHTML;
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      /* Forzar perfil Coordinador para esta página */
+      window.IVCData.setPerfil('coordinador');
+
+      var template = document.getElementById('page-content');
+      var shellRoot = document.getElementById('app-shell');
+      shellRoot.innerHTML = template.innerHTML;
+
+      window.IVCShell.init({ title: null, activeNav: 'bandeja-coord' });
+
+      /* v1.5.0 (25/05/2026): SOURCE OF TRUTH = IVCStore (localStorage).
+         Antes leía TRAMITES_BANDEJA hardcoded de data.js; ahora lee de
+         IVCStore para que los trámites creados desde formulario-fase-1
+         aparezcan acá en vivo. */
+      IVCStore.init();
+      function loadFromStore() {
+        state.tramites = IVCStore.getTramites({ area: 'aficionado' });
+        /* Plazo desde el campo del store, pero recomputamos como fallback
+           si no viene (compatibilidad con seed antiguo) */
+        state.tramites.forEach(function (t, idx) {
+          if (typeof t.plazoDias !== 'number') t.plazoDias = computePlazoMock(idx, t.estado);
+          if (!t.historico) t.historico = buildHistoricoMock(t);
+        });
+      }
+      loadFromStore();
+
+      /* Live updates: si el formulario crea uno mientras esta tab está
+         abierta, o si otra tab cambia el store, refrescamos. */
+      IVCStore.on('tramite:creado',        function(){ loadFromStore(); renderStats(); renderTabla(); updateSubtitle(); refreshProfDropdowns(); });
+      IVCStore.on('tramite:asignado',      function(){ loadFromStore(); renderStats(); renderTabla(); updateSubtitle(); refreshProfDropdowns(); });
+      IVCStore.on('store:changed-external',function(){ loadFromStore(); renderStats(); renderTabla(); updateSubtitle(); refreshProfDropdowns(); });
+      IVCStore.on('tramite:estado-cambiado',function(){ loadFromStore(); renderStats(); renderTabla(); updateSubtitle(); refreshProfDropdowns(); });
+
+      renderStats();
+      renderTabla();
+      updateSubtitle();
+      wireFiltros();
+      wireSelection();
+      wireModales();
+      setupNaoweeDropdownController();
+      /* v1.13.3: render inicial de badges semáforo desde el store
+         (sobrescribe los valores hardcoded del HTML inicial). */
+      refreshProfDropdowns();
+      /* v1.5.2: cuando el demo-switcher (shell.js) cambia el modo, refrescamos */
+      IVCStore.on('store:mode-changed', function () {
+        loadFromStore();
+        state.seleccionados = {};
+        renderStats();
+        renderTabla();
+        updateSubtitle();
+        refreshProfDropdowns();
+      });
+      /* v1.4.8 rev2: tooltips ahora usan DS canónico nativo (sin portal).
+         Ver CSS de .naowee-table-card { overflow: visible } arriba. */
+
+      /* v1.12.3: tour deshabilitado por default en la bandeja del Coordinador.
+         El step 5 'bandeja-coordinador' del demo-tour.js activaba overlay con
+         spotlight + tooltip que interfería con los hover/tooltips de los
+         action icons + tabs. Doug reportó "pareciera que el tour guiado
+         estuviera molestando". Si el usuario quiere ver el tour, puede
+         hacer click en "Reiniciar tour" desde el demo-switcher. */
+      if (window.IVCData && window.IVCData.setTourClosed) {
+        window.IVCData.setTourClosed(true);
+      }
+      /* window.IVCTour.mount({ pageId: 'coordinador/bandeja.html' });
+         ↑ comentado en v1.12.3 — re-activable manualmente desde restart-tour. */
+
+      /* Actualizar bulk button con disabled estado inicial */
+      updateBulkButton();
+    });
+
+    /* Mock plazo — algunos 15, algunos 3, algunos vencidos (GAP #12) */
+    function computePlazoMock(idx, estado) {
+      var rotation = [15, 12, 3, 0, 18, 5, -2, 20, 2, 10, 4, -5];
+      return rotation[idx % rotation.length];
+    }
+
+    /* Mock histórico — siempre incluye Radicado + Remisión.
+       Si está Asignada/En validación, agrega evento de asignación. */
+    function buildHistoricoMock(t) {
+      var eventos = [
+        {
+          titulo: 'Radicado',
+          meta: t.fechaRadicacion + ' · 10:32',
+          actor: t.organismo
+        },
+        {
+          titulo: 'En remisión',
+          meta: t.fechaRadicacion + ' · 10:32',
+          actor: 'Sistema (Remisión automática)'
+        }
+      ];
+      if (t.estado === 'Asignada' || t.estado === 'En validación') {
+        eventos.push({
+          titulo: 'Asignada a ' + (t.profesionalNombre || '—'),
+          meta: '2026-05-22 · 14:18',
+          actor: 'Carolina Méndez (Coordinador)'
+        });
+      }
+      if (t.estado === 'En validación') {
+        eventos.push({
+          titulo: 'Inicio de validación',
+          meta: '2026-05-23 · 09:05',
+          actor: (t.profesionalNombre || '—') + ' (Profesional)'
+        });
+      }
+      return eventos;
+    }
+
+    /* ───────────── Render Stats ───────────── */
+    function renderStats() {
+      var counts = state.tramites.reduce(function (acc, t) {
+        if (t.estado === 'No asignada') acc.no++;
+        else if (t.estado === 'Asignada') acc.asig++;
+        else if (t.estado === 'En validación') acc.val++;
+        return acc;
+      }, { no: 0, asig: 0, val: 0 });
+      document.getElementById('statNoAsignadas').textContent = counts.no;
+      document.getElementById('statAsignadas').textContent = counts.asig;
+      document.getElementById('statEnValidacion').textContent = counts.val;
+    }
+
+    /* ───────────── Render tabla ───────────── */
+    function getFilteredTramites() {
+      return state.tramites.filter(function (t) {
+        if (state.filtros.estado && t.estado !== state.filtros.estado) return false;
+        if (state.filtros.tipo && (t.tipoTramite || t.tipo) !== state.filtros.tipo) return false;
+        if (state.filtros.search) {
+          var q = state.filtros.search.toLowerCase();
+          if (t.id.toLowerCase().indexOf(q) < 0 && t.organismo.toLowerCase().indexOf(q) < 0) return false;
+        }
+        return true;
+      });
+    }
+
+    function renderTabla() {
+      var visibles = getFilteredTramites();
+      var rowsHtml = visibles.map(function (t) {
+        var isSelected = !!state.seleccionados[t.id];
+        var badgeEstado = badgeForEstadoAsignacion(t.estado);
+        var badgePlazo  = badgeForPlazo(t.plazoDias, t.estado);
+        var asignado = t.profesionalNombre === '—' || !t.profesionalNombre
+          ? '<span class="row-asignado--vacio">—</span>'
+          : '<span class="row-asignado">' + t.profesionalNombre + '</span>';
+
+        /* v1.4.4 (23/05/2026): acciones con .naowee-btn--mute (Ghost canónico
+           del DS: transparente idle, naranja claro en hover) — patrón correcto
+           confirmado por Doug. El --quiet del DS tiene fill naranja desde idle. */
+        /* v1.13.22 (Doug 27/05/2026): reasignar profesional solo es posible
+           mientras el trámite NO haya pasado el veredicto del profesional.
+           Estados activos para reasignar: No asignada, Asignada, En validación.
+           Cualquier estado post-veredicto (Cumple/Parcial/NoCumple) o cualquier
+           downstream (PendienteCOO, PendienteFirma, Firmado, NotifElectronica,
+           NotifOficinas, Vigente, EnApelacion, EnReposicion, etc) → disabled. */
+        var canReasignar = (t.estado === 'No asignada' || t.estado === 'Asignada' || t.estado === 'En validación');
+        var accionLabel = (t.estado === 'No asignada')
+          ? 'Asignar trámite'
+          : (canReasignar
+              ? 'Reasignar a otro profesional'
+              : 'No se puede reasignar · el profesional ya emitió veredicto');
+        var accionIcon = (t.estado === 'No asignada')
+          /* user-plus icon — asignar */
+          ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>'
+          /* refresh icon — reasignar */
+          : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>';
+
+        /* v1.12.2: onclick inline directo en cada botón — antes la event
+           delegation en #bandejaBody fallaba para Doug ("sigo sin poder
+           accionar el detalle"). Causa probable: la tooltip wrapper o algún
+           padre interceptaba el bubble del click. onclick directo es a
+           prueba de balas. Window.* expone los openers para que sean
+           accesibles desde inline onclick. */
+        var safeId = escHtml(t.id);
+        var accionBtn =
+          '<span class="naowee-tooltip">' +
+            '<button type="button" class="naowee-btn naowee-btn--mute naowee-btn--icon naowee-btn--small" ' +
+              'data-asignar="' + safeId + '" ' +
+              (canReasignar
+                ? 'onclick="event.stopPropagation(); window.openModalIndividual(\'' + safeId + '\');" '
+                : 'disabled aria-disabled="true" ') +
+              'aria-label="' + accionLabel + '">' +
+              accionIcon +
+            '</button>' +
+            '<span class="naowee-tooltip__content">' + accionLabel + '</span>' +
+          '</span>';
+
+        /* Botón histórico — icon button ghost (mute) con tooltip canónico */
+        var historicoBtn =
+          '<span class="naowee-tooltip">' +
+            '<button type="button" class="naowee-btn naowee-btn--mute naowee-btn--icon naowee-btn--small" ' +
+              'data-historico="' + safeId + '" ' +
+              'onclick="event.stopPropagation(); window.openModalHistorico(\'' + safeId + '\');" ' +
+              'aria-label="Ver histórico del trámite">' +
+              '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+                '<circle cx="12" cy="12" r="10"/>' +
+                '<polyline points="12 6 12 12 16 14"/>' +
+              '</svg>' +
+            '</button>' +
+            '<span class="naowee-tooltip__content">Ver histórico</span>' +
+          '</span>';
+
+        /* v1.5.9 (25/05/2026): nuevo botón "Ver detalle" — abre modal con TODOS
+           los datos diligenciados en el formulario. Feedback Juanma. */
+        var detalleBtn =
+          '<span class="naowee-tooltip">' +
+            '<button type="button" class="naowee-btn naowee-btn--mute naowee-btn--icon naowee-btn--small" ' +
+              'data-detalle="' + safeId + '" ' +
+              'onclick="event.stopPropagation(); window.openModalDetalle(\'' + safeId + '\');" ' +
+              'aria-label="Ver detalle del trámite">' +
+              '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+                '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>' +
+                '<circle cx="12" cy="12" r="3"/>' +
+              '</svg>' +
+            '</button>' +
+            '<span class="naowee-tooltip__content">Ver detalle</span>' +
+          '</span>';
+
+        return '<tr data-tramite-id="' + t.id + '">' +
+          '<td class="row-checkbox-cell">' +
+            '<label class="naowee-checkbox ' + (isSelected ? 'naowee-checkbox--checked' : '') + '" data-row-check="' + t.id + '">' +
+              '<span class="naowee-checkbox__box">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' +
+              '</span>' +
+            '</label>' +
+          '</td>' +
+          '<td><span class="row-radicado">' + t.id + '</span>' +
+            (t.tramite_parent ? '<span class="row-radicado-parent" title="Reposición · trámite hijo del ' + escHtml(t.tramite_parent) + '">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 10 20 15 15 20"/><path d="M4 4v7a4 4 0 0 0 4 4h12"/></svg>' +
+              'Hijo de ' + escHtml(t.tramite_parent) + '</span>' : '') +
+          '</td>' +
+          '<td><span class="row-tipo">' + (t.tipoTramite || t.tipo || '—') + '</span></td>' +
+          '<td><span class="row-organismo">' + t.organismo + '<span class="row-organismo__sub">NIT ' + t.nit + '</span></span></td>' +
+          '<td><span class="row-date">' + formatDate(t.fechaRadicacion) + '</span></td>' +
+          '<td>' + badgePlazo + '</td>' +
+          '<td>' + badgeEstado + '</td>' +
+          '<td>' + asignado + '</td>' +
+          '<td><div class="row-actions">' + detalleBtn + historicoBtn + accionBtn + '</div></td>' +
+        '</tr>';
+      }).join('');
+
+      /* v1.12.8: filter-empty con pattern canónico .naowee-empty-state
+         (icono inbox 32px gris + título + descripción) dentro del <td
+         colspan>, mismo look que el resto de bandejas. */
+      document.getElementById('bandejaBody').innerHTML = rowsHtml ||
+        '<tr><td colspan="9" style="padding:0;">' +
+          '<div class="naowee-empty-state">' +
+            '<div class="naowee-empty-state__icon">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>' +
+            '</div>' +
+            '<div class="naowee-empty-state__title">Sin resultados</div>' +
+            '<div class="naowee-empty-state__description">Ningún trámite coincide con los filtros actuales. Ajusta la búsqueda, el estado o el tipo para ver más resultados.</div>' +
+          '</div>' +
+        '</td></tr>';
+      document.getElementById('footerCount').textContent = 'Mostrando ' + visibles.length + ' de ' + state.tramites.length;
+
+      updateBulkButton();
+    }
+
+    /* GAP #9 — Badge canónico "En remisión" (naranja) / Asignada (azul info) / En validación (azul) */
+    function badgeForEstadoAsignacion(estado) {
+      if (estado === 'No asignada') {
+        return '<span class="naowee-badge naowee-badge--caution naowee-badge--quiet naowee-badge--small">En remisión</span>';
+      }
+      if (estado === 'Asignada') {
+        return '<span class="naowee-badge naowee-badge--informative naowee-badge--quiet naowee-badge--small">Asignada</span>';
+      }
+      if (estado === 'En validación') {
+        return '<span class="naowee-badge naowee-badge--informative naowee-badge--quiet naowee-badge--small">En validación</span>';
+      }
+      /* v1.5.9: badges para estados finales con variant semántico.
+         v1.10.0: PendienteCOO — estado intermedio en aprobación del Coordinador.
+         v1.11.0: nuevos estados del flujo Director + notificación. */
+      if (estado === 'PendienteCOO') {
+        return '<span class="naowee-badge naowee-badge--caution naowee-badge--quiet naowee-badge--small">En aprobación COO</span>';
+      }
+      if (estado === 'PendienteFirma') {
+        return '<span class="naowee-badge naowee-badge--informative naowee-badge--quiet naowee-badge--small">Pendiente firma Director</span>';
+      }
+      if (estado === 'Firmado') {
+        return '<span class="naowee-badge naowee-badge--informative naowee-badge--quiet naowee-badge--small">Firmado · notificando</span>';
+      }
+      if (estado === 'NotifElectronica') {
+        return '<span class="naowee-badge naowee-badge--informative naowee-badge--quiet naowee-badge--small">Notificación electrónica</span>';
+      }
+      if (estado === 'NotifOficinas') {
+        return '<span class="naowee-badge naowee-badge--caution naowee-badge--quiet naowee-badge--small">Notificación en oficinas</span>';
+      }
+      if (estado === 'Vigente') {
+        return '<span class="naowee-badge naowee-badge--positive naowee-badge--quiet naowee-badge--small">Vigente</span>';
+      }
+      /* v1.11.4: estados intermedios del flujo de recursos. */
+      if (estado === 'PendienteRecursos') {
+        return '<span class="naowee-badge naowee-badge--caution naowee-badge--quiet naowee-badge--small">Términos legales corriendo</span>';
+      }
+      if (estado === 'PendienteRecursoTipo') {
+        return '<span class="naowee-badge naowee-badge--caution naowee-badge--quiet naowee-badge--small">Eligiendo recurso</span>';
+      }
+      if (estado === 'EnApelacion') {
+        return '<span class="naowee-badge naowee-badge--informative naowee-badge--quiet naowee-badge--small">En apelación · Jurídica</span>';
+      }
+      if (estado === 'EnReposicion') {
+        return '<span class="naowee-badge naowee-badge--neutral naowee-badge--quiet naowee-badge--small">Reposición · cerrado</span>';
+      }
+      if (estado === 'No cumple' || estado === 'NoCumple') {
+        return '<span class="naowee-badge naowee-badge--negative naowee-badge--quiet naowee-badge--small">No cumple</span>';
+      }
+      if (estado === 'Cumple') {
+        return '<span class="naowee-badge naowee-badge--positive naowee-badge--quiet naowee-badge--small">Cumple</span>';
+      }
+      if (estado === 'Cumplimiento parcial' || estado === 'CumplimientoParcial' || estado === 'Parcial') {
+        return '<span class="naowee-badge naowee-badge--caution naowee-badge--quiet naowee-badge--small">Cumplimiento parcial</span>';
+      }
+      return '<span class="naowee-badge naowee-badge--neutral naowee-badge--quiet naowee-badge--small">' + estado + '</span>';
+    }
+
+    /* v1.4.4 (23/05/2026): Plazo como LABEL con color semántico (no badge),
+       para que NO compita visualmente con el badge del Estado. Doug feedback. */
+    function badgeForPlazo(dias, estado) {
+      if (dias <= 0) {
+        return '<span class="row-plazo row-plazo--negative">Vencido</span>';
+      }
+      if (dias <= 5) {
+        return '<span class="row-plazo row-plazo--caution">' + dias + ' días</span>';
+      }
+      return '<span class="row-plazo row-plazo--positive">' + dias + ' días</span>';
+    }
+
+    function formatDate(iso) {
+      var p = iso.split('-');
+      var months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      return p[2] + ' ' + months[parseInt(p[1], 10) - 1] + ' ' + p[0];
+    }
+
+    /* ───────────── Filtros ───────────── */
+    function wireFiltros() {
+      var sb = document.getElementById('searchboxRoot');
+      var sbInput = document.getElementById('searchInput');
+      sbInput.addEventListener('input', function () {
+        state.filtros.search = sbInput.value;
+        if (sbInput.value) sb.classList.add('naowee-searchbox--has-value');
+        else sb.classList.remove('naowee-searchbox--has-value');
+        renderTabla();
+      });
+      document.getElementById('searchClear').addEventListener('click', function () {
+        sbInput.value = '';
+        state.filtros.search = '';
+        sb.classList.remove('naowee-searchbox--has-value');
+        renderTabla();
+      });
+    }
+
+    /* ═════════════════════════════════════════════════════════════════════
+       v1.4.6 (23/05/2026): Tooltip portal pattern
+       El .naowee-tooltip__content del DS canónico usa position:absolute y
+       se recorta cuando el padre (.naowee-table-card o td) tiene overflow.
+       Solución: al hover, mover el __content al body con position:fixed
+       y calcular coords desde el bounding rect del trigger.
+       ═════════════════════════════════════════════════════════════════════ */
+    /* v1.4.8 rev: event delegation directo en document. Funciona sin
+       importar cuántas veces se re-renderice la tabla — el listener vive
+       en document y los matches dinámicos por closest('.naowee-tooltip').
+       Trackea el trigger/content activos para devolver el content al DOM
+       original al cerrar (importante: el `:hover` del DS no aplica al
+       content portaled, por eso forzamos opacity:1 en el CSS .is-portaled). */
+    function setupTooltipPortal(){
+      var activeTrigger = null;
+      var activeContent = null;
+
+      function position(trigger, content, prefBottom) {
+        var rect = trigger.getBoundingClientRect();
+        var cw = content.offsetWidth || 200;
+        var ch = content.offsetHeight || 28;
+        var margin = 8;
+        var left = rect.left + (rect.width / 2) - (cw / 2);
+        if (left + cw > window.innerWidth - margin) left = window.innerWidth - cw - margin;
+        if (left < margin) left = margin;
+        /* v1.13.9 (Doug 27/05/2026): gap 4px, default arriba. Si no cabe
+           arriba, fallback abajo manteniendo el mismo gap. */
+        var top = prefBottom ? rect.bottom + 4 : rect.top - ch - 4;
+        if (!prefBottom && top < margin) top = rect.bottom + 4;
+        content.style.left = left + 'px';
+        content.style.top  = top + 'px';
+      }
+
+      function hideActive() {
+        if (!activeContent || !activeTrigger) return;
+        activeContent.classList.remove('is-portaled');
+        activeContent.style.removeProperty('left');
+        activeContent.style.removeProperty('top');
+        try { activeTrigger.appendChild(activeContent); } catch(e) {}
+        activeTrigger = null;
+        activeContent = null;
+      }
+
+      document.addEventListener('mouseover', function(ev){
+        var trigger = ev.target.closest('.naowee-tooltip');
+        if (!trigger) return;
+        if (trigger === activeTrigger) return;        /* ya está abierto */
+        hideActive();                                  /* cierra el anterior */
+        var content = trigger.querySelector('.naowee-tooltip__content');
+        if (!content) return;
+        var prefBottom = trigger.classList.contains('naowee-tooltip--bottom');
+        document.body.appendChild(content);
+        content.classList.add('is-portaled');
+        position(trigger, content, prefBottom);
+        activeTrigger = trigger;
+        activeContent = content;
+      });
+
+      document.addEventListener('mouseout', function(ev){
+        if (!activeTrigger) return;
+        /* solo cerrar si el mouse salió del trigger hacia algo que no es el trigger ni sus hijos */
+        if (activeTrigger.contains(ev.relatedTarget)) return;
+        hideActive();
+      });
+
+      /* v1.6.1 (26/05/2026): cerrar tooltip al clickear el trigger.
+         Antes: clickear el botón "Ver detalle" abría el modal pero el tooltip
+         quedaba pegado en el body porque la portaling no recibe mouseout
+         cuando el modal overlay tapa el trigger. Feedback Doug. */
+      document.addEventListener('click', function(ev){
+        if (ev.target.closest('.naowee-tooltip')) hideActive();
+      }, true);
+      /* Cerrar también cuando se abre cualquier modal overlay (defensivo: si
+         el tooltip vino de un trigger fuera del .naowee-tooltip, ej. teclado). */
+      document.addEventListener('keydown', function(ev){
+        if (ev.key === 'Escape') hideActive();
+      });
+
+      window.addEventListener('scroll', hideActive, true);
+      window.addEventListener('resize', hideActive);
+    }
+
+    /* ═════════════════════════════════════════════════════════════════════
+       GAP #1, #2, #3 — Portal dropdown al body + position:fixed + keyboard nav
+       Patrón portado idéntico desde /Users/dvargas/Desktop/IVC/demo-fase-1-formulario.html
+       líneas 2692-2956.
+       ═════════════════════════════════════════════════════════════════════ */
+    function setupNaoweeDropdownController(){
+      function ensureDdId(wrap){
+        if (wrap.dataset.ddId) return wrap.dataset.ddId;
+        var id = 'dd-portal-' + Math.random().toString(36).slice(2,9);
+        wrap.dataset.ddId = id;
+        return id;
+      }
+
+      function getMenu(wrap){
+        var id = ensureDdId(wrap);
+        return wrap.querySelector(':scope > .naowee-dropdown__menu')
+            || document.querySelector('body > .naowee-dropdown__menu[data-owned-by="' + id + '"]');
+      }
+
+      function positionMenu(wrap, menu){
+        var trg = wrap.querySelector('.naowee-dropdown__trigger');
+        if (!trg) return;
+        var rect = trg.getBoundingClientRect();
+        var margin = 8;
+        var menuH = menu.offsetHeight || 240;
+        var spaceBelow = window.innerHeight - rect.bottom - margin;
+        var top;
+        /* Flip-up cuando no cabe debajo */
+        if (spaceBelow >= menuH + 6 || spaceBelow >= rect.top - margin) {
+          top = rect.bottom + 6;
+          if (top + menuH > window.innerHeight - margin) {
+            top = Math.max(margin, window.innerHeight - margin - menuH);
+          }
+        } else {
+          top = rect.top - menuH - 6;
+          if (top < margin) top = margin;
+        }
+        menu.style.position = 'fixed';
+        menu.style.top = top + 'px';
+        menu.style.left = rect.left + 'px';
+        menu.style.width = rect.width + 'px';
+        menu.style.zIndex = '9999';
+      }
+
+      function portalToBody(wrap){
+        var id = ensureDdId(wrap);
+        var menu = wrap.querySelector(':scope > .naowee-dropdown__menu');
+        if (menu) {
+          menu.dataset.ownedBy = id;
+          document.body.appendChild(menu);
+        } else {
+          menu = document.querySelector('body > .naowee-dropdown__menu[data-owned-by="' + id + '"]');
+        }
+        return menu;
+      }
+
+      function openDropdown(wrap){
+        closeAll(wrap);
+        var menu = portalToBody(wrap);
+        if (!menu) return;
+        wrap.classList.add('naowee-dropdown--open');
+        /* El __menu portaled necesita estilos inline porque ya no está bajo
+           el padre con .naowee-dropdown--open. */
+        menu.style.opacity = '1';
+        menu.style.pointerEvents = 'auto';
+        menu.style.visibility = 'visible';
+        menu.style.transform = 'translateY(0)';
+        menu.style.maxHeight = '260px';
+        menu.style.overflowY = 'auto';
+        positionMenu(wrap, menu);
+        var trg = wrap.querySelector('.naowee-dropdown__trigger');
+        if (trg) trg.setAttribute('aria-expanded', 'true');
+      }
+
+      function closeDropdown(wrap){
+        wrap.classList.remove('naowee-dropdown--open');
+        var id = wrap.dataset.ddId;
+        if (id) {
+          var menu = document.querySelector('body > .naowee-dropdown__menu[data-owned-by="' + id + '"]');
+          if (menu) {
+            menu.style.opacity = '0';
+            menu.style.pointerEvents = 'none';
+            menu.style.visibility = 'hidden';
+          }
+        }
+        var trg = wrap.querySelector('.naowee-dropdown__trigger');
+        if (trg) trg.setAttribute('aria-expanded', 'false');
+      }
+
+      function closeAll(except){
+        document.querySelectorAll('.naowee-dropdown.naowee-dropdown--open').forEach(function (d) {
+          if (d === except) return;
+          closeDropdown(d);
+        });
+      }
+
+      /* Cierre suave en scroll/resize */
+      var scrollCloseScheduled = false;
+      function onScrollOrResize(){
+        if (scrollCloseScheduled) return;
+        scrollCloseScheduled = true;
+        requestAnimationFrame(function () {
+          scrollCloseScheduled = false;
+          closeAll(null);
+        });
+      }
+      window.addEventListener('scroll', onScrollOrResize, true);
+      window.addEventListener('resize', onScrollOrResize);
+
+      /* Resolver wrap origen desde una opción (puede estar portaled) */
+      function resolveWrap(option){
+        var direct = option.closest('.naowee-dropdown');
+        if (direct) return direct;
+        var menu = option.closest('.naowee-dropdown__menu');
+        if (menu && menu.dataset.ownedBy) {
+          return document.querySelector('.naowee-dropdown[data-dd-id="' + menu.dataset.ownedBy + '"]');
+        }
+        return null;
+      }
+
+      /* Click delegado global */
+      document.addEventListener('click', function(ev){
+        var trigger = ev.target.closest('.naowee-dropdown__trigger');
+        var option  = ev.target.closest('.naowee-dropdown__option');
+
+        if (option) {
+          var wrap = resolveWrap(option);
+          if (!wrap) return;
+          if (option.classList.contains('naowee-dropdown__option--disabled') || option.getAttribute('aria-disabled') === 'true') {
+            ev.stopPropagation();
+            return;
+          }
+          var value = option.getAttribute('data-val') || option.getAttribute('data-value') || '';
+          var text  = option.textContent.trim();
+          var menu = option.closest('.naowee-dropdown__menu');
+          var scope = menu || wrap;
+          scope.querySelectorAll('.naowee-dropdown__option--selected')
+              .forEach(function (o) { o.classList.remove('naowee-dropdown__option--selected'); });
+          option.classList.add('naowee-dropdown__option--selected');
+          var trg = wrap.querySelector('.naowee-dropdown__trigger');
+          var labelSpan = trg && trg.querySelector('.naowee-dropdown__placeholder, .naowee-dropdown__value');
+          if (labelSpan) {
+            labelSpan.className = 'naowee-dropdown__value';
+            /* v1.13.0: si el dropdown tiene data-rich="1" copiamos el HTML
+               completo del option al trigger (para preservar el badge
+               semáforo + layout flex). Sino, textContent normal. */
+            if (wrap.getAttribute('data-rich') === '1') {
+              labelSpan.innerHTML = option.innerHTML;
+            } else {
+              labelSpan.textContent = text;
+            }
+          }
+          wrap.classList.remove('naowee-dropdown--error');
+          closeDropdown(wrap);
+
+          /* Aplicar filtro si tiene data-filter */
+          var filterName = wrap.getAttribute('data-filter');
+          if (filterName) {
+            state.filtros[filterName] = value;
+            renderTabla();
+          }
+          /* Hooks de los dropdowns de profesional
+             v1.5.3 rev7: updateMasivoMessage() ya hace TODO (texto + variant +
+             icono + título). updateCargaWarning('masivo') ya no se llama desde
+             acá — se mantiene la función para 'single' que es independiente. */
+          if (wrap.id === 'ddProfesional') {
+            state.profesionalIdMasivo = value;
+            updateMasivoMessage();
+          }
+          if (wrap.id === 'ddProfesionalSingle') {
+            state.profesionalIdSingle = value;
+            updateCargaWarning('single');
+          }
+          ev.stopPropagation();
+          return;
+        }
+
+        if (trigger) {
+          var wrap2 = trigger.closest('.naowee-dropdown');
+          if (!wrap2) return;
+          if (wrap2.classList.contains('naowee-dropdown--disabled')) return;
+          var wasOpen = wrap2.classList.contains('naowee-dropdown--open');
+          if (wasOpen) {
+            closeDropdown(wrap2);
+          } else {
+            openDropdown(wrap2);
+          }
+          ev.stopPropagation();
+          return;
+        }
+
+        /* Click fuera */
+        if (ev.target.closest('.naowee-dropdown__menu')) return;
+        closeAll(null);
+      });
+
+      function resolveActiveWrap(){
+        var ae = document.activeElement;
+        if (!ae || !ae.closest) return null;
+        var direct = ae.closest('.naowee-dropdown');
+        if (direct) return direct;
+        var menu = ae.closest('.naowee-dropdown__menu');
+        if (menu && menu.dataset.ownedBy) {
+          return document.querySelector('.naowee-dropdown[data-dd-id="' + menu.dataset.ownedBy + '"]');
+        }
+        return null;
+      }
+
+      function getOptionsForWrap(wrap){
+        var id = wrap.dataset.ddId;
+        if (id) {
+          var menu = document.querySelector('body > .naowee-dropdown__menu[data-owned-by="' + id + '"]');
+          if (menu) return Array.prototype.slice.call(menu.querySelectorAll('.naowee-dropdown__option:not(.naowee-dropdown__option--disabled)'));
+        }
+        return Array.prototype.slice.call(wrap.querySelectorAll('.naowee-dropdown__option:not(.naowee-dropdown__option--disabled)'));
+      }
+
+      /* Teclado: Enter/Space/ArrowDown abre, Esc cierra, Up/Down navega */
+      document.addEventListener('keydown', function(ev){
+        var wrap = resolveActiveWrap();
+        if (!wrap) {
+          if (ev.key === 'Escape') closeAll(null);
+          return;
+        }
+        var isOpen = wrap.classList.contains('naowee-dropdown--open');
+        var trg = wrap.querySelector('.naowee-dropdown__trigger');
+        var options = getOptionsForWrap(wrap);
+
+        if (ev.key === 'Escape') {
+          closeDropdown(wrap);
+          if (trg) trg.focus();
+          ev.preventDefault();
+          return;
+        }
+        if ((ev.key === 'Enter' || ev.key === ' ' || ev.key === 'ArrowDown') && !isOpen && document.activeElement === trg) {
+          openDropdown(wrap);
+          if (options[0]) options[0].focus();
+          ev.preventDefault();
+          return;
+        }
+        if (isOpen && (ev.key === 'ArrowDown' || ev.key === 'ArrowUp')) {
+          var focused = document.activeElement.closest('.naowee-dropdown__option');
+          var idx = focused ? options.indexOf(focused) : -1;
+          var next = ev.key === 'ArrowDown' ? Math.min(options.length - 1, idx + 1) : Math.max(0, idx - 1);
+          if (options[next]) options[next].focus();
+          ev.preventDefault();
+          return;
+        }
+        if (isOpen && ev.key === 'Enter') {
+          var focused2 = document.activeElement.closest('.naowee-dropdown__option');
+          if (focused2) { focused2.click(); ev.preventDefault(); }
+          return;
+        }
+      });
+    }
+
+    /* GAP #7 — Shake utility */
+    function shakeElement(el) {
+      if (!el) return;
+      el.classList.remove('naowee-shake');
+      void el.offsetWidth; /* reflow para reiniciar animación */
+      el.classList.add('naowee-shake');
+      setTimeout(function () { el.classList.remove('naowee-shake'); }, 500);
+    }
+
+    /* GAP #8 — v1.5.3 rev2: el warning de alta carga ahora cambia el variant
+       del .naowee-message canónico (informative → caution) en lugar de mostrar
+       un segundo bloque pegado. Doug: 1 sola pieza canónica.
+       En scope 'single', conserva el patrón anterior porque el modal individual
+       solo tiene el warning sin info adicional. */
+    function updateCargaWarning(scope) {
+      var profId = scope === 'masivo' ? state.profesionalIdMasivo : state.profesionalIdSingle;
+      var carga = PROF_LOAD[profId] || 0;
+      var nombre = PROF_NAMES[profId] || '—';
+      var altaCarga = carga >= ALTA_CARGA_UMBRAL;
+
+      if (scope === 'masivo') {
+        /* Cambiar el variant del summary message según carga */
+        var summary = document.getElementById('masivoSummary');
+        var icon    = document.getElementById('masivoSummaryIcon');
+        var title   = document.getElementById('masivoSummaryTitle');
+        if (!summary) return;
+        if (altaCarga) {
+          summary.classList.remove('naowee-message--informative');
+          summary.classList.add('naowee-message--caution');
+          title.textContent = 'Profesional con alta carga';
+          icon.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+        } else {
+          summary.classList.remove('naowee-message--caution');
+          summary.classList.add('naowee-message--informative');
+          title.textContent = 'Resumen de la asignación';
+          icon.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+        }
+        return;
+      }
+
+      /* scope === 'single' — patrón canónico original (warning bloc separado) */
+      var warnEl  = document.getElementById('singleWarnCarga');
+      var textEl  = document.getElementById('singleWarnCargaText');
+      if (!warnEl || !textEl) return;
+      if (altaCarga) {
+        textEl.textContent = nombre + ' ya tiene ' + carga + ' trámites activos. Considera distribuir a otros profesionales.';
+        warnEl.style.display = 'flex';
+      } else {
+        warnEl.style.display = 'none';
+      }
+    }
+
+    /* ───────────── Selection ───────────── */
+    function wireSelection() {
+      var checkAllWrap = document.getElementById('checkAllWrap');
+      checkAllWrap.addEventListener('click', function (e) {
+        e.preventDefault();
+        var visibles = getFilteredTramites();
+        var allSelected = visibles.every(function (t) { return state.seleccionados[t.id]; });
+        if (allSelected) {
+          visibles.forEach(function (t) { delete state.seleccionados[t.id]; });
+        } else {
+          visibles.forEach(function (t) { state.seleccionados[t.id] = true; });
+        }
+        checkAllWrap.classList.toggle('naowee-checkbox--checked', !allSelected);
+        renderTabla();
+      });
+
+      document.getElementById('bandejaBody').addEventListener('click', function (ev) {
+        var cb = ev.target.closest('[data-row-check]');
+        if (cb) {
+          ev.preventDefault();
+          var id = cb.getAttribute('data-row-check');
+          if (state.seleccionados[id]) delete state.seleccionados[id];
+          else state.seleccionados[id] = true;
+          cb.classList.toggle('naowee-checkbox--checked');
+          updateBulkButton();
+          return;
+        }
+        var detalle = ev.target.closest('[data-detalle]');
+        if (detalle) {
+          openModalDetalle(detalle.getAttribute('data-detalle'));
+          return;
+        }
+        var hist = ev.target.closest('[data-historico]');
+        if (hist) {
+          openModalHistorico(hist.getAttribute('data-historico'));
+          return;
+        }
+        var asig = ev.target.closest('[data-asignar]');
+        if (asig) {
+          openModalIndividual(asig.getAttribute('data-asignar'));
+        }
+      });
+    }
+
+    function selectedCount() {
+      return Object.keys(state.seleccionados).filter(function (k) { return state.seleccionados[k]; }).length;
+    }
+
+    function updateBulkButton() {
+      var n = selectedCount();
+      var btn = document.getElementById('btnAsignacionMasiva');
+      var hint = document.getElementById('bulkHint');
+      /* v1.5.1: asignación masiva requiere >= 2 seleccionados (con 1, usar
+         el flujo individual). Doug 25/05/2026. */
+      if (btn) {
+        btn.disabled = n < 2;
+        btn.title = n < 2
+          ? 'Selecciona al menos 2 trámites para asignación masiva'
+          : 'Asignar ' + n + ' trámites a un profesional';
+      }
+      if (hint) hint.textContent = '(' + n + ')';
+    }
+
+    /* v1.5.2: el modo demo ahora vive en el panel del demo-switcher (shell.js).
+       Acá solo escuchamos el evento del store y refrescamos. */
+    function updateSubtitle() {
+      var n = state.tramites.length;
+      var sub = document.getElementById('bandejaSubtitle');
+      if (sub) sub.textContent = (n === 0 ? 'Sin trámites' : (n + ' trámite' + (n === 1 ? '' : 's'))) + ' — Deporte Aficionado';
+    }
+
+    /* ───────────── Modales ───────────── */
+    function wireModales() {
+      var masivoOv = document.getElementById('modalMasivoOverlay');
+      /* GAP #6/#7 — botón masivo: si hay 0 seleccionados, mostrar helper + shake (NO abrir modal) */
+      document.getElementById('btnAsignacionMasiva').addEventListener('click', function () {
+        var n = selectedCount();
+        if (n === 0) {
+          /* Construir helper inline en la toolbar si no existe — luego shake del toolbar */
+          var toolbar = document.getElementById('toolbarRoot');
+          var existing = document.getElementById('toolbarHelperError');
+          if (!existing) {
+            var helper = document.createElement('div');
+            helper.id = 'toolbarHelperError';
+            helper.className = 'naowee-helper naowee-helper--negative';
+            helper.style.margin = '0 20px 12px';
+            helper.innerHTML =
+              '<span class="naowee-helper__badge">' +
+                '<svg width="12" height="12" viewBox="0 0 16 16" fill="none">' +
+                  '<path d="M8 5v3.5M8 10.75v.05" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>' +
+                  '<path d="M7.13 2.5L1.78 12.5a1 1 0 00.87 1.5h10.7a1 1 0 00.87-1.5L8.87 2.5a1 1 0 00-1.74 0z" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/>' +
+                '</svg>' +
+              '</span>' +
+              '<span class="naowee-helper__text">Selecciona al menos un trámite antes de asignar</span>';
+            toolbar.parentNode.insertBefore(helper, toolbar.nextSibling);
+            setTimeout(function () {
+              var n2 = selectedCount();
+              if (n2 > 0 && helper.parentNode) helper.parentNode.removeChild(helper);
+            }, 4000);
+          }
+          shakeElement(toolbar);
+          return;
+        }
+        openModalMasivo();
+      });
+
+      document.getElementById('modalMasivoClose').addEventListener('click', closeModalMasivo);
+      /* v1.5.3: modalMasivoCancel removido del markup (la X del header reemplaza) */
+      masivoOv.addEventListener('click', function (e) { if (e.target === masivoOv) closeModalMasivo(); });
+      document.getElementById('modalMasivoConfirm').addEventListener('click', confirmMasivo);
+
+      /* Radios de estrategia
+         v1.5.3 rev7: updateMasivoMessage() unificado hace texto + variant +
+         icono + título en un solo paso. Ya no hace falta llamar updateCargaWarning. */
+      document.querySelectorAll('[data-estrategia]').forEach(function (r) {
+        r.addEventListener('click', function () {
+          document.querySelectorAll('[data-estrategia]').forEach(function (o) { o.classList.remove('naowee-radio--selected'); });
+          r.classList.add('naowee-radio--selected');
+          state.estrategia = r.getAttribute('data-estrategia');
+          /* Ocultar/mostrar bloque profesional según estrategia */
+          var profWrap = document.getElementById('masivoProfWrap');
+          profWrap.style.display = (state.estrategia === 'mismo') ? '' : 'none';
+          updateMasivoMessage();
+        });
+      });
+
+      var indOv = document.getElementById('modalIndividualOverlay');
+      document.getElementById('modalIndividualClose').addEventListener('click', closeModalIndividual);
+      indOv.addEventListener('click', function (e) { if (e.target === indOv) closeModalIndividual(); });
+      document.getElementById('modalIndividualConfirm').addEventListener('click', confirmIndividual);
+
+      /* v1.5.3 rev4: Modal Distribuir (multi-selección manual por profesional) */
+      var distOv = document.getElementById('modalDistribuirOverlay');
+      document.getElementById('modalDistribuirClose').addEventListener('click', closeModalDistribuir);
+      distOv.addEventListener('click', function (e) { if (e.target === distOv) closeModalDistribuir(); });
+      document.getElementById('modalDistribuirConfirm').addEventListener('click', confirmDistribuir);
+
+      /* Modal histórico (GAP #11) */
+      var histOv = document.getElementById('modalHistoricoOverlay');
+      document.getElementById('modalHistoricoClose').addEventListener('click', closeModalHistorico);
+      histOv.addEventListener('click', function (e) { if (e.target === histOv) closeModalHistorico(); });
+
+      /* v1.5.9: Modal Detalle del trámite */
+      var detOv = document.getElementById('modalDetalleOverlay');
+      document.getElementById('modalDetalleClose').addEventListener('click', closeModalDetalle);
+      detOv.addEventListener('click', function (e) { if (e.target === detOv) closeModalDetalle(); });
+    }
+
+    function openModalMasivo() {
+      var ov = document.getElementById('modalMasivoOverlay');
+      ov.classList.add('open');
+      var n = selectedCount();
+      document.getElementById('masivoCount').textContent = n;
+      var ids = Object.keys(state.seleccionados).filter(function (k) { return state.seleccionados[k]; });
+      var listEl = document.getElementById('masivoList');
+      /* v1.5.3 rev (25/05/2026): render como chips para escalar a bulk grande.
+         Vacío → :empty::after del CSS pinta "Ningún trámite seleccionado". */
+      listEl.innerHTML = ids.map(function (id) {
+        return '<span class="masivo-chip" title="' + id + '">' + id + '</span>';
+      }).join('');
+      /* Limpiar helper de error si existía */
+      var helperErr = document.getElementById('masivoHelperError');
+      if (helperErr) helperErr.style.display = 'none';
+      /* v1.5.3 rev7: updateMasivoMessage() ya hace texto + variant + icono + title.
+         updateCargaWarning('masivo') redundante removido. */
+      updateMasivoMessage();
+    }
+    function closeModalMasivo() {
+      document.getElementById('modalMasivoOverlay').classList.remove('open');
+    }
+
+    /* ═══ Modal Distribuir (v1.5.3 rev4) ═══════════════════════════════════
+       Multi-selección manual: el coord elige qué profesional para cada trámite.
+       Patrón: cerrar masivo → abrir distribuir → renderizar filas con select
+       nativo → confirmar persiste todas las asignaciones de una. */
+    /* v1.5.3 rev5: usa .naowee-dropdown canónico (DS v1.8.0) en lugar de
+       <select> nativos. El controlador setupNaoweeDropdownController ya
+       hace event delegation global, así que NO necesito rebindear por dropdown.
+       Para capturar el cambio: listener global en .naowee-dropdown__option dentro
+       de menus portaled con [data-owned-by] que apunta a un dd con data-tid. */
+    var PROF_COLORS = {
+      'cp-001': '#1f78d1',
+      'mg-002': '#7c3aed',
+      'al-003': '#1f8923',
+      'lr-004': '#d74009'
+    };
+    var PROF_INIT = {
+      'cp-001': 'CP', 'mg-002': 'MG', 'al-003': 'AL', 'lr-004': 'LR'
+    };
+
+    function renderProfGrid() {
+      var grid = document.getElementById('distribuirProfGrid');
+      if (!grid) return;
+      var ids = Object.keys(state.seleccionados).filter(function (k) { return state.seleccionados[k]; });
+      var counts = { 'cp-001': 0, 'mg-002': 0, 'al-003': 0, 'lr-004': 0 };
+      ids.forEach(function (tid) {
+        var pid = state.distribuirAsignaciones[tid] || 'cp-001';
+        counts[pid] = (counts[pid] || 0) + 1;
+      });
+      var profIds = ['cp-001', 'mg-002', 'al-003', 'lr-004'];
+      grid.innerHTML = profIds.map(function (pid) {
+        var n = counts[pid] || 0;
+        var active = n > 0;
+        return '<div class="ivc-prof-card ' + (active ? 'ivc-prof-card--active' : '') + '" role="listitem">' +
+          '<span class="ivc-prof-card__avatar" style="background:' + PROF_COLORS[pid] + '">' + PROF_INIT[pid] + '</span>' +
+          '<div class="ivc-prof-card__info">' +
+            '<div class="ivc-prof-card__name">' + PROF_NAMES[pid] + '</div>' +
+            '<div class="ivc-prof-card__count-label">' + (n === 0 ? 'sin asignar' : (n === 1 ? '1 trámite' : n + ' trámites')) + '</div>' +
+          '</div>' +
+          '<span class="ivc-prof-card__count">' + n + '</span>' +
+        '</div>';
+      }).join('');
+    }
+
+    function openModalDistribuir() {
+      var ids = Object.keys(state.seleccionados).filter(function(k){ return state.seleccionados[k]; });
+      if (!state.distribuirAsignaciones) state.distribuirAsignaciones = {};
+      ids.forEach(function (id) { state.distribuirAsignaciones[id] = state.distribuirAsignaciones[id] || 'cp-001'; });
+
+      var listEl = document.getElementById('distribuirList');
+      var rowsHtml = ids.map(function (tid) {
+        var t = state.tramites.find(function (x) { return x.id === tid; });
+        var org = t ? t.organismo : '';
+        var current = state.distribuirAsignaciones[tid] || 'cp-001';
+        var ddId = 'dd-dist-' + tid.replace(/[^a-z0-9]/gi, '');
+        return '<div class="ivc-distribuir-row" data-tid="' + tid + '" role="listitem">' +
+          '<div>' +
+            '<div class="ivc-distribuir-row__id">' + tid + '</div>' +
+            '<div class="ivc-distribuir-row__org">' + (org || '—') + '</div>' +
+          '</div>' +
+          /* .naowee-dropdown canónico */
+          '<div class="naowee-dropdown" data-distribuir="1" data-tid="' + tid + '" id="' + ddId + '">' +
+            '<button type="button" class="naowee-dropdown__trigger" aria-haspopup="listbox" aria-expanded="false">' +
+              '<span class="naowee-dropdown__value" data-value-label>' + PROF_NAMES[current] + '</span>' +
+              '<span class="naowee-dropdown__controls"><span class="naowee-dropdown__chevron">' +
+                '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+              '</span></span>' +
+            '</button>' +
+            '<div class="naowee-dropdown__menu" role="listbox">' +
+              '<div class="naowee-dropdown__option ' + (current === 'cp-001' ? 'naowee-dropdown__option--selected' : '') + '" role="option" data-val="cp-001" tabindex="-1">Carlos Pérez</div>' +
+              '<div class="naowee-dropdown__option ' + (current === 'mg-002' ? 'naowee-dropdown__option--selected' : '') + '" role="option" data-val="mg-002" tabindex="-1">María García</div>' +
+              '<div class="naowee-dropdown__option ' + (current === 'al-003' ? 'naowee-dropdown__option--selected' : '') + '" role="option" data-val="al-003" tabindex="-1">Andrés López</div>' +
+              '<div class="naowee-dropdown__option ' + (current === 'lr-004' ? 'naowee-dropdown__option--selected' : '') + '" role="option" data-val="lr-004" tabindex="-1">Lucía Ramírez</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+      listEl.innerHTML = rowsHtml;
+
+      renderProfGrid();
+      closeModalMasivo();
+      document.getElementById('modalDistribuirOverlay').classList.add('open');
+    }
+
+    function closeModalDistribuir() {
+      document.getElementById('modalDistribuirOverlay').classList.remove('open');
+    }
+
+    /* v1.5.3 rev5: updateDistribuirSummary ahora delega a renderProfGrid (live update).
+       Hook delegated del controlador del DS — el menu portaled vive en body con
+       data-owned-by que apunta al wrap original con data-distribuir + data-tid. */
+    function updateDistribuirSummary() {
+      renderProfGrid();
+    }
+
+    /* Listener delegado para clicks en options de dropdowns con data-distribuir */
+    document.addEventListener('click', function (ev) {
+      var opt = ev.target.closest && ev.target.closest('.naowee-dropdown__option');
+      if (!opt) return;
+      var menu = opt.closest('.naowee-dropdown__menu');
+      if (!menu) return;
+      var ownerId = menu.dataset.ownedBy;
+      var wrap = ownerId
+        ? document.querySelector('.naowee-dropdown[data-dd-id="' + ownerId + '"]')
+        : opt.closest('.naowee-dropdown');
+      if (!wrap || wrap.dataset.distribuir !== '1') return;
+      var tid = wrap.dataset.tid;
+      var profId = opt.getAttribute('data-val');
+      if (!tid || !profId) return;
+      state.distribuirAsignaciones[tid] = profId;
+      renderProfGrid();
+    }, true);  /* capture phase: corre ANTES del controlador del DS */
+
+    function confirmDistribuir() {
+      var ids = Object.keys(state.seleccionados).filter(function (k) { return state.seleccionados[k]; });
+      if (ids.length === 0) { closeModalDistribuir(); return; }
+      var counts = { 'cp-001': 0, 'mg-002': 0, 'al-003': 0, 'lr-004': 0 };
+
+      closeModalDistribuir();   /* Cerrar primero (UX rápido) */
+
+      setTimeout(function () {
+        try {
+          ids.forEach(function (tid) {
+            var pid = state.distribuirAsignaciones[tid] || 'cp-001';
+            IVCStore.asignar(tid, pid, 'Carolina Méndez (Coordinador · distribución)');
+            counts[pid]++;
+          });
+        } catch (e) { console.error('[confirmDistribuir] asignación:', e); }
+        try {
+          loadFromStore();
+          state.seleccionados = {};
+          state.distribuirAsignaciones = {};
+          renderStats();
+          renderTabla();
+          updateSubtitle();
+        } catch (e) { console.error('[confirmDistribuir] refresh:', e); }
+
+        var detalle = Object.keys(counts).filter(function (k) { return counts[k] > 0; })
+          .map(function (pid) { return PROF_NAMES[pid] + ' (' + counts[pid] + ')'; })
+          .join(', ');
+        if (window.IVCShell && window.IVCShell.showSnackbar) {
+          window.IVCShell.showSnackbar(ids.length + ' trámites distribuidos: ' + detalle, 'success');
+        }
+      }, 220);
+    }
+
+    /* v1.5.3 rev7 (25/05/2026): unificado — un solo punto de actualización
+       del summary message para garantizar sincronía entre texto + variant +
+       icono + título. Doug detectó que al cambiar a Lucía (5 activos), la
+       alerta naranja persistía: causa probable era race entre updateMasivoMessage
+       y updateCargaWarning. Ahora todo en una sola función. */
+    function updateMasivoMessage() {
+      var n = selectedCount();
+      var profNombre = PROF_NAMES[state.profesionalIdMasivo] || 'Carlos Pérez';
+      var carga = PROF_LOAD[state.profesionalIdMasivo] || 0;
+      var altaCarga = carga >= ALTA_CARGA_UMBRAL;
+
+      var summary = document.getElementById('masivoSummary');
+      var icon    = document.getElementById('masivoSummaryIcon');
+      var title   = document.getElementById('masivoSummaryTitle');
+      var msgText = document.getElementById('masivoMsgText');
+      var countEl = document.getElementById('msgCount');
+
+      if (countEl) countEl.textContent = n;
+      if (!summary || !msgText) return;
+
+      var ICON_INFO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+      var ICON_WARN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+
+      /* Solo "mismo profesional" puede activar el variant --caution */
+      var showCaution = (state.estrategia === 'mismo' && altaCarga);
+
+      /* 1. Variant del .naowee-message */
+      if (showCaution) {
+        summary.classList.remove('naowee-message--informative');
+        summary.classList.add('naowee-message--caution');
+      } else {
+        summary.classList.remove('naowee-message--caution');
+        summary.classList.add('naowee-message--informative');
+      }
+
+      /* 2. Icono */
+      if (icon) icon.innerHTML = showCaution ? ICON_WARN : ICON_INFO;
+
+      /* 3. Título */
+      if (title) title.textContent = showCaution
+        ? 'Profesional con alta carga'
+        : 'Resumen de la asignación';
+
+      /* 4. Texto del body */
+      if (state.estrategia === 'mismo') {
+        if (altaCarga) {
+          msgText.innerHTML =
+            '<strong>' + profNombre + '</strong> ya tiene <strong>' + carga + '</strong> trámites activos. ' +
+            'Al asignarle <strong>' + n + '</strong> más, su carga total será ' + (carga + n) + '. ' +
+            'Considera distribuir entre otros profesionales.';
+        } else {
+          msgText.innerHTML = 'Se asignarán <strong>' + n + '</strong> trámites a <strong>' + profNombre + '</strong>. Se registrará fecha, hora y usuario responsable en cada uno.';
+        }
+      } else if (state.estrategia === 'distribuir') {
+        msgText.innerHTML = 'Al confirmar, abrirás el panel de distribución donde podrás asignar <strong>' + n + '</strong> trámites uno a uno entre los profesionales disponibles.';
+      }
+    }
+
+    /* v1.5.3 rev4 (25/05/2026): refactor robusto.
+       Problema previo: el listener IVCStore.on('tramite:asignado') disparaba N
+       veces dentro del forEach, cada una re-renderizando la tabla. Eso podía
+       lanzar errores que rompían la cadena → el modal nunca se cerraba ni
+       el toast aparecía.
+       Solución:
+       1. Cerrar modal INMEDIATAMENTE al confirmar (UX rápido)
+       2. Persistir + refresh en setTimeout protegido con try/catch
+       3. Mostrar snackbar al final, independiente de errores de render */
+    function confirmMasivo() {
+      var n = selectedCount();
+      if (n === 0) {
+        var helper = document.getElementById('masivoHelperError');
+        helper.querySelector('.naowee-helper__text').textContent = 'Selecciona al menos un trámite antes de asignar';
+        helper.style.display = 'flex';
+        shakeElement(document.querySelector('#modalMasivoOverlay .naowee-modal'));
+        return;
+      }
+
+      /* ESTRATEGIA "distribuir": ahora abre vista de multi-selección por
+         profesional. NO persiste directo (el user elige qué va a qué prof). */
+      if (state.estrategia === 'distribuir') {
+        openModalDistribuir();
+        return;
+      }
+
+      /* v1.5.3 rev6: estrategia "manual" removida.
+         Para asignación 1-a-1, el coord usa los icon-btn de cada fila en la tabla. */
+
+      /* ESTRATEGIA "mismo": validar profesional */
+      if (!state.profesionalIdMasivo) {
+        var h2 = document.getElementById('masivoHelperError');
+        h2.querySelector('.naowee-helper__text').textContent = 'Selecciona un profesional antes de confirmar';
+        h2.style.display = 'flex';
+        shakeElement(document.getElementById('ddProfesional'));
+        return;
+      }
+
+      var ids = Object.keys(state.seleccionados).filter(function (k) { return state.seleccionados[k]; });
+      var profId = state.profesionalIdMasivo;
+      var profNombre = PROF_NAMES[profId] || 'Carlos Pérez';
+      var snackbarText = n + ' trámite' + (n === 1 ? '' : 's') + ' asignado' + (n === 1 ? '' : 's') + ' a ' + profNombre + '.';
+
+      /* 1. CERRAR MODAL INMEDIATAMENTE — UX rápido, no dependiente de render posterior */
+      closeModalMasivo();
+
+      /* 2. Persistir + refresh en setTimeout (después de la animación de cierre) */
+      setTimeout(function () {
+        try {
+          ids.forEach(function (tramiteId) {
+            IVCStore.asignar(tramiteId, profId, 'Carolina Méndez (Coordinador)');
+          });
+        } catch (e) { console.error('[confirmMasivo] error asignando:', e); }
+        try {
+          loadFromStore();
+          state.seleccionados = {};
+          renderStats();
+          renderTabla();
+          updateSubtitle();
+        } catch (e) { console.error('[confirmMasivo] error refrescando UI:', e); }
+
+        /* 3. Snackbar al final — siempre dispara, aún si hay errores en pasos 1-2 */
+        if (window.IVCShell && typeof window.IVCShell.showSnackbar === 'function') {
+          window.IVCShell.showSnackbar(snackbarText, 'success');
+        } else {
+          console.warn('[bandeja] showSnackbar no disponible:', snackbarText);
+        }
+      }, 220);
+    }
+
+    /* v1.12.2: window.* expuesto para que el onclick inline de la tabla
+       pueda invocarlo. La event delegation fallaba para Doug. */
+    window.openModalIndividual = function (tramiteId) {
+      state.modalTramiteId = tramiteId;
+      var t = state.tramites.find(function (x) { return x.id === tramiteId; });
+      var sub = t ? (t.id + ' · ' + t.organismo) : '';
+      document.getElementById('modalIndividualSub').textContent = sub;
+      document.getElementById('modalIndividualOverlay').classList.add('open');
+      updateCargaWarning('single');
+    };
+    function closeModalIndividual() {
+      document.getElementById('modalIndividualOverlay').classList.remove('open');
+      state.modalTramiteId = null;
+    }
+    function confirmIndividual() {
+      // v1.5.8 (25/05/2026): try/catch defensivo. Si una parte falla, el modal
+      // igual cierra y mostramos snackbar de error en lugar de quedar atrapado.
+      if (!state.modalTramiteId) return;
+      if (!state.profesionalIdSingle) {
+        shakeElement(document.getElementById('ddProfesionalSingle'));
+        return;
+      }
+      var profNombre = PROF_NAMES[state.profesionalIdSingle] || 'Carlos Pérez';
+      var ok = false;
+      try {
+        /* v1.5.0: persist via IVCStore */
+        var result = IVCStore.asignar(state.modalTramiteId, state.profesionalIdSingle, 'Carolina Méndez (Coordinador)');
+        if (result) ok = true;
+      } catch (e) {
+        console.error('[confirmIndividual] IVCStore.asignar:', e);
+      }
+      // Siempre cerramos el modal y refrescamos para que el usuario no quede atrapado.
+      try { loadFromStore(); } catch(e) { console.error('[confirmIndividual] loadFromStore:', e); }
+      closeModalIndividual();
+      try { renderStats(); renderTabla(); } catch(e) { console.error('[confirmIndividual] render:', e); }
+      if (ok) {
+        try { window.IVCShell.showSnackbar('Trámite asignado a ' + profNombre + '.', 'success'); } catch(e) {}
+      } else {
+        try { window.IVCShell.showSnackbar('No se pudo asignar el trámite.', 'negative'); } catch(e) {}
+      }
+    }
+
+    /* GAP #11 — Modal histórico
+       v1.5.8 (25/05/2026): tolerante a dos shapes de eventos.
+       - Mock local (buildHistoricoMock): { titulo, meta, actor }
+       - IVCStore (asignar, actualizarEstado): { accion, fecha, hora, actor }
+       Feedback Doug: antes mostraba "undefined" para los eventos creados por el store. */
+    function escHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+        return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+      });
+    }
+
+    function normalizeEvento(ev) {
+      var titulo = ev.titulo || ev.accion || '—';
+      var meta;
+      if (ev.meta) {
+        meta = ev.meta;
+      } else if (ev.fecha && ev.hora) {
+        meta = ev.fecha + ' · ' + ev.hora;
+      } else if (ev.fecha) {
+        meta = ev.fecha;
+      } else {
+        meta = '';
+      }
+      var actor = ev.actor || '';
+      return { titulo: titulo, meta: meta, actor: actor };
+    }
+
+    /* v1.5.9 rev2 (25/05/2026): Modal "Ver detalle" con TABS canónicos DS.
+       UX pro max: navegación tab-based en lugar de scroll con títulos naranjas.
+       Tabs adaptativos por organismo (Liga/Federación tienen Asamblea, Asociación no). */
+    var __detalleTramiteActual = null;
+
+    function getTabsDetalleParaOrganismo(t) {
+      var tipoOrganismo = (t && typeof t === 'object') ? t.tipoOrganismo : t;
+      var tabs = [];
+      /* v1.13.50 (Doug 27/05/2026): trámites HIJO (reposición) abren con el
+         tab Trazabilidad primero — da contexto del origen antes de los datos. */
+      if (t && typeof t === 'object' && t.tramite_parent) {
+        tabs.push({ id:'trazabilidad', label:'Trazabilidad' });
+      }
+      tabs.push({ id:'general',    label:'General' });
+      tabs.push({ id:'personeria', label:'Personería' });
+      if (tipoOrganismo === 'liga' || tipoOrganismo === 'federacion') {
+        tabs.push({ id:'asamblea', label:'Asamblea' });
+      }
+      tabs.push({ id:'estructura', label:'Estructura' });
+      tabs.push({ id:'cierre',     label:'Cierre' });
+      return tabs;
+    }
+    /* v1.13.12 (Doug 27/05/2026): iconos por tab id. Stroke 1.8 16px,
+       hereda color del .naowee-tab (gris en idle, naranja en --selected). */
+    var TAB_ICONS = {
+      general:    '<svg class="ivc-tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+      personeria: '<svg class="ivc-tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/></svg>',
+      asamblea:   '<svg class="ivc-tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+      estructura: '<svg class="ivc-tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',
+      cierre:     '<svg class="ivc-tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+      trazabilidad: '<svg class="ivc-tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>'
+    };
+
+    /* v1.12.2: window.openModalDetalle expuesto para que el onclick inline
+       inside renderTabla pueda invocarlo. Misma exposición para Historico
+       y Individual abajo. */
+    window.openModalDetalle = function (tramiteId) {
+      var t = state.tramites.find(function (x) { return x.id === tramiteId; });
+      if (!t) return;
+      __detalleTramiteActual = t;
+      document.getElementById('modalDetalleSub').textContent = t.id + ' · ' + t.organismo;
+      // Renderizar tabs según organismo (+ trazabilidad si es hijo de reposición)
+      var tabs = getTabsDetalleParaOrganismo(t);
+      var tabsHtml = tabs.map(function(tab, i){
+        return '<button class="naowee-tab' + (i === 0 ? ' naowee-tab--selected' : '') +
+               '" data-detalle-tab="' + tab.id + '" role="tab" type="button">' +
+               (TAB_ICONS[tab.id] || '') + tab.label + '</button>';
+      }).join('');
+      document.getElementById('modalDetalleTabs').innerHTML = tabsHtml;
+      // Renderizar contenido del primer tab
+      document.getElementById('modalDetalleBody').innerHTML = renderDetalleTabContent(t, tabs[0].id);
+      document.getElementById('modalDetalleOverlay').classList.add('open');
+      wireTabsDetalle();
+    }
+    function closeModalDetalle() {
+      document.getElementById('modalDetalleOverlay').classList.remove('open');
+      __detalleTramiteActual = null;
+    }
+    /* v1.7.0: simplificado — patrón DS simple usa ::after del .naowee-tab--selected
+       para el indicator (no requiere posicionamiento JS de un span __indicator). */
+    function wireTabsDetalle() {
+      var tabsEl = document.getElementById('modalDetalleTabs');
+      if (!tabsEl) return;
+      tabsEl.querySelectorAll('.naowee-tab').forEach(function(tab){
+        tab.addEventListener('click', function(){
+          var key = tab.dataset.detalleTab;
+          tabsEl.querySelectorAll('.naowee-tab').forEach(function(t){
+            t.classList.toggle('naowee-tab--selected', t === tab);
+          });
+          document.getElementById('modalDetalleBody').innerHTML = renderDetalleTabContent(__detalleTramiteActual, key);
+          document.getElementById('modalDetalleBody').scrollTop = 0;
+        });
+      });
+    }
+
+    /* v1.6.9 (26/05/2026): toggle del DS .naowee-accordion. Click o
+       Enter/Space sobre el header → toggle --open + actualiza label
+       "Ver más" ↔ "Ver menos". Event delegation en el body para que
+       funcione aunque el contenido se re-renderice al cambiar de tab. */
+    function _toggleAccordionItem(header) {
+      var item = header.closest('.naowee-accordion__item');
+      if (!item) return;
+      item.classList.toggle('naowee-accordion__item--open');
+      var isOpen = item.classList.contains('naowee-accordion__item--open');
+      var action = header.querySelector('.naowee-accordion__action');
+      if (action) action.textContent = isOpen ? 'Ver menos' : 'Ver más';
+    }
+    (function wireDetailAccordionToggle(){
+      var body = document.getElementById('modalDetalleBody');
+      if (!body) return;
+      body.addEventListener('click', function(ev){
+        var header = ev.target.closest('.naowee-accordion__header[data-accordion-toggle]');
+        if (header) _toggleAccordionItem(header);
+      });
+      body.addEventListener('keydown', function(ev){
+        if (ev.key !== 'Enter' && ev.key !== ' ') return;
+        var header = ev.target.closest('.naowee-accordion__header[data-accordion-toggle]');
+        if (!header) return;
+        ev.preventDefault();
+        _toggleAccordionItem(header);
+      });
+    })();
+
+    /* Helper compartido con workspace.html — muestra TODOS los datos del trámite. */
+    function _dtCell(label, value, mono) {
+      var v = (value === undefined || value === null || value === '') ? '—' : String(value);
+      var valCls = 'ivc-data-grid__value' + (mono ? ' ivc-data-grid__value--mono' : '');
+      return '<div class="ivc-data-grid__cell">' +
+        '<span class="ivc-data-grid__label">' + label + '</span>' +
+        '<span class="' + valCls + '">' + escHtml(v) + '</span>' +
+      '</div>';
+    }
+    /* v1.6.9: usar componente .naowee-accordion canónico del DS.
+       Cada bloque es ahora un .naowee-accordion__item con:
+       - __title (label de la sección)
+       - __action (link "Ver más" / "Ver menos" en naranja)
+       - __chevron (icono que rota 180° al abrir)
+       Primer bloque de cada tab arranca con --open. */
+    var __dtBlockCounter = 0;
+    function _resetBlockCounter() { __dtBlockCounter = 0; }
+    var _ACCORDION_CHEVRON = '<svg class="naowee-accordion__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>';
+
+    function _dtAccordionItem(title, contentHtml) {
+      __dtBlockCounter += 1;
+      var isOpen = __dtBlockCounter === 1;
+      var openCls = isOpen ? ' naowee-accordion__item--open' : '';
+      var actionLabel = isOpen ? 'Ver menos' : 'Ver más';
+      return '<div class="naowee-accordion__item' + openCls + '">' +
+        '<div class="naowee-accordion__header" role="button" tabindex="0" data-accordion-toggle>' +
+          '<span class="naowee-accordion__title">' + title + '</span>' +
+          '<span class="naowee-accordion__action">' + actionLabel + '</span>' +
+          _ACCORDION_CHEVRON +
+        '</div>' +
+        '<div class="naowee-accordion__body">' +
+          '<div class="naowee-accordion__content">' + contentHtml + '</div>' +
+        '</div>' +
+      '</div>';
+    }
+    function _dtBlock(title, cellsHtml) {
+      if (!cellsHtml) return '';
+      return _dtAccordionItem(title, '<div class="ivc-data-grid">' + cellsHtml + '</div>');
+    }
+    function _dtBlockRaw(title, innerHtml) {
+      if (!innerHtml) return '';
+      return _dtAccordionItem(title, innerHtml);
+    }
+    function _dtSubBlock(title, content) {
+      return '<div class="ivc-detail-subblock"><h4 class="ivc-detail-subblock__title">' + title + '</h4>' + content + '</div>';
+    }
+    function _dtTable(headers, rows) {
+      if (!rows || rows.length === 0) return '<p class="ivc-detail-empty">—</p>';
+      var nonEmpty = rows.filter(function(r){ return r.some(function(c){ return c && String(c).trim() !== ''; }); });
+      if (nonEmpty.length === 0) return '<p class="ivc-detail-empty">No se diligenció ninguna fila.</p>';
+      var html = '<table class="ivc-detail-table"><thead><tr>';
+      headers.forEach(function(h){ html += '<th>' + escHtml(h) + '</th>'; });
+      html += '</tr></thead><tbody>';
+      nonEmpty.forEach(function(row){
+        html += '<tr>';
+        row.forEach(function(c){ html += '<td>' + escHtml(c || '—') + '</td>'; });
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+      return html;
+    }
+    var _DT_TIPOS_REUNION = {
+      ORDINARIA:'Ordinaria', EXTRAORDINARIA:'Extraordinaria', EXT_CARACTER_ORD:'Extraordinaria con carácter de Ordinaria',
+      SEGUNDA_CONVOCATORIA:'Segunda convocatoria', NO_PRESENCIAL:'No presencial', DERECHO_PROPIO:'De pleno derecho',
+      CONSTITUTIVA:'Constitutiva', UNIVERSAL:'Universal', DEL_OA:'Del Órgano de Administración'
+    };
+    var _DT_TIPOS_CONVOCANTE = {
+      OA:'Órgano de Administración', PRESIDENTE:'Presidente del Organismo',
+      OC:'Órgano de Control', COMITE_PROVISIONAL:'Comité Provisional'
+    };
+    var _DT_SUB_ASOCIACION = { JUVENIL:'Asociación Juvenil', RECREATIVA:'Asociación Recreativa' };
+    var _DT_RADIO = { si:'Sí', no:'No', no_aplica:'No aplica' };
+    var _DT_ORG = {
+      liga:'Ligas o asociaciones deportivas',
+      asociacion:'Asociaciones juveniles o recreativas',
+      federacion:'Federaciones deportivas'
+    };
+    function _dtRadio(v){ return _DT_RADIO[v] || v || '—'; }
+    function _dtArchivo(file) {
+      if (!file) return '—';
+      if (typeof file === 'object' && file.name) return file.name + (file.size ? ' · ' + file.size : '');
+      return 'Archivo adjunto';
+    }
+    /* v1.8.2: file link minimal — sin container, sólo nombre + tamaño +
+       download icon naranja con tooltip "Descargar". */
+    var _ICON_DOWNLOAD = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+    function _dtFileLink(file) {
+      if (!file) return '<span class="ivc-data-grid__value">—</span>';
+      var name = (typeof file === 'object' && file.name) ? file.name : 'Archivo adjunto';
+      var size = (typeof file === 'object' && file.size) ? file.size : '';
+      return '<a href="#" class="ivc-file-link" title="Descargar" onclick="event.preventDefault(); _mockDownload(this);" data-file-name="' + escHtml(name) + '">' +
+        '<span class="ivc-file-link__name">' + escHtml(name) + '</span>' +
+        (size ? '<span class="ivc-file-link__size">' + escHtml(size) + '</span>' : '') +
+        '<span class="ivc-file-link__download" aria-label="Descargar">' + _ICON_DOWNLOAD + '</span>' +
+      '</a>';
+    }
+    /* Mock download — UX feedback en el demo (en prod conecta a la URL real). */
+    window._mockDownload = function (el) {
+      var name = el.getAttribute('data-file-name') || 'archivo';
+      window.IVCShell && window.IVCShell.showSnackbar
+        ? window.IVCShell.showSnackbar('Descargando ' + name + ' (mock)', 'info')
+        : alert('Mock: descargando ' + name);
+    };
+    function _dtCellFile(label, file) {
+      return '<div class="ivc-data-grid__cell">' +
+        '<span class="ivc-data-grid__label">' + label + '</span>' +
+        _dtFileLink(file) +
+      '</div>';
+    }
+    /* v1.8.2: simple list para datos tabulares de 2 columnas (más ligero que tabla). */
+    function _dtSimpleList(rows) {
+      if (!Array.isArray(rows) || rows.length === 0) return '<p class="ivc-detail-empty">No se diligenció ninguna fila.</p>';
+      return '<ul class="ivc-simple-list">' + rows.map(function (r) {
+        return '<li class="ivc-simple-list__item">' +
+          '<span class="ivc-simple-list__primary">' + escHtml(r[0] || '—') + '</span>' +
+          '<span class="ivc-simple-list__secondary">' + escHtml(r[1] || '—') + '</span>' +
+        '</li>';
+      }).join('') + '</ul>';
+    }
+    /* Iniciales de un nombre para el avatar del actor pill */
+    function _initials(name) {
+      if (!name) return '?';
+      return name.replace(/\([^)]*\)/g, '').trim().split(/\s+/).slice(0, 2).map(function (p) { return p.charAt(0).toUpperCase(); }).join('');
+    }
+    function _dtDate(s) {
+      if (!s) return '—';
+      try { return formatDate(s); } catch (e) { return s; }
+    }
+
+    /* v1.5.9 rev3 (25/05/2026): dispatcher de tabs — cada tab devuelve solo su
+       sección. Antes _renderTabGeneral concentraba todo el contenido y los
+       otros 4 (_renderTabPersoneria/Asamblea/Estructura/Cierre) no existían,
+       por eso clickear cualquier tab distinto de General mostraba undefined. */
+    function renderDetalleTabContent(t, tabId) {
+      _resetBlockCounter();  /* v1.6.7: cada tab arranca con su primer bloque expandido */
+      if (!t) return '<p class="ivc-detail-empty">Trámite no encontrado.</p>';
+      var d = t.datos || {};
+      if (tabId === 'trazabilidad') return _renderTabTrazabilidad(t, d);
+      if (tabId === 'general')    return _renderTabGeneral(t, d);
+      if (tabId === 'personeria') return _renderTabPersoneria(t, d);
+      if (tabId === 'asamblea')   return _renderTabAsamblea(t, d);
+      if (tabId === 'estructura') return _renderTabEstructura(t, d);
+      if (tabId === 'cierre')     return _renderTabCierre(t, d);
+      return '';
+    }
+
+    /* ── TAB · Trazabilidad (solo trámites HIJO de reposición) ───────────
+       v1.13.50 (Doug 27/05/2026): muestra el vínculo padre→hijo, los datos
+       y APROBACIONES del trámite de origen, y su historial completo. Permite
+       saltar al detalle del padre. Reusa el componente .ivc-timeline. */
+    var _TRAZA_ESTADO_LABEL = {
+      'No asignada':'No asignada', 'Asignada':'Asignada', 'En validación':'En validación',
+      'PendienteCOO':'Pendiente aprobación COO', 'PendienteFirma':'Pendiente firma Director',
+      'Firmado':'Firmado', 'Notificado':'Notificado', 'Vigente':'Vigente',
+      'EnApelacion':'En apelación', 'EnReposicion':'En reposición',
+      'PendienteRecursos':'Pendiente recursos', 'Finalizado':'Finalizado',
+      'NoCumple':'No cumple', 'CumpleParcial':'Cumple parcial'
+    };
+    function _trazaEstadoLabel(e) { return _TRAZA_ESTADO_LABEL[e] || e || '—'; }
+
+    /* Clasifica un evento del histórico para el color del dot del timeline. */
+    function _trazaDotMod(accion) {
+      var a = (accion || '').toLowerCase();
+      if (/no cumple|rechaz|niega|negativa|devuel/.test(a)) return 'negative';
+      if (/firm|aprob|cumple|vigente|notific|favorable/.test(a)) return 'positive';
+      if (/asignad|remisi|valida|revisi|reposici|apelaci/.test(a)) return 'info';
+      return 'muted';
+    }
+
+    /* Timeline reusable a partir de un array historico (más reciente arriba). */
+    function _dtTimelineFromHistorico(historico) {
+      if (!historico || !historico.length) return '<p class="ivc-detail-empty">Sin eventos registrados.</p>';
+      var items = historico.slice().reverse();
+      return '<ul class="ivc-timeline">' + items.map(function (h) {
+        var meta = (h.fecha ? _dtDate(h.fecha) : '') + (h.hora ? ' · ' + h.hora : '');
+        return '<li class="ivc-timeline__item ivc-timeline__item--' + _trazaDotMod(h.accion) + '">' +
+          '<span class="ivc-timeline__dot"></span>' +
+          '<span class="ivc-timeline__title">' + escHtml(h.accion || '—') + '</span>' +
+          (meta ? '<span class="ivc-timeline__meta">' + escHtml(meta) + '</span>' : '') +
+          (h.actor ? '<span class="ivc-timeline__actor">Por: ' + escHtml(h.actor) + '</span>' : '') +
+        '</li>';
+      }).join('') + '</ul>';
+    }
+
+    function _renderTabTrazabilidad(t, d) {
+      var parentId = t.tramite_parent;
+      var parent = (window.IVCStore && IVCStore.getTramite) ? IVCStore.getTramite(parentId) : null;
+
+      /* Vínculo padre→hijo visual. */
+      var linkHtml =
+        '<div class="ivc-traza-link">' +
+          '<div class="ivc-traza-link__node">' +
+            '<span class="ivc-traza-link__rad">' + escHtml(parentId) + '</span>' +
+            '<span class="ivc-traza-link__tag ivc-traza-link__tag--parent">Trámite de origen</span>' +
+          '</div>' +
+          '<svg class="ivc-traza-link__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="4" x2="12" y2="20"/><polyline points="6 14 12 20 18 14"/></svg>' +
+          '<div class="ivc-traza-link__node">' +
+            '<span class="ivc-traza-link__rad">' + escHtml(t.id) + '</span>' +
+            '<span class="ivc-traza-link__tag ivc-traza-link__tag--child">Reposición (este)</span>' +
+          '</div>' +
+        '</div>' +
+        '<p class="ivc-traza-note">Este trámite es una <strong>Reposición</strong> interpuesta contra la resolución del trámite de origen. Conserva sus datos y documentos para la revalidación del Profesional.</p>';
+      var html = _dtBlockRaw('Relación del trámite', linkHtml);
+
+      if (!parent) {
+        html += _dtBlockRaw('Trámite de origen',
+          '<p class="ivc-detail-empty">El trámite de origen (' + escHtml(parentId) + ') está archivado y no está disponible para consulta en esta vista.</p>');
+        return html;
+      }
+
+      /* Datos del padre. */
+      html += _dtBlock('Datos del trámite de origen',
+        _dtCell('Radicado', parent.id, true) +
+        _dtCell('Tipo de trámite', parent.tipoTramite || '—') +
+        _dtCell('Fecha de radicación', parent.fechaRadicacion ? _dtDate(parent.fechaRadicacion) : '—') +
+        _dtCell('Estado', _trazaEstadoLabel(parent.estado)) +
+        _dtCell('Profesional que validó', parent.profesionalNombre || '—')
+      );
+
+      /* Aprobaciones extraídas del histórico del padre (quién aprobó/firmó). */
+      var aprob = (parent.historico || []).filter(function (h) {
+        var a = (h.accion || '').toLowerCase();
+        return /firm|aprob|cumple|favorable|veredicto/.test(a) && !/no cumple/.test(a);
+      });
+      if (aprob.length) {
+        var aprobHtml = '<div class="ivc-traza-approvers">' + aprob.map(function (h) {
+          var meta = (h.fecha ? _dtDate(h.fecha) : '') + (h.hora ? ' · ' + h.hora : '');
+          return '<div class="ivc-traza-approver">' +
+            '<span class="ivc-traza-approver__avatar">' + escHtml(_initials(h.actor)) + '</span>' +
+            '<div class="ivc-traza-approver__body">' +
+              '<span class="ivc-traza-approver__actor">' + escHtml(h.actor || '—') + '</span>' +
+              '<span class="ivc-traza-approver__action">' + escHtml(h.accion || '') + '</span>' +
+            '</div>' +
+            (meta ? '<span class="ivc-traza-approver__date">' + escHtml(meta) + '</span>' : '') +
+          '</div>';
+        }).join('') + '</div>';
+        html += _dtBlockRaw('Aprobaciones del trámite de origen', aprobHtml);
+      }
+
+      /* Historial completo del padre (timeline). */
+      html += _dtBlockRaw('Historial completo del trámite de origen', _dtTimelineFromHistorico(parent.historico));
+
+      /* CTA para saltar al detalle del padre. */
+      html += '<div class="ivc-traza-cta">' +
+        '<button type="button" class="naowee-btn naowee-btn--mute naowee-btn--small" ' +
+        'onclick="window.openModalDetalle(\'' + escHtml(parentId) + '\')">Ver detalle completo del trámite de origen →</button>' +
+      '</div>';
+
+      return html;
+    }
+
+    /* v1.5.9 rev3 (25/05/2026): refactor en 5 funciones, una por tab.
+       Antes _renderTabGeneral contenía TODO (personería+asamblea+estructura+cierre);
+       eso rompía la navegación por tabs porque clickear "Personería" caía en
+       _renderTabPersoneria que no existía → undefined.                          */
+
+    /* ── TAB 1 · General: identificación del trámite + datos generales ── */
+    function _renderTabGeneral(t, d) {
+      var coordActor = (t.historico || []).find(function (h) {
+        return /asignad/i.test(h.accion || '') && (h.actor || '').toLowerCase().indexOf('coordinador') >= 0;
+      });
+      var coord = coordActor ? coordActor.actor : '—';
+      var orgLabel = _DT_ORG[t.tipoOrganismo] || t.tipoOrganismo || '—';
+      var area = t.area === 'aficionado' ? 'Deporte Aficionado' : t.area === 'profesional' ? 'Deporte Profesional' : (t.area || '—');
+      var plazo = (typeof t.plazoDias === 'number') ? t.plazoDias : 15;
+      var plazoTxt = plazo <= 0 ? 'Vencido' : plazo + ' días hábiles';
+
+      var html = _dtBlock('Identificación del trámite',
+        _dtCell('Número de radicado', t.id || '—', true) +
+        _dtCell('Tipo de organismo', orgLabel) +
+        _dtCell('Tipo de trámite', t.tipoTramite || '—') +
+        _dtCell('Área', area) +
+        _dtCell('Fecha de radicación', t.fechaRadicacion ? _dtDate(t.fechaRadicacion) : '—') +
+        _dtCell('Plazo restante', plazoTxt) +
+        _dtCell('Estado actual', t.estado || '—') +
+        _dtCell('Coordinador asignador', coord) +
+        _dtCell('Profesional asignado', t.profesionalNombre || '—')
+      );
+
+      var generales = _dtCell('Nombre del organismo', d.nombre);
+      if (t.tipoOrganismo === 'liga') generales += _dtCell('NIT', d.nit, true);
+      generales += _dtCell('Dirección', d.direccion);
+      if (t.tipoOrganismo !== 'asociacion') generales += _dtCell('Municipio', d.municipio);
+      generales += _dtCell('Teléfono', d.telefono, true) + _dtCell('Correo electrónico', d.correo);
+      html += _dtBlock('Datos generales del organismo', generales);
+
+      return html;
+    }
+
+    /* ── TAB 2 · Personería: F1 / F2 / F3 según organismo ── */
+    function _renderTabPersoneria(t, d) {
+      /* v1.6.9: empty state a nivel tab */
+      var hasPersData = (t.tipoOrganismo === 'liga' && d.f1 && Object.values(d.f1).some(function(v){ return v !== '' && v != null; })) ||
+                       (t.tipoOrganismo === 'asociacion' && d.f2 && Object.values(d.f2).some(function(v){ return v !== '' && v != null; })) ||
+                       (t.tipoOrganismo === 'federacion' && d.f3 && Object.values(d.f3).some(function(v){ return v !== '' && v != null; }));
+      if (!hasPersData) {
+        return '<p class="ivc-detail-empty">Sin datos de personería diligenciados todavía.</p>';
+      }
+      if (t.tipoOrganismo === 'liga' && d.f1) {
+        var f1 = d.f1;
+        return _dtBlock('Personería, Estatutos y Constitución (F1)',
+          _dtCell('N° Resolución Personería Jurídica', f1.no_res_personeria) +
+          _dtCell('Radicado Personería en IVC', f1.radicado_personeria, true) +
+          _dtCell('Fecha última Reforma Estatutaria', _dtDate(f1.fecha_reforma)) +
+          _dtCell('Radicado Estatutos en IVC', f1.radicado_estatutos, true) +
+          _dtCell('N° Resolución Inscripción Estatutos', f1.no_res_estatutos) +
+          _dtCell('Período Estatutario Inicial', f1.periodo_inicial) +
+          _dtCell('Período Estatutario Vigente', f1.periodo_vigente) +
+          _dtCell('N° Resolución RD anterior', f1.no_res_rd_anterior) +
+          _dtCell('Fecha Notificación RD anterior', _dtDate(f1.fecha_notif_rd)) +
+          _dtCell('Fecha Firmeza RD anterior', _dtDate(f1.fecha_firmeza_rd)) +
+          _dtCell('N° Res/Acta Inscripción Miembros', f1.f1_no_acta_miembros) +
+          _dtCell('¿Constancia Personería vigente?', _dtRadio(f1.tiene_constancia)) +
+          _dtCell('Fecha Constancia', _dtDate(f1.fecha_constancia)) +
+          _dtCell('N° Resolución de Mínimos', f1.no_res_minimos) +
+          _dtCell('N° de Mínimos', f1.n_minimos)
+        );
+      }
+      if (t.tipoOrganismo === 'asociacion' && d.f2) {
+        var f2 = d.f2;
+        return _dtBlock('Personería, Estatutos y Estructura (F2)',
+          _dtCell('Sub-tipo de Asociación', _DT_SUB_ASOCIACION[f2.sub_tipo] || f2.sub_tipo) +
+          _dtCell('N° y fecha doc. Personería Jurídica', f2.no_personeria) +
+          _dtCell('Radicado Personería en IVC', f2.radicado_personeria, true) +
+          _dtCell('Fecha Estatutos Sociales vigentes', _dtDate(f2.fecha_estatutos)) +
+          _dtCell('Radicado Estatutos en IVC', f2.radicado_estatutos, true) +
+          _dtCell('N° Acta designación de sede', f2.no_acta_sede) +
+          _dtCell('Radicado Acta sede en IVC', f2.radicado_acta_sede, true) +
+          _dtCell('N° Acta Constitución/elección OA', f2.no_acta_constitucion) +
+          _dtCell('Radicado Acta constitución en IVC', f2.radicado_acta_constitucion, true) +
+          _dtCell('N° Resolución Inscripción Miembros', f2.no_inscripcion_miembros) +
+          _dtCell('Radicado Resolución Miembros en IVC', f2.radicado_inscripcion_miembros, true) +
+          _dtCell('¿Cuenta con inventario de bienes?', _dtRadio(f2.tiene_inventario)) +
+          _dtCellFile('Archivo inventario', f2.archivo_inventario) +
+          _dtCell('¿Documentos de afiliación internacional?', _dtRadio(f2.tiene_afiliacion)) +
+          _dtCellFile('Archivo afiliación', f2.archivo_afiliacion)
+        );
+      }
+      if (t.tipoOrganismo === 'federacion' && d.f3) {
+        var f3 = d.f3;
+        return _dtBlock('Personería y Constitución (F3)',
+          _dtCell('N° Resolución Personería Jurídica', f3.no_res_personeria) +
+          _dtCell('Radicado Personería en IVC', f3.radicado_personeria, true) +
+          _dtCell('Período Estatutario Inicial', f3.f3_periodo_estatutario_inicial) +
+          _dtCell('N° Resolución de Mínimos', f3.f3_no_res_minimos) +
+          _dtCell('N° de Mínimos', f3.f3_n_minimos)
+        );
+      }
+      return '<p class="ivc-detail-empty">Sin datos de personería diligenciados.</p>';
+    }
+
+    /* ── TAB 3 · Asamblea: solo Liga (F1) y Federación (F3) ── */
+    function _renderTabAsamblea(t, d) {
+      /* v1.6.5: separar 2 casos. Asociación no tiene asamblea en el matriz;
+         Liga/Federación SÍ pero pueden estar vacíos. Antes ambos casos
+         devolvían "no requiere", lo cual era engañoso para Liga vacía. */
+      if (t.tipoOrganismo !== 'liga' && t.tipoOrganismo !== 'federacion') {
+        return '<p class="ivc-detail-empty">Este organismo no requiere sección de asamblea.</p>';
+      }
+      if (!d.asamblea) {
+        return '<p class="ivc-detail-empty">Sin datos de asamblea diligenciados todavía.</p>';
+      }
+      var a = d.asamblea;
+      var html = '';
+      if (t.tipoOrganismo === 'liga') {
+        html += _dtBlock('Asamblea — Tema', _dtCell('Tema u objeto de la reunión', a.f1_tema));
+        var rowsAsamblea = (a.f1_reuniones || []).map(function(r){
+          return [_DT_TIPOS_REUNION[r.tipo] || r.tipo || '—', _dtDate(r.fechaConv), _dtDate(r.fechaReal), _dtDate(r.antelacion), _dtRadio(r.cumple)];
+        });
+        html += _dtBlockRaw('Asamblea — Tipos de reunión realizados',
+          _dtTable(['Tipo / Clase','Fecha Convocatoria','Fecha Realización','Antelación','¿Cumple?'], rowsAsamblea));
+        if (a.f1_obs_asamblea) {
+          html += _dtBlock('Asamblea — Observaciones', _dtCell('Observaciones sobre la asamblea', a.f1_obs_asamblea));
+        }
+        html += _dtBlock('Convocante',
+          _dtCell('Tipo de convocante', _DT_TIPOS_CONVOCANTE[a.f1_tipo_convocante] || a.f1_tipo_convocante) +
+          _dtCell('¿Convocante elegido en período vigente?', _dtRadio(a.f1_convocante_vigente)) +
+          _dtCell('N° Res. Inscripción del convocante', a.f1_no_res_convocante) +
+          _dtCell('N° Acta OA que designa Presidente', a.f1_no_acta_designa_presidente) +
+          _dtCell('N° Res. nombramiento Comité Provisional', a.f1_no_res_comite_provisional) +
+          _dtCell('Vigencia Comité Provisional', a.f1_vigencia_comite_provisional) +
+          _dtCell('¿Comité designado por OA?', _dtRadio(a.f1_comite_designado_por_oa)) +
+          _dtCell('Ente Deportivo', a.f1_ente_deportivo)
+        );
+        html += _dtBlock('Asistentes y quórum',
+          _dtCell('N° total de afiliados', a.f1_num_afiliados, true) +
+          _dtCell('N° afiliados asistentes', a.f1_num_asistentes, true) +
+          _dtCell('¿Se cumplió el quórum?', _dtRadio(a.f1_cumplio_quorum)) +
+          _dtCell('¿Cert. RF a la fecha de reunión?', _dtRadio(a.f1_adjunta_cert_rf_fecha)) +
+          _dtCellFile('Archivo cert. RF fecha', a.f1_archivo_cert_rf_fecha) +
+          _dtCell('¿Cert. RF en la actualidad?', _dtRadio(a.f1_adjunta_cert_rf_actual)) +
+          _dtCellFile('Archivo cert. RF actualidad', a.f1_archivo_cert_rf_actual) +
+          _dtCell('Observaciones sobre asistencia', a.f1_obs_asistencia)
+        );
+      } else {
+        html += _dtBlock('Asamblea de Constitución (F3)',
+          _dtCell('Tipo de convocatoria', a.f3_tipo_convocatoria === 'COMITE_PROVISIONAL' ? 'Comité Provisional' : a.f3_tipo_convocatoria === 'INICIATIVA_PROPIA' ? 'Iniciativa Propia' : '—') +
+          _dtCell('Fecha de Convocatoria', _dtDate(a.f3_fecha_convocatoria)) +
+          _dtCell('Fecha de Realización', _dtDate(a.f3_fecha_realizacion))
+        );
+        html += _dtBlock('Asistentes y Quórum (F3)',
+          _dtCell('N° total de afiliados', a.f3_num_afiliados, true) +
+          _dtCell('N° afiliados asistentes', a.f3_num_asistentes, true) +
+          _dtCell('¿Se cumplió el quórum?', _dtRadio(a.f3_cumplio_quorum)) +
+          _dtCell('¿Cert. RF sobre afiliados?', _dtRadio(a.f3_adjunta_cert_rf)) +
+          _dtCellFile('Archivo cert. RF', a.f3_archivo_cert)
+        );
+      }
+      return html;
+    }
+
+    /* ── TAB 4 · Estructura: F1 (7 sub-bloques A-G) / F2 (seccionales) / F3 (completa) ── */
+    /* v1.6.9: helper para detectar arrays/tablas con al menos una fila no vacía */
+    function _hasRows(arr) {
+      if (!Array.isArray(arr) || arr.length === 0) return false;
+      return arr.some(function(r){
+        if (!r || typeof r !== 'object') return !!r;
+        return Object.keys(r).some(function(k){
+          var v = r[k];
+          return v !== undefined && v !== null && v !== '';
+        });
+      });
+    }
+    function _renderTabEstructura(t, d) {
+      if (!d.estructura) return '<p class="ivc-detail-empty">Sin datos de estructura diligenciados todavía.</p>';
+      var e = d.estructura;
+
+      /* v1.6.9: empty state a nivel TAB. Si TODOS los sub-bloques están
+         vacíos, mostrar un solo mensaje en lugar de N accordions vacíos. */
+      var anyData = false;
+      if (t.tipoOrganismo === 'liga') {
+        anyData = _hasRows(e.f1_fundadores) || _hasRows(e.f1_miembros_oa) ||
+                  _hasRows(e.f1_revisor_fiscal) || _hasRows(e.f1_comision_disciplinaria) ||
+                  _hasRows(e.f1_comision_tecnica) || _hasRows(e.f1_comision_juzgamiento) ||
+                  _hasRows(e.f1_comision_paradeporte) ||
+                  !!e.f1_presidente_antecedentes || !!e.f1_persona_discapacidad ||
+                  !!e.f1_paradeporte_fecha_asamblea;
+      } else if (t.tipoOrganismo === 'asociacion') {
+        anyData = _hasRows(e.f2_seccionales);
+      } else if (t.tipoOrganismo === 'federacion') {
+        anyData = _hasRows(e.f3_afiliados) || _hasRows(e.f3_miembros_oa) ||
+                  _hasRows(e.f3_revisor_fiscal) || _hasRows(e.f3_comision_disciplinaria) ||
+                  !!e.f3_persona_discapacidad || !!e.f3_fecha_reunion_electiva_oa ||
+                  !!e.f3_fecha_reunion_asignacion || !!e.f3_acredita_cert_residencia_oa ||
+                  !!e.f3_acredita_cert_residencia_oc || !!e.f3_fecha_reunion_oa_cd;
+      }
+      if (!anyData) {
+        return '<p class="ivc-detail-empty">Sin datos de estructura diligenciados todavía.</p>';
+      }
+
+      if (t.tipoOrganismo === 'liga') {
+        var fund = (e.f1_fundadores || []).map(function(r){ return [r.nombre, r.no_res_reconocimiento]; });
+        var oa = (e.f1_miembros_oa || []).map(function(r){ return [r.nombre, r.identificacion, r.cargo, _dtRadio(r.capacitacion), r.nombrado_por, r.no_periodos]; });
+        var rf = (e.f1_revisor_fiscal || []).map(function(r){ return [r.display, r.nombre, r.identificacion]; });
+        var cd = (e.f1_comision_disciplinaria || []).map(function(r){ return [r.display, r.nombre]; });
+        var ct = (e.f1_comision_tecnica || []).map(function(r){ return [r.display, r.nombre]; });
+        var cj = (e.f1_comision_juzgamiento || []).map(function(r){ return [r.display, r.nombre]; });
+        var cp = (e.f1_comision_paradeporte || []).map(function(r){ return [r.display, r.nombre]; });
+        /* v1.6.7: cada sub-bloque (A-G) es ahora su propio collapsible.
+           Sólo "A" arranca expandido; B-G se expanden bajo demanda. */
+        return _dtBlockRaw('A. Fundadores / Afiliados asistentes',
+            _dtTable(['Nombre','N° Res. Reconocimiento Deportivo'], fund)) +
+          _dtBlockRaw('B. Miembros del Órgano de Administración',
+            _dtTable(['Nombre','Identificación','Cargo','¿Capacitación?','Nombrado por','N° Períodos'], oa)) +
+          _dtBlock('B. Datos extra OA',
+            _dtCell('¿Presidente con antecedentes disciplinarios?', _dtRadio(e.f1_presidente_antecedentes)) +
+            _dtCell('Persona con discapacidad / grupo poblacional', e.f1_persona_discapacidad)) +
+          _dtBlockRaw('C. Revisor Fiscal',
+            _dtTable(['Cargo','Nombre','Identificación'], rf)) +
+          _dtBlockRaw('D. Comisión Disciplinaria',
+            _dtTable(['Órgano electivo','Nombre'], cd)) +
+          _dtBlockRaw('E. Comisión Técnica',
+            _dtTable(['Integrante','Nombre'], ct)) +
+          _dtBlockRaw('F. Comisión de Juzgamiento',
+            _dtTable(['Integrante','Nombre'], cj)) +
+          (e.f1_aplica_paradeporte === 'si'
+            ? _dtBlockRaw('G. Comisión Especializada / Paradeporte',
+                _dtTable(['Integrante','Nombre'], cp) +
+                '<div class="ivc-data-grid">' + _dtCell('Fecha asamblea elección Comisión Paradeporte', _dtDate(e.f1_paradeporte_fecha_asamblea)) + '</div>')
+            : _dtBlockRaw('G. Comisión Especializada / Paradeporte',
+                '<p class="ivc-detail-empty">No aplica.</p>'));
+      }
+      if (t.tipoOrganismo === 'asociacion') {
+        var sec = (e.f2_seccionales || []).map(function(r){ return [r.nombre_seccional, r.nombre_directivo]; });
+        /* v1.8.2: simple list en lugar de tabla — más ligero para 2 columnas */
+        return _dtBlockRaw('Entidades seccionales', _dtSimpleList(sec));
+      }
+      if (t.tipoOrganismo === 'federacion') {
+        var afi = (e.f3_afiliados || []).map(function(r){ return [r.nombre, r.no_res_reconocimiento]; });
+        var oa3 = (e.f3_miembros_oa || []).map(function(r){ return [r.nombre, r.cargo, r.identificacion, _dtRadio(r.tiene_capacitacion), r.nombrado_por, _dtRadio(r.acepta_cargo)]; });
+        var rf3 = (e.f3_revisor_fiscal || []).map(function(r){ return [r.display, r.nombre, r.identificacion, r.no_tarjeta_profesional, _dtRadio(r.acepta_cargo), _dtRadio(r.antecedentes_disciplinarios), _dtRadio(r.firma_revisoria)]; });
+        var cd3 = (e.f3_comision_disciplinaria || []).map(function(r){ return [r.display, r.nombre, r.identificacion, _dtRadio(r.acepta)]; });
+        return _dtBlockRaw('A. Afiliados constituyentes',
+            _dtTable(['Nombre','N° Res. Reconocimiento Deportivo'], afi)) +
+          _dtBlockRaw('B. Miembros del Órgano de Administración',
+            _dtTable(['Nombre','Cargo','Identificación','¿Capacitación?','Nombrado por','¿Acepta cargo?'], oa3)) +
+          _dtBlock('B. Datos extra OA',
+            _dtCell('Persona con discapacidad / grupo poblacional', e.f3_persona_discapacidad) +
+            _dtCell('Fecha reunión electiva del OA', _dtDate(e.f3_fecha_reunion_electiva_oa)) +
+            _dtCell('Fecha reunión asignación de cargos', _dtDate(e.f3_fecha_reunion_asignacion)) +
+            _dtCell('¿Acredita Cert. Residencia OA?', _dtRadio(e.f3_acredita_cert_residencia_oa)) +
+            _dtCell('Nombres cert. residencia OA', e.f3_nombres_cert_residencia_oa) +
+            _dtCellFile('Archivo cert. residencia OA', e.f3_archivo_cert_residencia_oa)) +
+          _dtBlockRaw('C. Órgano de Control (Revisor Fiscal)',
+            _dtTable(['Cargo','Nombre','Identificación','N° Tarjeta','¿Acepta?','¿Antecedentes?','¿Firma revisoría?'], rf3)) +
+          _dtBlock('C. Datos extra OC',
+            _dtCell('¿Acredita Cert. Residencia OC?', _dtRadio(e.f3_acredita_cert_residencia_oc)) +
+            _dtCell('Nombres cert. residencia OC', e.f3_nombres_cert_residencia_oc) +
+            _dtCellFile('Archivo cert. residencia OC', e.f3_archivo_cert_residencia_oc)) +
+          _dtBlockRaw('D. Comisión Disciplinaria',
+            _dtTable(['Órgano electivo','Nombre','Identificación','¿Acepta?'], cd3) +
+            '<div class="ivc-data-grid">' + _dtCell('Fecha reunión OA elección Miembro 3 CD', _dtDate(e.f3_fecha_reunion_oa_cd)) + '</div>');
+      }
+      return '<p class="ivc-detail-empty">Sin datos de estructura diligenciados.</p>';
+    }
+
+    /* ── TAB 5 · Cierre (refactor v1.8.1) ──
+       Estructura:
+       1. Si state es terminal (Cumple/NoCumple/Parcial) → RESULTADO de la revisión:
+          - badge del veredicto + actor + fecha
+          - acta administrativa generada (file card descargable)
+          - lista de documentos validados con su veredicto e observaciones
+       2. Certificaciones del organismo (F1 / F3): pregunta + file card si aplica.
+          Las preguntas "¿…?" se traducen a etiquetas declarativas legibles.
+       3. Documentación final del trámite (radicado + observaciones del organismo + archivos). */
+    function _renderTabCierre(t, d) {
+      var c2 = d.cierre || {};
+      var hasCierreData = Object.values(c2).some(function (v) { return v !== '' && v != null; });
+      /* v1.10.1: PendienteCOO también dispara el bloque de "Resultado" — el
+         acto fue generado por el profesional aunque aún espere aprobación
+         del Coordinador. Permite navegar desde acá a actos.html para revisar. */
+      var isTerminal = (t.estado === 'Cumple' || t.estado === 'NoCumple' || t.estado === 'Parcial' || t.estado === 'PendienteCOO');
+      if (!hasCierreData && !isTerminal) {
+        return '<p class="ivc-detail-empty">Sin información de cierre diligenciada todavía.</p>';
+      }
+
+      var html = '';
+
+      /* (1) Resultado de la validación profesional — solo cuando hay veredicto */
+      if (isTerminal) {
+        html += _renderResultadoValidacion(t);
+      }
+
+      /* (2) Certificaciones específicas del organismo */
+      if (t.tipoOrganismo === 'liga' && (c2.f1_adjunta_cert_conjunta || c2.f1_archivo_cert_conjunta)) {
+        html += _dtBlock('Certificación de la estructura funcional',
+          _dtCell('Adjunta certificación conjunta', _dtRadio(c2.f1_adjunta_cert_conjunta)) +
+          _dtCellFile('Archivo de la certificación', c2.f1_archivo_cert_conjunta)
+        );
+      }
+      if (t.tipoOrganismo === 'federacion') {
+        var anyF3Cert = c2.f3_adjunta_cert_coc || c2.f3_adjunta_aval_paralimpico || c2.f3_adjunta_cert_conjunta_no_inv;
+        if (anyF3Cert) {
+          html += _dtBlock('Certificaciones de la federación',
+            _dtCell('Certificación del COC', _dtRadio(c2.f3_adjunta_cert_coc)) +
+            _dtCellFile('Archivo certificación COC', c2.f3_archivo_cert_coc) +
+            _dtCell('Aval del Comité Paralímpico (CPC)', _dtRadio(c2.f3_adjunta_aval_paralimpico)) +
+            _dtCellFile('Archivo aval CPC', c2.f3_archivo_aval_paralimpico) +
+            _dtCell('Certificación conjunta de no investigación disciplinaria o penal', _dtRadio(c2.f3_adjunta_cert_conjunta_no_inv)) +
+            _dtCellFile('Archivo certificación no-investigación', c2.f3_archivo_cert_conjunta_no_inv)
+          );
+        }
+      }
+
+      /* (3) Documentación final del trámite (siempre, si existe) */
+      if (hasCierreData) {
+        html += _dtBlock('Documentación adjunta al trámite',
+          _dtCell('Número de radicado de la documentación', c2.no_radicado_doc, true) +
+          (c2.observaciones ? _dtCell('Observaciones del organismo', c2.observaciones) : '') +
+          _dtCellFile('Expediente completo', c2.archivos_adjuntos)
+        );
+      }
+
+      return html;
+    }
+
+    /* v1.8.2 (26/05/2026): redesign del Resultado de la Validación con
+       jerarquía visual mejorada (feedback Doug):
+       - Badge GRANDE del veredicto arriba (banner color-coded).
+       - Profesional como actor pill (avatar iniciales + nombre + rol).
+       - Acto administrativo como file link minimal (sin container, sólo
+         download icon naranja + tooltip "Descargar").
+       - Lista de docs validados igual que antes (cards con badge per doc). */
+    /* SVG icons para el .naowee-message__icon (DS canónico) */
+    var _MSG_ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>';
+    var _MSG_ICON_WARN  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+    var _MSG_ICON_X     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+
+    function _renderResultadoValidacion(t) {
+      var estado = t.estado;
+      var cfg = {
+        /* v1.10.1: PendienteCOO — acto recién generado por el profesional, en
+           cola para revisión del Coordinador. CTA: navegar a actos.html. */
+        PendienteCOO: { variant: 'caution',  icon: _MSG_ICON_WARN,  label: 'EN APROBACIÓN COO',     sub: 'El acto administrativo fue generado por el profesional y está pendiente de su revisión y aprobación.', file: 'acto-otorgamiento-' + t.id + '.pdf', ctaLabel: 'Revisar y aprobar acto →', ctaHref: 'actos.html?id=' + encodeURIComponent(t.id) },
+        Cumple:       { variant: 'positive', icon: _MSG_ICON_CHECK, label: 'CUMPLE',                sub: 'Acto administrativo de Otorgamiento aprobado por el Coordinador IVC. Pendiente firma del Director IVC.',          file: 'acto-otorgamiento-' + t.id + '.pdf', ctaLabel: 'Ver acto administrativo →', ctaHref: 'actos.html?id=' + encodeURIComponent(t.id) },
+        Parcial:      { variant: 'caution',  icon: _MSG_ICON_WARN,  label: 'CUMPLIMIENTO PARCIAL',  sub: 'Devuelto al organismo para subsanación. Quedará reabierto cuando radique la subsanación.', file: 'acto-cumplimiento-parcial-' + t.id + '.pdf' },
+        /* v1.9.8: NoCumple es terminal en firme — no admite subsanación. */
+        NoCumple:     { variant: 'negative', icon: _MSG_ICON_X,     label: 'NO CUMPLE',             sub: 'Acto de no cumplimiento generado. El trámite quedó cerrado en firme y no admite subsanación.', file: 'acto-no-cumplimiento-' + t.id + '.pdf' }
+      }[estado];
+      if (!cfg) return '';
+
+      /* Evento del histórico que disparó este estado (para actor + fecha) */
+      var evento = (t.historico || []).slice().reverse().find(function (h) {
+        return (h.accion || '').indexOf(estado) >= 0;
+      }) || {};
+      /* Nombre del profesional limpio (sin "(Profesional)" en el name principal) */
+      var actorFull = evento.actor || 'Carlos Pérez (Profesional)';
+      var actorName = actorFull.replace(/\s*\([^)]*\)\s*$/, '').trim();
+      var actorRole = (actorFull.match(/\(([^)]*)\)/) || [, 'Profesional'])[1];
+
+      /* Lista de documentos validados */
+      var docs = Array.isArray(t.documentos) ? t.documentos : [];
+      var docList = docs.length === 0
+        ? '<p class="ivc-detail-empty">No hay registro detallado de la validación por documento.</p>'
+        : '<div class="ivc-validation-list">' + docs.map(function (doc, i) {
+            var vCfg = {
+              cumple:   { cls: 'cumple',   label: 'Cumple' },
+              no:       { cls: 'nocumple', label: 'No cumple' },
+              obs:      { cls: 'obs',      label: 'Observación' }
+            }[doc.validacion] || { cls: '', label: 'Sin validar' };
+            return '<div class="ivc-validation-list__item' + (vCfg.cls ? ' ivc-validation-list__item--' + vCfg.cls : '') + '">' +
+              '<div class="ivc-validation-list__num">' + (doc.orden || (i + 1)) + '</div>' +
+              '<div class="ivc-validation-list__body">' +
+                '<div class="ivc-validation-list__title">' + escHtml(doc.titulo || 'Documento') + '</div>' +
+                (doc.observacion ? '<div class="ivc-validation-list__obs">' + escHtml(doc.observacion) + '</div>' : '') +
+              '</div>' +
+              (vCfg.label !== 'Sin validar'
+                ? '<span class="ivc-validation-list__badge ivc-validation-list__badge--' + vCfg.cls + '">' + vCfg.label + '</span>'
+                : '') +
+            '</div>';
+          }).join('') + '</div>';
+
+      /* v1.10.1: CTA opcional dentro del message — shortcut para navegar a
+         actos.html?id=… directamente desde el modal Detalle. Sólo aplica para
+         PendienteCOO (acción requerida) y Cumple (vista del acto firmado).
+         v1.10.2: text-decoration: none inline para quitar underline heredado
+         del estilo de <a>. Cumple usa --mute para look ghost neutral, no quiet
+         que parecía textlink subrayado. */
+      var ctaHtml = cfg.ctaLabel
+        ? '<div style="margin-top: 12px; display: flex;">' +
+            '<a href="' + cfg.ctaHref + '" ' +
+               'class="naowee-btn naowee-btn--' + (cfg.variant === 'positive' ? 'mute' : 'loud') + ' naowee-btn--small" ' +
+               'style="text-decoration: none;">' +
+              cfg.ctaLabel +
+            '</a>' +
+          '</div>'
+        : '';
+
+      var inner =
+        /* v1.8.3: .naowee-message canónico del DS (variant + icon + title + text). */
+        '<div class="naowee-message naowee-message--' + cfg.variant + '">' +
+          '<div class="naowee-message__header">' +
+            '<div class="naowee-message__icon">' + cfg.icon + '</div>' +
+            '<div class="naowee-message__title">' + cfg.label + '</div>' +
+          '</div>' +
+          '<div class="naowee-message__text">' + escHtml(cfg.sub) + '</div>' +
+          ctaHtml +
+        '</div>' +
+        /* Grid: profesional (actor pill) · fecha · acto administrativo (file link minimal) */
+        '<div class="ivc-data-grid">' +
+          '<div class="ivc-data-grid__cell">' +
+            '<span class="ivc-data-grid__label">Profesional encargado</span>' +
+            '<div class="ivc-actor-pill">' +
+              '<div class="ivc-actor-pill__avatar">' + _initials(actorName) + '</div>' +
+              '<div class="ivc-actor-pill__meta">' +
+                '<div class="ivc-actor-pill__name">' + escHtml(actorName) + '</div>' +
+                '<div class="ivc-actor-pill__role">' + escHtml(actorRole) + '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          _dtCell('Fecha del veredicto', evento.fecha ? _dtDate(evento.fecha) + (evento.hora ? ' · ' + evento.hora : '') : '—') +
+          _dtCellFile('Acto administrativo', { name: cfg.file, size: '312 KB · PDF' }) +
+        '</div>' +
+        /* Documentos validados */
+        '<div class="ivc-detail-subblock"><h4 class="ivc-detail-subblock__title">Documentos validados por el profesional</h4>' +
+          docList +
+        '</div>';
+
+      return _dtBlockRaw('Resultado de la validación', inner);
+    }
+
+    /* GAP #11 — Modal histórico
+       v1.12.2: window.* expuesto para inline onclick. */
+    window.openModalHistorico = function (tramiteId) {
+      var t = state.tramites.find(function (x) { return x.id === tramiteId; });
+      if (!t) return;
+      document.getElementById('modalHistoricoSub').textContent = t.id + ' · ' + t.organismo;
+      var ol = document.getElementById('histTimeline');
+      var eventos = (t.historico || []).slice().reverse();  // último arriba (más reciente primero)
+      ol.innerHTML = eventos.map(function (raw, idx) {
+        var ev = normalizeEvento(raw);
+        var isFirst = idx === 0;  // el más reciente es el destacado (no muted)
+        var muted = isFirst ? '' : ' ivc-timeline__item--muted';
+        return '<li class="ivc-timeline__item' + muted + '">' +
+          '<span class="ivc-timeline__dot"></span>' +
+          '<span class="ivc-timeline__title">' + escHtml(ev.titulo) + '</span>' +
+          (ev.meta ? '<span class="ivc-timeline__meta">' + escHtml(ev.meta) + '</span>' : '') +
+          (ev.actor ? '<span class="ivc-timeline__actor">' + escHtml(ev.actor) + '</span>' : '') +
+        '</li>';
+      }).join('');
+      document.getElementById('modalHistoricoOverlay').classList.add('open');
+      /* v1.13.10: detectar overflow del timeline para mostrar "Ver más". */
+      setTimeout(function () {
+        var box = document.getElementById('modalHistTrazaBox');
+        var wrap = document.getElementById('modalHistTrazaWrap');
+        var toggle = document.getElementById('modalHistTrazaToggle');
+        if (!box || !wrap || !toggle) return;
+        /* Reset al abrir (en caso de que el usuario haya expandido en un trámite anterior). */
+        box.classList.remove('is-expanded');
+        toggle.classList.remove('is-expanded');
+        var lbl = toggle.querySelector('.ivc-traza-toggle__label');
+        if (lbl) lbl.textContent = 'Ver más';
+        var hasOverflow = box.scrollHeight > box.clientHeight + 4;
+        wrap.classList.toggle('has-overflow', hasOverflow);
+        toggle.style.display = hasOverflow ? 'inline-flex' : 'none';
+      }, 0);
+    }
+    window._toggleModalHistTraza = function () {
+      var box = document.getElementById('modalHistTrazaBox');
+      var toggle = document.getElementById('modalHistTrazaToggle');
+      var lbl = toggle && toggle.querySelector('.ivc-traza-toggle__label');
+      if (!box || !toggle) return;
+      var isExpanded = box.classList.toggle('is-expanded');
+      toggle.classList.toggle('is-expanded', isExpanded);
+      if (lbl) lbl.textContent = isExpanded ? 'Ver menos' : 'Ver más';
+    };
+    function closeModalHistorico() {
+      document.getElementById('modalHistoricoOverlay').classList.remove('open');
+    }
+  </script>
+</body>
+</html>

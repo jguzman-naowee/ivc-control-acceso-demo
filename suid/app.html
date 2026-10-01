@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IVC · Gestión de infractores</title>
+  <link rel="icon" type="image/x-icon" href="login/img/favicon.ico">
+  <link rel="stylesheet" href="../shared/fonts/google-sans.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/naowee-tech/naowee-design-system@v1.8.0/dist/design-system.css">
+  <link rel="stylesheet" href="../shared/tokens.css">
+  <link rel="stylesheet" href="../shared/components.css">
+  <link rel="stylesheet" href="../shared/shell.css">
+  <link rel="stylesheet" href="app.css">
+  <link rel="stylesheet" href="gi.css">
+  <link rel="stylesheet" href="gi-form.css">
+  <link rel="stylesheet" href="gi-vistas.css">
+</head>
+<body>
+  <div class="shell" id="app-shell">
+    <aside class="sidebar" id="sidebar"></aside>
+    <div class="main">
+      <header class="top-header" id="topHeader"></header>
+      <main class="main-scroll" id="view"></main>
+    </div>
+  </div>
+  <div id="overlays"></div>
+
+  <script src="gi-catalogos.js"></script>
+  <script src="gi-data.js"></script>
+  <script src="app.js"></script>
+  <script src="gi.js"></script>
+  <script src="gi-form.js"></script>
+  <script src="gi-bulk.js"></script>
+  <script src="gi-capa.js"></script>
+  <script src="gi-consulta.js"></script>
+  <script src="gi-solicitudes.js"></script>
+  <script>SUID.start();</script>
+</body>
+</html>

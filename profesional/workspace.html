@@ -1,0 +1,2200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Validación de trámite · Profesional IVC</title>
+  <link rel="stylesheet" href="../shared/fonts/google-sans.css">
+
+  <!-- Naowee DS canónico v1.8.0 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/naowee-tech/naowee-design-system@v1.8.0/dist/design-system.css">
+
+  <link rel="stylesheet" href="../shared/tokens.css?v=1.13.56">
+  <link rel="stylesheet" href="../shared/components.css?v=1.13.57">
+  <link rel="stylesheet" href="../shared/shell.css?v=1.13.56">
+  <link rel="stylesheet" href="../shared/naowee-footer.css?v=1.13.56">
+  <style>/* FOOTER POINTER FIX INLINE — v1.12.5 defensive — Doug reportó que el cache de file:// servía CSS viejo y el footer flotante seguía bloqueando hover/click sobre las tablas. Esta regla está inline en el HTML para vencer al CSS externo cacheado. */ .naowee-floating-footer { pointer-events: none !important; } .naowee-floating-footer__version, .naowee-floating-footer__logo, .naowee-floating-footer__text, .naowee-floating-footer__sep { pointer-events: auto !important; }</style>
+  <style>
+    /* Page-local: layout objetivo = proyecto-detalle.html v2.0.3
+       Hero card (info + plazo) + naowee-tabs--animated + sticky decision footer.
+       Prefijo .ivc-* para todo lo custom; sin invención .naowee-*. */
+
+    /* v1.5.8 (25/05/2026): subido de 1280 → 1480 para igualar con bandeja
+       del Coordinador y del Profesional. Feedback Doug: aprovechar mejor el
+       ancho disponible en pantallas amplias. */
+    .page-inner { max-width: 1480px !important; }
+
+    /* v1.5.8 rev2 (25/05/2026): Alto razonable para los modales de decisión.
+       El DS canónico `.naowee-modal--scrollable` aplica `height: calc(100vh - 64px)`
+       que ocupa casi toda la pantalla. Feedback Doug: "alto considerable sin ser
+       masivamente alto". Limitamos a 85vh max y aseguramos overflow-y en el body
+       para que el footer (CTA) quede fijo y el contenido scrollee internamente. */
+    #modalCumpleOverlay .naowee-modal--scrollable,
+    #modalParcialOverlay .naowee-modal--scrollable,
+    #modalNoCumpleOverlay .naowee-modal--scrollable {
+      height: auto !important;
+      max-height: 85vh !important;
+    }
+    #modalCumpleOverlay .naowee-modal__body,
+    #modalParcialOverlay .naowee-modal__body,
+    #modalNoCumpleOverlay .naowee-modal__body {
+      overflow-y: auto;
+    }
+    /* Header y footer fijos (no shrink) para que solo el body scrollee. */
+    #modalCumpleOverlay .naowee-modal__header,
+    #modalParcialOverlay .naowee-modal__header,
+    #modalNoCumpleOverlay .naowee-modal__header,
+    #modalCumpleOverlay .naowee-modal__footer,
+    #modalParcialOverlay .naowee-modal__footer,
+    #modalNoCumpleOverlay .naowee-modal__footer {
+      flex-shrink: 0;
+    }
+
+    /* v1.5.8 (25/05/2026): override scoped al textarea dentro de los modales
+       de decisión. El DS canónico usa --naowee-color-gray-600 (#8788AB · darker)
+       para el textfield, pero acá queremos el mismo color que el dropdown
+       (--naowee-color-gray-300 · lighter) por consistencia. También
+       padding y altura adaptados al textarea (height auto, padding interno). */
+    .naowee-modal .naowee-textfield__input-wrap {
+      border-color: var(--naowee-color-gray-300, #d0d4e6);
+    }
+    .naowee-modal .naowee-textfield__input-wrap:hover {
+      border-color: var(--naowee-color-interactive-border-hover, #8788ab);
+    }
+    .naowee-modal .naowee-textfield--textarea .naowee-textfield__input-wrap {
+      height: auto;
+      padding: 10px 12px;
+      align-items: stretch;
+    }
+    .naowee-modal .naowee-textfield--textarea textarea.naowee-textfield__input {
+      min-height: 88px;
+      resize: vertical;
+      line-height: 1.5;
+      border: 0;
+      outline: none;
+      width: 100%;
+      background: transparent;
+      font-family: inherit;
+      font-size: 14px;
+      color: var(--text-primary);
+      padding: 0;
+    }
+    .naowee-modal .naowee-textfield__input::placeholder,
+    .naowee-modal textarea.naowee-textfield__input::placeholder {
+      color: var(--naowee-color-text-secondary, #646587);
+      font-weight: 400;
+    }
+
+    /* Back button — pegado al borde superior izquierdo del page.
+       v1.5.4: text-decoration: none para quitar el underline del <a>. */
+    .ivc-back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      align-self: flex-start;
+      margin: 0 0 6px 0;       /* v1.5.4: reducido de 14px → 6px para acercar al hero */
+      width: auto;
+      text-align: left;
+      text-decoration: none !important;
+    }
+    .ivc-back-link:hover { text-decoration: none !important; }
+    .page-inner { text-align: left; }
+
+    /* ──────────────── HERO ──────────────── */
+    .ivc-hero {
+      background: linear-gradient(135deg, #fff 0%, #fafbff 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl, 20px);
+      padding: 26px 28px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 32px;
+      align-items: stretch;
+      box-shadow: none;
+    }
+    @media (max-width: 900px) { .ivc-hero { grid-template-columns: 1fr; gap: 20px; } }
+
+    .ivc-hero__left { min-width: 0; }
+    .ivc-hero__rad {
+      font-family: var(--font-sans);font-variant-numeric:tabular-nums;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent, #d74009);
+      letter-spacing: .3px;
+      margin-bottom: 6px;
+    }
+    .ivc-hero__title {
+      margin: 0 0 8px;
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -.4px;
+      color: var(--text-primary);
+      line-height: 1.2;
+    }
+    .ivc-hero__meta {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 14px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .ivc-hero__meta > span { display: inline-flex; align-items: center; }
+    .ivc-hero__meta > span + span::before {
+      content: '·';
+      margin-right: 12px;
+      color: var(--text-muted);
+    }
+    .ivc-hero__badges { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* Hero right — bloque de plazo (vertical separador en desktop) */
+    .ivc-hero__right {
+      border-left: 1px solid var(--border);
+      padding-left: 28px;
+      min-width: 220px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+    }
+    @media (max-width: 900px) {
+      .ivc-hero__right {
+        border-left: 0;
+        padding-left: 0;
+        border-top: 1px solid var(--border);
+        padding-top: 16px;
+      }
+    }
+    .ivc-hero__right-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      letter-spacing: .6px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .ivc-hero__right-value {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -.5px;
+      line-height: 1;
+      margin-bottom: 6px;
+      font-feature-settings: 'tnum';
+    }
+    .ivc-hero__right-value--positive { color: var(--green, #1f8923); }
+    .ivc-hero__right-value--caution  { color: var(--accent, #d74009); }
+    .ivc-hero__right-value--negative { color: #c0392b; }
+    .ivc-hero__right-sub {
+      font-size: 12.5px;
+      color: var(--text-secondary);
+    }
+
+    /* ──────────────── TABS CARD ──────────────── */
+    /* v1.5.4 rev2 (25/05/2026): sticky footer removido → no necesitamos
+       margin-bottom: 100px. overflow:visible para que los tooltips canónicos
+       de los toggle btns no queden recortados. */
+    .ivc-tabs-card {
+      margin-top: 18px;
+      margin-bottom: 28px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl, 20px);
+      overflow: visible;
+    }
+    /* Force overflow visible para padres del tooltip + z-index alto */
+    .ivc-tabs-card,
+    .ivc-tab-panel,
+    .ivc-ra-list,
+    .ivc-ra-item,
+    .ivc-ra-toggle { overflow: visible !important; }
+    .ivc-ra-toggle .naowee-tooltip__content { z-index: 9999 !important; }
+    /* v1.5.4 rev3 (25/05/2026):
+       - .naowee-tabs con padding lateral interno (los tabs no quedan pegados al borde)
+       - tabs background transparent (sin fill crema del DS, evita conflicto visual con el indicator)
+       - .naowee-tabs__indicator con z-index sobre el border-top del panel (cubre la línea gris bajo el tab activo)
+       - .ivc-tab-panel margin-top: -1px para que su border-top "abrace" exactamente con la base del .naowee-tabs */
+    /* v1.7.9 (26/05/2026): mismo padding-top que el modal para respirar
+       del top del card. Height 60 = 48 (tab) + 12 (padding-top). */
+    .ivc-tabs-card .naowee-tabs {
+      overflow-x: visible;
+      border-bottom: 0;
+      position: relative;
+      padding: 12px 24px 0;       /* top 12 — lateral 24 — bottom 0 */
+      background: transparent;    /* mata el background: var(--bg) legacy */
+      border-radius: 0;           /* mata el border-radius legacy */
+      gap: 0;                     /* mata el gap legacy */
+      box-sizing: border-box;
+      height: 60px;
+      min-height: 60px;
+    }
+    .ivc-tabs-card .naowee-tabs::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: var(--border);
+      pointer-events: none;
+    }
+    .ivc-tabs-card .naowee-tabs > .naowee-tab::after {
+      border-radius: 0;
+    }
+
+    /* v1.7.5: REMOVIDO border-top del .ivc-tab-panel — creaba DOBLE divider
+       porque .naowee-tabs ya tiene su border-bottom canónico justo encima.
+       Antes funcionaba porque el span __indicator del patrón animated tapaba
+       el gap; ahora con patrón simple sin __indicator se veían las 2 líneas. */
+    .ivc-tab-panel {
+      padding: 24px 28px;
+    }
+    .ivc-tab-panel[hidden] { display: none; }
+
+    /* ──────────────── TAB: Documentos ──────────────── */
+    /* v1.5.4: barra progresiva tipo SEMÁFORO — el fill cambia de rojo →
+       naranja → verde según el progreso. data-progress en el JS escribe
+       la clase modifier en el contenedor. */
+    .ivc-checklist-progress {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+      padding: 14px 18px;
+      background: var(--bg-soft);
+      border-radius: var(--radius-md);
+    }
+    .ivc-checklist-progress__text {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .ivc-checklist-progress__bar {
+      flex: 1;
+      max-width: 280px;
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .ivc-checklist-progress__fill {
+      height: 100%;
+      background: #c0392b;   /* rojo por default (0%) */
+      transition: width var(--duration-normal) var(--ease-in-out),
+                  background var(--duration-normal) var(--ease-in-out);
+    }
+    /* Semáforo según data-progress en el wrapper */
+    .ivc-checklist-progress[data-progress="low"]    .ivc-checklist-progress__fill { background: #c0392b; }                    /* 0-33%  rojo */
+    .ivc-checklist-progress[data-progress="medium"] .ivc-checklist-progress__fill { background: var(--accent, #d74009); }     /* 34-66% naranja */
+    .ivc-checklist-progress[data-progress="high"]   .ivc-checklist-progress__fill { background: var(--green, #1f8923); }      /* 67-99% verde tenue */
+    .ivc-checklist-progress[data-progress="full"]   .ivc-checklist-progress__fill { background: var(--green, #1f8923); }      /* 100%   verde */
+
+    /* Patrón canónico ra-item + ra-toggle (port from revisar-area.html v2.0.3,
+       prefijado .ivc-ra-* para scope discipline) */
+    .ivc-ra-list {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .ivc-ra-item {
+      display: grid;
+      grid-template-columns: 36px 1fr auto;
+      gap: 16px;
+      align-items: center;
+      padding: 14px 22px;
+      border-bottom: 1px solid var(--border);
+      transition: background .15s;
+    }
+    .ivc-ra-item:last-child { border-bottom: 0; }
+    .ivc-ra-item:hover { background: #fafbff; }
+    /* v1.13.11 (Doug 27/05/2026): aplicar border-radius explícito a primera
+       y última row para que el hover bg respete las esquinas del container.
+       Antes el container tenía overflow:hidden pero el hover se veía cuadrado
+       en las esquinas superiores cuando el usuario hovereaba la primera row. */
+    .ivc-ra-item:first-child {
+      border-top-left-radius: var(--radius-lg);
+      border-top-right-radius: var(--radius-lg);
+    }
+    .ivc-ra-item:last-child {
+      border-bottom-left-radius: var(--radius-lg);
+      border-bottom-right-radius: var(--radius-lg);
+    }
+    .ivc-ra-item__num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--bg-soft, #f5f6fa);
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      transition: background .15s, color .15s;
+    }
+    .ivc-ra-item.is-cumple   .ivc-ra-item__num { background: var(--green-bg);  color: var(--green); }
+    .ivc-ra-item.is-nocumple .ivc-ra-item__num { background: var(--red-bg);    color: #c01818; }
+    .ivc-ra-item.is-obs      .ivc-ra-item__num { background: var(--orange-bg); color: var(--accent); }
+
+    .ivc-ra-item__main { min-width: 0; }
+    /* v1.13.11: title con peso 600 para mejor jerarquía sobre el ref/meta. */
+    .ivc-ra-item__text {
+      font-size: 13.5px;
+      font-weight: 600;
+      line-height: 1.45;
+      color: var(--text-primary);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .ivc-ra-item__ref {
+      font-size: 11.5px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+      font-family: var(--font-sans);font-variant-numeric:tabular-nums;
+    }
+    /* v1.5.4: "Descargar documento" como ghost button (label naranja, hover bg naranja claro) */
+    .ivc-ra-item__viewlink {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+      padding: 4px 10px;
+      font-size: 12.5px;
+      color: var(--accent);
+      font-weight: 600;
+      text-decoration: none;
+      background: transparent;
+      border: 0;
+      border-radius: var(--radius-sm, 6px);
+      transition: background .15s, color .15s;
+      cursor: pointer;
+    }
+    .ivc-ra-item__viewlink:hover,
+    .ivc-ra-item__viewlink:focus-visible {
+      background: var(--orange-bg, #fff3e6);
+      color: var(--accent);
+      outline: none;
+      text-decoration: none;
+    }
+    .ivc-ra-item__viewlink svg { width: 14px; height: 14px; }
+    .ivc-ra-item__obs-input { margin-top: 8px; display: none; max-width: 520px; }
+    .ivc-ra-item.is-obs .ivc-ra-item__obs-input,
+    .ivc-ra-item.is-nocumple .ivc-ra-item__obs-input { display: block; }
+
+    .ivc-ra-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: transparent;
+      border: 0;
+      padding: 0;
+    }
+    .ivc-ra-toggle__btn {
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      min-width: 0;
+      font-family: inherit;
+      background: transparent;
+      border: 0;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background .12s, color .12s, transform .12s;
+      flex-shrink: 0;
+    }
+    .ivc-ra-toggle__btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+    .ivc-ra-toggle__btn[data-r="cumple"]   { color: var(--green, #1f8923); }
+    .ivc-ra-toggle__btn[data-r="nocumple"] { color: #c01818; }
+    .ivc-ra-toggle__btn[data-r="obs"]      { color: var(--accent, #d74009); }
+    .ivc-ra-toggle__btn[data-r="cumple"]:hover    { background: var(--green-bg, #e6f4e7); }
+    .ivc-ra-toggle__btn[data-r="nocumple"]:hover  { background: var(--red-bg, #fff0ee); }
+    .ivc-ra-toggle__btn[data-r="obs"]:hover       { background: var(--orange-bg, #fff3e6); }
+    .ivc-ra-toggle__btn:active { transform: scale(.94); }
+    .ivc-ra-toggle__btn.is-active--cumple   { background: var(--green-bg, #e6f4e7);  color: #156d18; }
+    .ivc-ra-toggle__btn.is-active--nocumple { background: var(--red-bg, #fff0ee);    color: #8a1212; }
+    .ivc-ra-toggle__btn.is-active--obs      { background: var(--orange-bg, #fff3e6); color: var(--accent); }
+
+    /* ──────────────── TAB: Datos ────────────────
+       v1.13.10 (Doug 27/05/2026): aligeré la lectura del tab.
+       · titles ahora son gris claro letterspaced sutil — NO naranja
+       · sin divider border-bottom (rompía el flujo visual)
+       · más aire vertical entre campos (gap 18→26px) */
+    .ivc-data-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 26px 32px;
+    }
+    @media (max-width: 900px) { .ivc-data-grid { grid-template-columns: 1fr; } }
+    .ivc-data-grid__cell { display: flex; flex-direction: column; gap: 6px; }
+    .ivc-data-grid__label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .4px;
+      text-transform: uppercase;
+      color: #9a9db0;
+    }
+    .ivc-data-grid__value {
+      font-size: 14px;
+      color: var(--text-primary);
+      font-weight: 500;
+      line-height: 1.45;
+    }
+    .ivc-data-grid__value--mono {
+      font-family: var(--font-sans);font-variant-numeric:tabular-nums;
+      font-weight: 700;
+    }
+
+    /* v1.5.9 (25/05/2026): bloques de detalle del trámite (tab Datos completo).
+       v1.13.10 (Doug 27/05/2026): title ahora es gris secundario letterspaced
+       sutil (no naranja). Divider removido — la jerarquía visual se logra con
+       el margin-top generoso entre bloques (32px) + uppercase letterspacing. */
+    .ivc-detail-block {
+      margin: 0 0 36px;
+    }
+    .ivc-detail-block + .ivc-detail-block { margin-top: 36px; }
+    .ivc-detail-block__title {
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: .6px;
+      text-transform: uppercase;
+      color: #9a9db0;
+      margin: 0 0 18px;
+      padding-bottom: 0;
+      border-bottom: 0;
+    }
+    .ivc-detail-subblock {
+      margin: 22px 0 0;
+    }
+    .ivc-detail-subblock__title {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .3px;
+      text-transform: uppercase;
+      color: #9a9db0;
+      margin: 0 0 12px;
+    }
+    .ivc-detail-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md, 8px);
+      overflow: hidden;
+      margin: 0 0 6px;
+    }
+    .ivc-detail-table th {
+      background: var(--bg-soft);
+      text-align: left;
+      padding: 10px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .3px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border);
+    }
+    .ivc-detail-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-primary);
+      vertical-align: top;
+    }
+    .ivc-detail-table tr:last-child td { border-bottom: 0; }
+    .ivc-detail-empty {
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      font-style: italic;
+      margin: 4px 0;
+    }
+
+    /* ──────────────── TAB: Historial — Timeline canónico .ivc-* ──────────────── */
+    .ivc-timeline { list-style: none; margin: 0; padding: 0 0 4px 0; position: relative; }
+    .ivc-timeline::before {
+      content: '';
+      position: absolute;
+      left: 9px;
+      top: 6px;
+      bottom: 6px;
+      width: 2px;
+      background: var(--border);
+    }
+    .ivc-timeline__item {
+      position: relative;
+      padding: 0 0 18px 32px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+    .ivc-timeline__item:last-child { padding-bottom: 0; }
+    .ivc-timeline__dot {
+      position: absolute;
+      left: 4px;
+      top: 4px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent, #d74009);
+      box-shadow: 0 0 0 3px #fff, 0 0 0 4px var(--accent, #d74009);
+    }
+    .ivc-timeline__item--muted .ivc-timeline__dot {
+      background: var(--text-muted, #9ca3af);
+      box-shadow: 0 0 0 3px #fff, 0 0 0 4px var(--border-dark, #d0d4e6);
+    }
+    .ivc-timeline__item--positive .ivc-timeline__dot {
+      background: var(--green, #1f8923);
+      box-shadow: 0 0 0 3px #fff, 0 0 0 4px var(--green, #1f8923);
+    }
+    .ivc-timeline__item--caution .ivc-timeline__dot {
+      background: var(--accent, #d74009);
+      box-shadow: 0 0 0 3px #fff, 0 0 0 4px var(--accent, #d74009);
+    }
+    .ivc-timeline__item--negative .ivc-timeline__dot {
+      background: #c01818;
+      box-shadow: 0 0 0 3px #fff, 0 0 0 4px #c01818;
+    }
+    .ivc-timeline__item--info .ivc-timeline__dot {
+      background: var(--blue-info, #1f78d1);
+      box-shadow: 0 0 0 3px #fff, 0 0 0 4px var(--blue-info, #1f78d1);
+    }
+    .ivc-timeline__title {
+      display: block;
+      font-weight: 700;
+      color: var(--text-primary);
+      font-size: 13.5px;
+      margin-bottom: 2px;
+    }
+    .ivc-timeline__meta {
+      display: block;
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-family: var(--font-sans);font-variant-numeric:tabular-nums;
+    }
+    .ivc-timeline__actor {
+      display: block;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* v1.9.3 (26/05/2026): CSS verbatim del .convo-status-cenefa del módulo
+       Project v2.0.3 (naowee-test-digitacion/shared/pages.css L1900+).
+       Sólo agrego el panel de causales expandible (no invasivo, colapsado
+       por default). Patrón --top: edge-to-edge pegado al header con
+       negative margins escapando el padding del .page-inner. */
+    #lockBannerHost { margin: 0; }
+    .convo-status-cenefa {
+      margin: 32px -28px -28px;
+      padding: 22px 28px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+    .convo-status-cenefa--top {
+      margin: -28px -32px 14px;
+      padding: 12px 32px;
+      border-top: 0;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .convo-status-cenefa--top .convo-status-cenefa__icon { width: 36px; height: 36px; }
+    .convo-status-cenefa--top .convo-status-cenefa__icon svg { width: 18px; height: 18px; }
+    .convo-status-cenefa--top .convo-status-cenefa__title { font-size: 14px; margin-bottom: 2px; }
+    .convo-status-cenefa--top .convo-status-cenefa__msg { font-size: 12px; line-height: 1.4; max-width: 660px; }
+
+    .convo-status-cenefa--positive {
+      background: linear-gradient(90deg, var(--green-bg, #e6f4e7) 0%, #f4faf5 70%, var(--surface) 100%);
+      border-top-color: var(--green-border, #b7dfb9);
+    }
+    .convo-status-cenefa--caution {
+      background: linear-gradient(90deg, var(--orange-bg, #fff3e6) 0%, #fff8ef 70%, var(--surface) 100%);
+      border-top-color: var(--orange-border, #ffbf75);
+    }
+    .convo-status-cenefa--negative {
+      background: linear-gradient(90deg, var(--red-bg, #fff0ee) 0%, #fff8f7 70%, var(--surface) 100%);
+      border-top-color: var(--red-border, #ffc4bb);
+    }
+    /* --top usa border-bottom → sincronizar con la variante */
+    .convo-status-cenefa--top.convo-status-cenefa--positive { border-bottom-color: var(--green-border, #b7dfb9); }
+    .convo-status-cenefa--top.convo-status-cenefa--caution  { border-bottom-color: var(--orange-border, #ffbf75); }
+    .convo-status-cenefa--top.convo-status-cenefa--negative { border-bottom-color: var(--red-border, #ffc4bb); }
+
+    .convo-status-cenefa__icon {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(40, 40, 52, .08);
+    }
+    .convo-status-cenefa--positive .convo-status-cenefa__icon { background: var(--green, #1f8923); color: #fff; }
+    .convo-status-cenefa--caution  .convo-status-cenefa__icon { background: var(--accent, #d74009); color: #fff; }
+    .convo-status-cenefa--negative .convo-status-cenefa__icon { background: #b42318; color: #fff; }
+    .convo-status-cenefa__icon svg { width: 22px; height: 22px; }
+
+    .convo-status-cenefa__body { flex: 1; min-width: 0; }
+    .convo-status-cenefa__title {
+      font-size: 15px; font-weight: 700;
+      color: var(--text-primary);
+      margin: 0 0 4px;
+    }
+    .convo-status-cenefa__msg {
+      font-size: 13px; line-height: 1.5;
+      color: var(--text-secondary);
+      margin: 0;
+      max-width: 540px;
+    }
+    .convo-status-cenefa__action {
+      flex-shrink: 0;
+      display: flex; gap: 10px; align-items: center;
+    }
+
+    /* Lock state — deshabilita toggles de documentos + finalizar buttons */
+    .ivc-tramite-locked .ivc-ra-toggle__btn {
+      pointer-events: none;
+      opacity: 0.4;
+    }
+    .ivc-tramite-locked [data-obs] {
+      pointer-events: none;
+      background: var(--bg-soft, #f5f6fa);
+      color: var(--text-secondary);
+    }
+    .ivc-tramite-locked .ivc-finalizar-row {
+      display: none !important;
+    }
+
+    /* v1.5.4 rev2 (25/05/2026): sticky footer con 3 botones REMOVIDO.
+       Doug: los 3 botones funcionaban como "leyenda redundante". Ahora el
+       resultado se infiere del checklist y se materializa con 1 solo CTA
+       "Finalizar revisión" al final del tab Documentos (inline, no fixed). */
+    /* v1.5.8 (25/05/2026): divider border-top va de borde a borde del card.
+       El .ivc-tab-panel tiene padding 24px 28px, así que el row negativo-margin
+       lateral para que el divider sobresalga y luego paga su propio padding
+       interno para alinear el contenido con el resto del panel. Feedback Doug. */
+    .ivc-finalizar-row {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 16px;
+      margin: 18px -28px 0;       /* negative-margin lateral compensa el padding del panel */
+      padding: 18px 28px 0;        /* re-paga padding interno para alinear contenido */
+      border-top: 1px solid var(--border);
+    }
+    .ivc-finalizar-row__hint {
+      flex: 1;
+      align-self: center;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+    .ivc-finalizar-row__btn {
+      flex-shrink: 0;
+    }
+    /* El botón se colorea según el resultado calculado del checklist */
+    /* v1.5.8 (25/05/2026): glow (box-shadow) del DS canónico --loud usa el accent
+       naranja. Override scoped por variant para que el glow matchee con el
+       color del fondo (verde/naranja/rojo). Feedback Doug. */
+    .ivc-finalizar-row__btn[data-result="cumple"] {
+      background: #15803d !important;
+      border-color: #15803d !important;
+      color: #fff !important;
+    }
+    .ivc-finalizar-row__btn[data-result="cumple"]:hover,
+    .ivc-finalizar-row__btn[data-result="cumple"]:focus-visible {
+      background: #166534 !important;
+      box-shadow: 0 8px 24px -4px rgba(21,128,61,.35) !important;  /* glow verde */
+    }
+    .ivc-finalizar-row__btn[data-result="parcial"] {
+      background: var(--accent) !important;
+      border-color: var(--accent) !important;
+      color: #fff !important;
+    }
+    .ivc-finalizar-row__btn[data-result="parcial"]:hover,
+    .ivc-finalizar-row__btn[data-result="parcial"]:focus-visible {
+      background: #b8350a !important;
+      box-shadow: 0 8px 24px -4px rgba(215,64,9,.35) !important;   /* glow naranja */
+    }
+    .ivc-finalizar-row__btn[data-result="no"] {
+      background: #c0392b !important;
+      border-color: #c0392b !important;
+      color: #fff !important;
+    }
+    .ivc-finalizar-row__btn[data-result="no"]:hover,
+    .ivc-finalizar-row__btn[data-result="no"]:focus-visible {
+      background: #9d2f23 !important;
+      box-shadow: 0 8px 24px -4px rgba(192,57,43,.35) !important;  /* glow rojo */
+    }
+    .ivc-finalizar-row__btn svg { stroke: #fff !important; color: #fff !important; }
+    .ivc-finalizar-row__btn:disabled {
+      background: var(--bg-soft) !important;
+      border-color: var(--border) !important;
+      color: var(--text-muted) !important;
+      cursor: not-allowed;
+    }
+    .ivc-finalizar-row__btn:disabled svg { stroke: var(--text-muted) !important; }
+
+    /* Decision button color variants — full contrast (#fff text + #fff stroke
+       on SVG) sobre los 3 fondos semánticos: verde / naranja / rojo. */
+    .ivc-btn-cumple {
+      background: #15803d !important;
+      border-color: #15803d !important;
+      color: #fff !important;
+    }
+    .ivc-btn-cumple:hover:not(:disabled),
+    .ivc-btn-cumple:focus-visible {
+      background: #166534 !important;
+      border-color: #166534 !important;
+      color: #fff !important;
+    }
+    .ivc-btn-cumple svg { stroke: #fff !important; color: #fff !important; }
+
+    .ivc-btn-parcial {
+      background: var(--accent, #d74009) !important;
+      border-color: var(--accent, #d74009) !important;
+      color: #fff !important;
+    }
+    .ivc-btn-parcial:hover:not(:disabled),
+    .ivc-btn-parcial:focus-visible {
+      background: #b8350a !important;
+      border-color: #b8350a !important;
+      color: #fff !important;
+    }
+    .ivc-btn-parcial svg { stroke: #fff !important; color: #fff !important; }
+
+    .ivc-btn-no {
+      background: #c0392b !important;
+      border-color: #c0392b !important;
+      color: #fff !important;
+    }
+    .ivc-btn-no:hover:not(:disabled),
+    .ivc-btn-no:focus-visible {
+      background: #9d2f23 !important;
+      border-color: #9d2f23 !important;
+      color: #fff !important;
+    }
+    .ivc-btn-no svg { stroke: #fff !important; color: #fff !important; }
+
+    /* Vista previa de acto (modal) — paridad con la versión anterior */
+    .ivc-acto-preview {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 24px 28px;
+      margin: 18px 0;
+      font-family: var(--font-sans);
+      font-size: 13px;
+      line-height: 1.65;
+      color: var(--text-primary);
+    }
+    .ivc-acto-preview__head {
+      text-align: center;
+      margin-bottom: 18px;
+      padding-bottom: 14px;
+      border-bottom: 2px solid var(--text-primary);
+    }
+    .ivc-acto-preview__ministerio {
+      font-weight: 700;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--azul);
+    }
+    .ivc-acto-preview__num {
+      margin: 14px 0 4px;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .ivc-acto-preview__por-la-cual {
+      font-style: italic;
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin: 0 0 18px;
+    }
+    .ivc-acto-preview__body p { margin: 0 0 10px; text-align: justify; }
+    .ivc-acto-preview__firma {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px dashed var(--border);
+      text-align: center;
+      font-style: italic;
+      color: var(--text-muted);
+      font-size: 12.5px;
+    }
+
+    /* v1.5.8 (25/05/2026): igualado a los labels del tab Datos (.ivc-data-grid__label).
+       Feedback Doug: gris claro y tamaño consistente con el resto de labels del
+       workspace. Antes era 14px + text-primary (muy fuerte para "internal title"). */
+    .ivc-section-title {
+      margin: 24px 0 12px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: .6px;
+    }
+    .ivc-section-title:first-child { margin-top: 0; }
+
+    .ivc-auto-data {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 8px;
+    }
+    @media (max-width: 700px) { .ivc-auto-data { grid-template-columns: 1fr; } }
+    .ivc-auto-data__cell {
+      background: var(--bg-soft);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+    }
+    .ivc-auto-data__label {
+      font-size: 10.5px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: .3px;
+      display: block;
+      margin-bottom: 2px;
+    }
+    .ivc-auto-data__value {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .ivc-auto-data__value--mono {
+      font-family: var(--font-sans);font-variant-numeric:tabular-nums;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="shell" id="app-shell"></div>
+
+  <template id="page-content">
+    <div class="page-inner">
+
+      <!-- v1.9.4: lock banner host PRIMERO — pegado al header (cenefa --top
+           usa negative margins para edge-to-edge + sticky top: 0). Antes el
+           back button bloqueaba el sticking porque la cenefa caía debajo. -->
+      <div id="lockBannerHost"></div>
+
+      <!-- Back -->
+      <a href="bandeja.html" class="naowee-btn naowee-btn--mute naowee-btn--small ivc-back-link" id="btnBack">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Volver a la bandeja
+      </a>
+
+      <!-- Slot: hero + tabs cards. JS inyecta. -->
+      <div id="workspaceContent"></div>
+
+    </div>
+  </template>
+
+  <!-- Modal: Generar Acto Cumple -->
+  <div class="naowee-modal-overlay" id="modalCumpleOverlay" role="dialog" aria-modal="true" aria-labelledby="modalCumpleTitle">
+    <div class="naowee-modal naowee-modal--scrollable" style="max-width: 720px;">
+      <div class="naowee-modal__header">
+        <div class="naowee-modal__title-group">
+          <h2 class="naowee-modal__title" id="modalCumpleTitle">Generar acto administrativo</h2>
+          <p class="naowee-modal__subtitle" id="modalCumpleSub">Reconocimiento Deportivo <span class="naowee-badge naowee-badge--positive naowee-badge--quiet naowee-badge--small" style="margin-left:8px; vertical-align:middle;">Cumplimiento total</span></p>
+        </div>
+        <button type="button" class="naowee-modal__dismiss" id="modalCumpleClose" aria-label="Cerrar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="naowee-modal__body">
+
+        <!-- v1.9.9: copy alineado al flujo real (INS-004 loop COO):
+             Profesional genera acto → Coordinador revisa → ¿Aprueba COO?
+               · Sí → Director firma electrónicamente.
+               · No → vuelve al Profesional para versionar y nueva revisión.
+             Antes decía "pasará al Director del IVC en la siguiente fase",
+             saltándose la revisión del Coordinador. -->
+        <div class="naowee-message naowee-message--informative">
+          <div class="naowee-message__header">
+            <span class="naowee-message__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            </span>
+            <span class="naowee-message__title">Acto pendiente de revisión del Coordinador</span>
+          </div>
+          <div class="naowee-message__text">
+            Se generará un acto administrativo con numeración consecutiva automática. El acto pasará primero al Coordinador IVC para su revisión. Si lo aprueba, será enviado al Director del IVC para firma electrónica. Si requiere correcciones, le será devuelto para versionarlo (INS-004) y radicar una nueva revisión.
+          </div>
+        </div>
+
+        <h3 class="ivc-section-title">Vista previa del acto</h3>
+        <article class="ivc-acto-preview">
+          <header class="ivc-acto-preview__head">
+            <div class="ivc-acto-preview__ministerio">República de Colombia · Ministerio del Deporte</div>
+            <p class="ivc-acto-preview__num">RESOLUCIÓN NÚMERO <span id="cumpleNumActo">—</span> DE 2026</p>
+            <p class="ivc-acto-preview__por-la-cual" id="cumplePorLaCual">"Por la cual se otorga el Reconocimiento Deportivo"</p>
+          </header>
+          <div class="ivc-acto-preview__body">
+            <p><strong>EL MINISTRO DEL DEPORTE</strong>, en uso de sus facultades legales, y en particular las conferidas por el Decreto 1387 de 1970, la Ley 181 de 1995 y el Decreto 1085 de 2015,</p>
+            <p><strong>CONSIDERANDO:</strong></p>
+            <p id="cumpleConsiderando">1. Que el organismo radicó la solicitud y la documentación aportada cumple con los requisitos exigidos por el Artículo 2.1.1.2 del Decreto 1387 de 1970.</p>
+            <p><strong>RESUELVE:</strong></p>
+            <p><strong>ARTÍCULO PRIMERO.</strong> Otorgar Reconocimiento Deportivo en los términos de la legislación vigente.</p>
+            <p><strong>ARTÍCULO SEGUNDO.</strong> Disponer la inscripción en el Registro Nacional Deportivo.</p>
+          </div>
+          <footer class="ivc-acto-preview__firma">
+            [Por firmar electrónicamente por el Director del IVC]
+          </footer>
+        </article>
+
+        <h3 class="ivc-section-title">Datos auto-generados</h3>
+        <div class="ivc-auto-data">
+          <div class="ivc-auto-data__cell">
+            <span class="ivc-auto-data__label">Número de acto</span>
+            <span class="ivc-auto-data__value ivc-auto-data__value--mono" id="cumpleNumActo2">—</span>
+          </div>
+          <div class="ivc-auto-data__cell">
+            <span class="ivc-auto-data__label">Fecha de generación</span>
+            <span class="ivc-auto-data__value" id="cumpleFechaGen">—</span>
+          </div>
+          <div class="ivc-auto-data__cell">
+            <span class="ivc-auto-data__label">Profesional responsable</span>
+            <span class="ivc-auto-data__value">Carlos Pérez</span>
+          </div>
+        </div>
+
+      </div>
+      <!-- v1.5.8: removido "Cancelar" (redundante con X + click overlay). Feedback Doug. -->
+      <div class="naowee-modal__footer naowee-modal__footer--end">
+        <!-- v1.5.8: removido .ivc-btn-cumple (verde) — feedback Doug: que sea naranja
+             canónico (.naowee-btn--loud del DS). -->
+        <button type="button" class="naowee-btn naowee-btn--loud" id="modalCumpleConfirm">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Confirmar y generar acto
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Cumplimiento parcial — devolver para subsanación -->
+  <div class="naowee-modal-overlay" id="modalParcialOverlay" role="dialog" aria-modal="true" aria-labelledby="modalParcialTitle">
+    <div class="naowee-modal" style="max-width: 560px;">
+      <div class="naowee-modal__header">
+        <div class="naowee-modal__title-group">
+          <h2 class="naowee-modal__title" id="modalParcialTitle">Devolver para subsanación</h2>
+          <p class="naowee-modal__subtitle">Reconocimiento Deportivo <span class="naowee-badge naowee-badge--caution naowee-badge--quiet naowee-badge--small" style="margin-left:8px; vertical-align:middle;">Cumplimiento parcial</span></p>
+        </div>
+        <button type="button" class="naowee-modal__dismiss" id="modalParcialClose" aria-label="Cerrar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="naowee-modal__body">
+        <div class="naowee-message naowee-message--caution">
+          <div class="naowee-message__header">
+            <span class="naowee-message__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </span>
+            <span class="naowee-message__title">Cumplimiento parcial</span>
+          </div>
+          <div class="naowee-message__text">
+            El trámite volverá al organismo con las observaciones marcadas. El plazo se pausa hasta que el organismo subsane.
+          </div>
+        </div>
+
+        <h3 class="ivc-section-title">Observaciones generales</h3>
+        <div class="naowee-textfield naowee-textfield--textarea">
+          <div class="naowee-textfield__input-wrap">
+            <textarea class="naowee-textfield__input" id="parcialObsText" rows="4" placeholder="Describe brevemente lo que falta corregir para que el organismo pueda subsanar."></textarea>
+          </div>
+        </div>
+
+        <h3 class="ivc-section-title">Documentos a subsanar</h3>
+        <div id="docsParcialList" style="font-size: 13px; color: var(--text-primary); line-height: 1.7;">—</div>
+      </div>
+      <!-- v1.5.8: removido "Cancelar" (redundante). Feedback Doug. -->
+      <div class="naowee-modal__footer naowee-modal__footer--end">
+        <button type="button" class="naowee-btn naowee-btn--loud" id="modalParcialConfirm">Enviar a subsanación</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: No Cumple -->
+  <div class="naowee-modal-overlay" id="modalNoCumpleOverlay" role="dialog" aria-modal="true" aria-labelledby="modalNoCumpleTitle">
+    <div class="naowee-modal naowee-modal--scrollable" style="max-width: 720px;">
+      <div class="naowee-modal__header">
+        <div class="naowee-modal__title-group">
+          <h2 class="naowee-modal__title" id="modalNoCumpleTitle">Generar acto de no cumplimiento</h2>
+          <p class="naowee-modal__subtitle">Reconocimiento Deportivo <span class="naowee-badge naowee-badge--negative naowee-badge--quiet naowee-badge--small" style="margin-left:8px; vertical-align:middle;">No cumple</span></p>
+        </div>
+        <button type="button" class="naowee-modal__dismiss" id="modalNoCumpleClose" aria-label="Cerrar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="naowee-modal__body">
+
+        <div class="naowee-message naowee-message--negative">
+          <div class="naowee-message__header">
+            <span class="naowee-message__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            </span>
+            <span class="naowee-message__title">Rechazo del trámite</span>
+          </div>
+          <div class="naowee-message__text">
+            Este acto formaliza el rechazo del trámite. El organismo recibirá notificación del cambio de estado y se registrará la trazabilidad completa.
+          </div>
+        </div>
+
+        <h3 class="ivc-section-title">Causales de no cumplimiento</h3>
+        <div class="naowee-textfield naowee-textfield--textarea">
+          <div class="naowee-textfield__input-wrap">
+            <textarea class="naowee-textfield__input" id="causalesText" rows="4" placeholder="Describe las causales generales del no cumplimiento..."></textarea>
+          </div>
+        </div>
+
+        <h3 class="ivc-section-title">Documentos que no cumplen</h3>
+        <div id="docsNoCumpleList" style="font-size: 13px; color: var(--text-primary); line-height: 1.7;">—</div>
+
+        <h3 class="ivc-section-title">Vista previa del acto</h3>
+        <article class="ivc-acto-preview">
+          <header class="ivc-acto-preview__head">
+            <div class="ivc-acto-preview__ministerio">República de Colombia · Ministerio del Deporte</div>
+            <p class="ivc-acto-preview__num">RESOLUCIÓN NÚMERO <span id="noCumpleNumActo">—</span> DE 2026 — NO CUMPLIMIENTO</p>
+            <p class="ivc-acto-preview__por-la-cual" id="noCumplePorLaCual">"Por la cual se rechaza el trámite de Otorgamiento de Reconocimiento Deportivo"</p>
+          </header>
+          <div class="ivc-acto-preview__body">
+            <p><strong>EL MINISTRO DEL DEPORTE</strong>, en uso de sus facultades legales,</p>
+            <p><strong>CONSIDERANDO:</strong></p>
+            <p>1. Que la documentación aportada presenta inconsistencias frente a los requisitos exigidos por el Artículo 2.1.1.2 del Decreto 1387 de 1970.</p>
+            <p><strong>RESUELVE:</strong></p>
+            <p><strong>ARTÍCULO PRIMERO.</strong> Rechazar el trámite.</p>
+            <p><strong>ARTÍCULO SEGUNDO.</strong> Notificar al organismo el presente acto y la trazabilidad asociada.</p>
+          </div>
+          <footer class="ivc-acto-preview__firma">
+            [Por firmar electrónicamente por el Director del IVC]
+          </footer>
+        </article>
+
+        <h3 class="ivc-section-title">Datos auto-generados</h3>
+        <div class="ivc-auto-data">
+          <div class="ivc-auto-data__cell">
+            <span class="ivc-auto-data__label">Número de acto</span>
+            <span class="ivc-auto-data__value ivc-auto-data__value--mono" id="noCumpleNumActo2">—</span>
+          </div>
+          <div class="ivc-auto-data__cell">
+            <span class="ivc-auto-data__label">Fecha de generación</span>
+            <span class="ivc-auto-data__value" id="noCumpleFechaGen">—</span>
+          </div>
+          <div class="ivc-auto-data__cell">
+            <span class="ivc-auto-data__label">Profesional responsable</span>
+            <span class="ivc-auto-data__value">Carlos Pérez</span>
+          </div>
+        </div>
+
+      </div>
+      <!-- v1.5.8: removido "Cancelar" (redundante). Feedback Doug. -->
+      <div class="naowee-modal__footer naowee-modal__footer--end">
+        <button type="button" class="naowee-btn naowee-btn--loud ivc-btn-no" id="modalNoCumpleConfirm">
+          Confirmar y generar acto
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- v1.5.4 rev2 (25/05/2026): Sticky footer con 3 botones REMOVIDO.
+       El CTA "Finalizar revisión" inline al final del tab Documentos lo
+       reemplaza. Se renderiza desde JS en renderDocsTab. -->
+
+  <!-- Scripts -->
+  <script src="../shared/data.js?v=1.13.56"></script>
+  <script src="../shared/shell.js?v=1.13.56"></script>
+  <script src="../shared/ivc-store.js?v=1.13.56"></script>
+  <script src="../shared/naowee-footer.js?v=1.13.56" defer></script>
+  <script>
+    /* Source of truth = IVCStore; lectura via ?id=IVC-2026-001 */
+    var state = {
+      tramite: null,
+      docs: [],        /* [{id, orden, titulo, obligatorio, validacion, observacion}] */
+      activeTab: 'documentos'
+    };
+
+    /* Catálogo de 7 documentos del Decreto 1387/1970 — copia local read-only.
+       Si window.IVCData.DOCUMENTOS_DECRETO_1387 está disponible, se prefiere. */
+    var DOCS_FALLBACK = [
+      { id: 'acta-constitucion',     orden: 1, titulo: 'Copia del Acta de Constitución',                obligatorio: true  },
+      { id: 'lista-afiliados',       orden: 2, titulo: 'Lista de afiliados con nóminas de Directivos', obligatorio: true  },
+      { id: 'estatutos',             orden: 3, titulo: 'Copia de Estatutos y Reglamentos',              obligatorio: true  },
+      { id: 'personeria',            orden: 4, titulo: 'Documento de Personería Jurídica',              obligatorio: true  },
+      { id: 'afiliacion-internacional', orden: 5, titulo: 'Constancia de afiliación internacional',    obligatorio: false },
+      { id: 'inventario',            orden: 6, titulo: 'Inventario de bienes',                          obligatorio: true  },
+      { id: 'sede',                  orden: 7, titulo: 'Acta de designación de sede',                   obligatorio: true  }
+    ];
+
+    document.addEventListener('DOMContentLoaded', function () {
+      window.IVCData.setPerfil('profesional');
+
+      var template = document.getElementById('page-content');
+      var shellRoot = document.getElementById('app-shell');
+      shellRoot.innerHTML = template.innerHTML;
+
+      window.IVCShell.init({ title: null, activeNav: 'bandeja-prof' });
+
+      /* v1.9.5: mover lockBannerHost OUT of .page-inner (max-width: 1480px
+         centrado) y ponerlo como primer hijo de .page (sin max-width) — así
+         la cenefa va edge-to-edge sin gaps en viewports anchos. */
+      var bannerHost = document.getElementById('lockBannerHost');
+      var pageEl = document.getElementById('page-main');
+      if (bannerHost && pageEl && bannerHost.parentNode !== pageEl) {
+        pageEl.insertBefore(bannerHost, pageEl.firstChild);
+      }
+
+      IVCStore.init();
+
+      var id = new URLSearchParams(location.search).get('id');
+      state.tramite = id ? IVCStore.getTramite(id) : null;
+
+      var content = document.getElementById('workspaceContent');
+      if (!state.tramite) {
+        renderEmpty(content);
+        return;
+      }
+
+      /* Hidratar el checklist con catálogo + cualquier validación previa */
+      var catalog = (window.IVCData && window.IVCData.DOCUMENTOS_DECRETO_1387) || DOCS_FALLBACK;
+      var prevDocs = (state.tramite.documentos && Array.isArray(state.tramite.documentos))
+        ? state.tramite.documentos : [];
+      state.docs = catalog.map(function (d) {
+        var prev = prevDocs.find(function (p) { return p.id === d.id; }) || {};
+        return {
+          id: d.id,
+          orden: d.orden,
+          titulo: d.titulo,
+          obligatorio: !!d.obligatorio,
+          validacion: prev.validacion || null,
+          observacion: prev.observacion || ''
+        };
+      });
+
+      renderWorkspace(content);
+      mountFooter();
+      wireTabs();
+      wireDocActions();
+      wireFooterActions();
+      wireModales();
+      applyLockState();        /* v1.8.0: aplica lock + banner si el estado es terminal */
+
+      /* Subscriptions: refrescar si el store cambia (otra tab, etc.) */
+      IVCStore.on('store:changed-external', function () {
+        state.tramite = IVCStore.getTramite(id);
+        if (!state.tramite) return;
+        renderHistorial();
+        applyLockState();      /* v1.8.0: sincroniza el lock si otra tab cambió el estado */
+      });
+    });
+
+    /* v1.8.0 (26/05/2026): helpers de lock — el trámite queda view-only
+       cuando el profesional ya emitió un veredicto (Cumple/NoCumple/Parcial).
+       El banner ofrece reabrir por subsanación del organismo. */
+    /* v1.10.0: PendienteCOO también bloquea — el trámite salió de manos del
+       profesional y está en el flujo del Coordinador. Si el Coordinador
+       devuelve para corrección, el estado vuelve a 'En validación' (con
+       version++ en el historico) y el lock se libera automáticamente.
+       v1.11.0: PendienteFirma / Firmado / NotifElectronica / NotifOficinas /
+       Vigente también son view-only para el Profesional — están en manos del
+       Director, Sistema, u Organismo. */
+    function isTramiteFinalizado() {
+      var e = state.tramite && state.tramite.estado;
+      return e === 'Cumple' || e === 'NoCumple' || e === 'Parcial' ||
+             e === 'PendienteCOO' || e === 'PendienteFirma' || e === 'Firmado' ||
+             e === 'NotifElectronica' || e === 'NotifOficinas' || e === 'Vigente' ||
+             /* v1.11.4: estados del flujo de recursos también bloquean. */
+             e === 'PendienteRecursos' || e === 'PendienteRecursoTipo' ||
+             e === 'EnApelacion'       || e === 'EnReposicion';
+    }
+    function applyLockState() {
+      document.body.classList.toggle('ivc-tramite-locked', isTramiteFinalizado());
+      renderLockBanner();
+    }
+    function renderLockBanner() {
+      var host = document.getElementById('lockBannerHost');
+      if (!host) return;
+      if (!isTramiteFinalizado()) { host.innerHTML = ''; return; }
+      var e = state.tramite.estado;
+      /* v1.9.3: iconos para .convo-status-cenefa__icon (22px svg) */
+      var iconCheck = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      var iconWarn  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+      /* v1.9.3: icono de error con círculo + X dentro (más expresivo para negative) */
+      var iconError = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+      /* v1.9.3: variants mapean a .convo-status-cenefa canónico del módulo Project.
+         v1.9.8: copy del NoCumple ya no menciona "puede subsanar" — es terminal en firme.
+         v1.10.0: nuevo estado intermedio PendienteCOO — el acto está en revisión del
+         Coordinador IVC; si éste lo devuelve para corrección, el lock se libera.
+         v1.11.0: añadidos estados post-firma del flujo Director: PendienteFirma,
+         Firmado, NotifElectronica, NotifOficinas, Vigente (terminal positivo final). */
+      var cfg = {
+        PendienteCOO:     { variant: 'caution',  icon: iconWarn,  title: 'Acto en revisión del Coordinador IVC',  sub: 'El acto administrativo fue generado y enviado al Coordinador para su aprobación (COO). Quedará habilitado nuevamente si el Coordinador solicita correcciones.' },
+        PendienteFirma:   { variant: 'caution',  icon: iconWarn,  title: 'Acto aprobado COO · pendiente firma del Director', sub: 'El Coordinador aprobó el acto. Está en cola del Director del IVC para firma electrónica.' },
+        Firmado:          { variant: 'positive', icon: iconCheck, title: 'Acto firmado por el Director IVC',      sub: 'El acto administrativo fue firmado electrónicamente. Sistema procediendo con la notificación al organismo.' },
+        NotifElectronica: { variant: 'positive', icon: iconCheck, title: 'Notificación electrónica al organismo', sub: 'El acto firmado fue enviado al organismo por canal electrónico. Esperando respuesta sobre renuncia a términos.' },
+        NotifOficinas:    { variant: 'caution',  icon: iconWarn,  title: 'Notificación en oficinas (5 días hábiles)', sub: 'El organismo fue alertado para asistir a las oficinas del IVC. Notificación queda en manos de Atención al Usuario / GIT Comunicaciones.' },
+        Vigente:          { variant: 'positive', icon: iconCheck, title: 'Trámite vigente · CERRADO',             sub: 'Acto administrativo vigente. Organismo inscrito en el Registro Nacional Deportivo. Trámite cerrado satisfactoriamente.' },
+        /* v1.11.4: estados del flujo de recursos. */
+        PendienteRecursos:    { variant: 'caution',  icon: iconWarn,  title: 'Términos legales corriendo (10 días)', sub: 'El organismo no renunció a términos. Dispone de 10 días hábiles para interponer recursos. Si no, el acto entrará en vigencia el día 11 (D+11).' },
+        PendienteRecursoTipo: { variant: 'caution',  icon: iconWarn,  title: 'Organismo eligiendo tipo de recurso',  sub: 'El organismo indicó que interpone recursos. Está seleccionando entre Apelación (área jurídica) o Reposición (nuevo trámite).' },
+        EnApelacion:          { variant: 'caution',  icon: iconWarn,  title: 'Apelación · pendiente pronunciamiento jurídico', sub: 'El recurso de apelación fue remitido al área jurídica del Ministerio. Trámite suspendido a la espera del fallo jurídico.' },
+        EnReposicion:         { variant: 'positive', icon: iconCheck, title: 'Trámite cerrado por Reposición',       sub: 'El organismo interpuso reposición. Se creó un nuevo trámite hijo con FK al original. Este trámite queda cerrado en favor del nuevo radicado.' },
+        Cumple:           { variant: 'positive', icon: iconCheck, title: 'Trámite cerrado · CUMPLE',              sub: 'Acto administrativo de Otorgamiento aprobado por el Coordinador IVC. Pendiente firma del Director IVC.' },
+        Parcial:          { variant: 'caution',  icon: iconWarn,  title: 'Trámite devuelto · CUMPLIMIENTO PARCIAL', sub: 'Devuelto al organismo para subsanación. Quedará reabierto cuando radique la subsanación.' },
+        NoCumple:         { variant: 'negative', icon: iconError, title: 'Trámite cerrado · NO CUMPLE',           sub: 'Acto de no cumplimiento generado. El trámite quedó cerrado en firme y no admite subsanación.' }
+      }[e];
+      /* v1.9.8: sólo Parcial habilita la reapertura por subsanación.
+         NoCumple es terminal definitivo — el organismo debe presentar un nuevo trámite.
+         v1.10.0: PendienteCOO no requiere CTAs en el workspace del profesional —
+         la acción está del lado del Coordinador en su página de aprobación. */
+      var canReopen = (e === 'Parcial');
+
+      /* v1.9.6: banner simplificado — sin actor pill ni dropdown de causales.
+         Las causales del profesional siguen visibles per-documento en el panel
+         de la izquierda y en el portal público del organismo (consultar.html). */
+      var actionsHtml = '';
+      if (canReopen) {
+        actionsHtml += '<a href="../usuario-externo/consultar.html?rad=' + encodeURIComponent(state.tramite.id) + '" target="_blank" class="naowee-btn naowee-btn--quiet naowee-btn--small">Ver portal del organismo →</a>';
+        actionsHtml += '<button type="button" class="naowee-btn naowee-btn--mute naowee-btn--small" onclick="reabrirPorSubsanacion()">Marcar como subsanado</button>';
+      }
+
+      host.innerHTML =
+        '<div class="convo-status-cenefa convo-status-cenefa--' + cfg.variant + ' convo-status-cenefa--top">' +
+          '<span class="convo-status-cenefa__icon" aria-hidden="true">' + cfg.icon + '</span>' +
+          '<div class="convo-status-cenefa__body">' +
+            '<div class="convo-status-cenefa__title">' + cfg.title + '</div>' +
+            '<p class="convo-status-cenefa__msg">' + cfg.sub + '</p>' +
+          '</div>' +
+          (actionsHtml ? '<div class="convo-status-cenefa__action">' + actionsHtml + '</div>' : '') +
+        '</div>';
+    }
+    function escHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+      });
+    }
+    /* Mock subsanación: el organismo radica la subsanación → trámite vuelve a "En validación".
+       En producción esto vendría del evento "subsanación radicada" del usuario externo. */
+    function reabrirPorSubsanacion() {
+      if (!state.tramite) return;
+      var actor = 'Sistema (mock: subsanación radicada por ' + (state.tramite.organismo || 'organismo') + ')';
+      IVCStore.actualizarEstado(state.tramite.id, 'En validación', actor, 'Trámite reabierto tras subsanación');
+      state.tramite = IVCStore.getTramite(state.tramite.id);
+      applyLockState();
+      renderHistorial();
+      window.IVCShell.showSnackbar('Trámite reabierto. Puede continuar la revisión con la documentación subsanada.', 'success');
+    }
+    window.reabrirPorSubsanacion = reabrirPorSubsanacion;
+
+    /* ───────── Empty (trámite no existe) ───────── */
+    function renderEmpty(host) {
+      host.innerHTML =
+        '<div class="naowee-empty-state" style="max-width:560px; margin:48px auto;">' +
+          '<div class="naowee-empty-state__icon">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
+              '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>' +
+            '</svg>' +
+          '</div>' +
+          '<div class="naowee-empty-state__title">Trámite no encontrado</div>' +
+          '<div class="naowee-empty-state__description">El identificador del trámite no es válido o ya no está disponible.</div>' +
+          '<div class="naowee-empty-state__action">' +
+            '<a class="naowee-btn naowee-btn--quiet" href="bandeja.html">Volver a la bandeja</a>' +
+          '</div>' +
+        '</div>';
+    }
+
+    /* ───────── Hero + tabs ───────── */
+    function renderWorkspace(host) {
+      var t = state.tramite;
+      var plazo = (typeof t.plazoDias === 'number') ? t.plazoDias : 15;
+      var plazoCls = plazo <= 0 ? 'negative' : plazo <= 5 ? 'caution' : 'positive';
+      var plazoLabel = plazo <= 0 ? 'Vencido' : (plazo + ' días');
+      var venceTxt = computeVence(t.fechaRadicacion, 15);
+
+      var estadoBadge = badgeForEstado(t.estado);
+      var tipoBadge = '<span class="naowee-badge naowee-badge--informative naowee-badge--quiet">' + (t.tipoTramite || t.tipo || 'Otorgamiento') + '</span>';
+
+      host.innerHTML =
+        /* v1.9.4: lockBannerHost ya vive en el template (page-inner > primer hijo)
+           para que el sticky funcione pegado al header sin colisionar con el back. */
+
+        /* HERO */
+        '<section class="ivc-hero">' +
+          '<div class="ivc-hero__left">' +
+            '<div class="ivc-hero__rad">' + t.id + '</div>' +
+            '<h1 class="ivc-hero__title">' + (t.organismo || '—') + '</h1>' +
+            '<div class="ivc-hero__meta">' +
+              '<span>NIT ' + (t.nit || '—') + '</span>' +
+              '<span>' + (t.tipoTramite || 'Otorgamiento') + '</span>' +
+              '<span>Radicado: ' + formatDate(t.fechaRadicacion) + '</span>' +
+            '</div>' +
+            '<div class="ivc-hero__badges">' + estadoBadge + tipoBadge + '</div>' +
+          '</div>' +
+          '<div class="ivc-hero__right">' +
+            '<div class="ivc-hero__right-label">Plazo restante</div>' +
+            '<div class="ivc-hero__right-value ivc-hero__right-value--' + plazoCls + '">' + plazoLabel + '</div>' +
+            '<div class="ivc-hero__right-sub">Vence ' + venceTxt + '</div>' +
+          '</div>' +
+        '</section>' +
+
+        /* v1.7.2: Tabs DS LITERALES — estructura mínima del playground. */
+        '<section class="ivc-tabs-card">' +
+          '<div class="naowee-tabs" role="tablist" style="width:100%">' +
+            /* v1.13.12 (Doug 27/05/2026): icono a la izquierda de cada label.
+               Doc icon (file-text) · Datos icon (list-rows) · Historial (clock). */
+            '<button class="naowee-tab naowee-tab--selected" data-tab="documentos" role="tab" type="button">' +
+              '<svg class="ivc-tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' +
+              'Documentos' +
+            '</button>' +
+            '<button class="naowee-tab" data-tab="datos" role="tab" type="button">' +
+              '<svg class="ivc-tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>' +
+              'Datos' +
+            '</button>' +
+            '<button class="naowee-tab" data-tab="historial" role="tab" type="button">' +
+              '<svg class="ivc-tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' +
+              'Historial' +
+            '</button>' +
+          '</div>' +
+
+          '<div class="ivc-tab-panel" data-panel="documentos" id="panelDocumentos">' +
+            renderDocsPanel() +
+          '</div>' +
+          '<div class="ivc-tab-panel" data-panel="datos" id="panelDatos" hidden>' +
+            renderDatosPanel() +
+          '</div>' +
+          '<div class="ivc-tab-panel" data-panel="historial" id="panelHistorial" hidden>' +
+            renderHistorialPanel() +
+          '</div>' +
+        '</section>';
+    }
+
+    /* ───────── Render: Documentos panel ───────── */
+    function renderDocsPanel() {
+      /* v1.13.13: detectar revalidación post-subsanación. Si hay docs con
+         __subsanado_prev (marca dejada por _confirmSubsanacion en consultar),
+         significa que el organismo subsanó esos y necesita re-revisión solo
+         de esos. Los demás cumple permanecen — banner sutil arriba avisa. */
+      var subsanados = state.docs.filter(function (d) { return d.__subsanado_prev; });
+      var yaCumple = state.docs.filter(function (d) { return d.validacion === 'cumple'; });
+      var banner = '';
+      if (subsanados.length > 0) {
+        banner =
+          '<div class="naowee-message naowee-message--informative" style="margin-bottom: 18px;">' +
+            '<div class="naowee-message__header">' +
+              '<div class="naowee-message__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></div>' +
+              '<div class="naowee-message__title">Re-revisión por subsanación · ' + subsanados.length + ' documento(s)</div>' +
+            '</div>' +
+            '<div class="naowee-message__text">' +
+              yaCumple.length + ' documento(s) ya fueron validados previamente como Cumple y quedaron lockeados con badge verde. ' +
+              'Solo necesita re-validar los <strong>' + subsanados.length + ' subsanado(s)</strong>: ' +
+              subsanados.map(function (d) { return '<em>' + d.titulo + '</em>'; }).join(', ') + '.' +
+            '</div>' +
+          '</div>';
+      }
+      var html = banner +
+        '<div class="ivc-checklist-progress">' +
+          '<span class="ivc-checklist-progress__text"><strong id="docsValidadosCount">0</strong> de ' + state.docs.length + ' documentos validados</span>' +
+          '<div class="ivc-checklist-progress__bar"><div class="ivc-checklist-progress__fill" id="progressFill" style="width:0%"></div></div>' +
+        '</div>' +
+        '<div id="docsList">' + buildDocRows() + '</div>';
+      return html;
+    }
+
+    function buildDocRows() {
+      var iconCheck = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>';
+      var iconX     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+      var iconWarn  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+
+      var html = '<div class="ivc-ra-list">';
+      html += state.docs.map(function (d) {
+        var cls = '';
+        if (d.validacion === 'cumple') cls = 'is-cumple';
+        else if (d.validacion === 'obs') cls = 'is-obs';
+        else if (d.validacion === 'no') cls = 'is-nocumple';
+
+        /* v1.13.11 (Doug 27/05/2026): badge simétrico — Obligatorio (caution
+           peach naranja) o Opcional (neutral gris). Antes solo se marcaban
+           los opcionales → no había forma de saber cuáles eran obligatorios. */
+        var tipoBadge = d.obligatorio
+          ? ' <span class="naowee-badge naowee-badge--caution naowee-badge--quiet naowee-badge--small">Obligatorio</span>'
+          : ' <span class="naowee-badge naowee-badge--neutral naowee-badge--quiet naowee-badge--small">Opcional</span>';
+
+        var obsValue = (d.observacion || '').replace(/"/g, '&quot;');
+        var refTxt = 'Decreto 1387/1970 · Art 2.1.1.2';
+
+        return '<div class="ivc-ra-item ' + cls + '" data-doc-id="' + d.id + '">' +
+          '<div class="ivc-ra-item__num">' + d.orden + '</div>' +
+          '<div class="ivc-ra-item__main">' +
+            '<div class="ivc-ra-item__text">' + d.titulo + tipoBadge + '</div>' +
+            '<div class="ivc-ra-item__ref">' + refTxt + ' · PDF · 245 KB</div>' +
+            /* v1.5.4: ghost button, "Descargar documento" con icono */
+            '<a href="#" class="ivc-ra-item__viewlink" aria-label="Descargar documento">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' +
+              '<span>Descargar documento</span>' +
+            '</a>' +
+            '<div class="ivc-ra-item__obs-input">' +
+              '<div class="naowee-textfield naowee-textfield--small">' +
+                '<div class="naowee-textfield__input-wrap">' +
+                  '<input type="text" class="naowee-textfield__input" data-obs="' + d.id + '" placeholder="Observación..." value="' + obsValue + '" />' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          /* v1.5.4: tooltips canónicos del DS (.naowee-tooltip + __content) */
+          '<div class="ivc-ra-toggle" role="group" aria-label="Veredicto del documento">' +
+            '<span class="naowee-tooltip">' +
+              '<button type="button" class="ivc-ra-toggle__btn ' + (d.validacion === 'cumple' ? 'is-active--cumple' : '') + '" data-r="cumple" data-doc="' + d.id + '" aria-label="Marcar como Cumple">' + iconCheck + '</button>' +
+              '<span class="naowee-tooltip__content">Cumple</span>' +
+            '</span>' +
+            '<span class="naowee-tooltip">' +
+              '<button type="button" class="ivc-ra-toggle__btn ' + (d.validacion === 'no' ? 'is-active--nocumple' : '') + '" data-r="nocumple" data-doc="' + d.id + '" aria-label="Marcar como No cumple">' + iconX + '</button>' +
+              '<span class="naowee-tooltip__content">No cumple</span>' +
+            '</span>' +
+            '<span class="naowee-tooltip">' +
+              '<button type="button" class="ivc-ra-toggle__btn ' + (d.validacion === 'obs' ? 'is-active--obs' : '') + '" data-r="obs" data-doc="' + d.id + '" aria-label="Marcar como Cumplimiento parcial">' + iconWarn + '</button>' +
+              '<span class="naowee-tooltip__content">Cumplimiento parcial</span>' +
+            '</span>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+      html += '</div>';
+
+      /* v1.5.4 rev2: CTA único "Finalizar revisión" al final del tab.
+         El JS de updateProgress() habilita/deshabilita + setea data-result
+         según el estado del checklist (cumple/parcial/no). */
+      html +=
+        '<div class="ivc-finalizar-row">' +
+          '<div class="ivc-finalizar-row__hint" id="finalizarHint">' +
+            'Marca todos los documentos obligatorios para finalizar la revisión.' +
+          '</div>' +
+          '<button type="button" class="naowee-btn naowee-btn--loud naowee-btn--large ivc-finalizar-row__btn" id="btnFinalizar" disabled>' +
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' +
+            '<span id="btnFinalizarLabel">Finalizar revisión</span>' +
+          '</button>' +
+        '</div>';
+      return html;
+    }
+
+    /* ───────── Render: Datos panel ───────── */
+    /* v1.5.9 (25/05/2026): tab Datos ahora muestra TODOS los datos diligenciados
+       en el formulario (no solo metadatos del trámite). Feedback Juanma:
+       el profesional necesita ver toda la información recolectada del formulario. */
+
+    /* Helpers de bloques */
+    function _dtCell(label, value, mono) {
+      var v = (value === undefined || value === null || value === '') ? '—' : String(value);
+      var safe = String(v).replace(/[&<>"']/g, function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];});
+      var valCls = 'ivc-data-grid__value' + (mono ? ' ivc-data-grid__value--mono' : '');
+      return '<div class="ivc-data-grid__cell">' +
+        '<span class="ivc-data-grid__label">' + label + '</span>' +
+        '<span class="' + valCls + '">' + safe + '</span>' +
+      '</div>';
+    }
+    function _dtBlock(title, cellsHtml) {
+      if (!cellsHtml) return '';
+      return '<section class="ivc-detail-block">' +
+        '<h3 class="ivc-detail-block__title">' + title + '</h3>' +
+        '<div class="ivc-data-grid">' + cellsHtml + '</div>' +
+      '</section>';
+    }
+    function _dtSubBlock(title, content) {
+      return '<div class="ivc-detail-subblock"><h4 class="ivc-detail-subblock__title">' + title + '</h4>' + content + '</div>';
+    }
+    function _dtTable(headers, rows) {
+      // rows = array de arrays (celdas)
+      if (!rows || rows.length === 0) return '<p class="ivc-detail-empty">—</p>';
+      var nonEmpty = rows.filter(function(r){ return r.some(function(c){ return c && String(c).trim() !== ''; }); });
+      if (nonEmpty.length === 0) return '<p class="ivc-detail-empty">No se diligenció ninguna fila.</p>';
+      var safe = function(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];}); };
+      var html = '<table class="ivc-detail-table"><thead><tr>';
+      headers.forEach(function(h){ html += '<th>' + safe(h) + '</th>'; });
+      html += '</tr></thead><tbody>';
+      nonEmpty.forEach(function(row){
+        html += '<tr>';
+        row.forEach(function(c){ html += '<td>' + safe(c || '—') + '</td>'; });
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+      return html;
+    }
+
+    /* Catálogos para traducir IDs a labels legibles */
+    var _DT_TIPOS_REUNION = {
+      ORDINARIA:'Ordinaria', EXTRAORDINARIA:'Extraordinaria', EXT_CARACTER_ORD:'Extraordinaria con carácter de Ordinaria',
+      SEGUNDA_CONVOCATORIA:'Segunda convocatoria', NO_PRESENCIAL:'No presencial', DERECHO_PROPIO:'De pleno derecho',
+      CONSTITUTIVA:'Constitutiva', UNIVERSAL:'Universal', DEL_OA:'Del Órgano de Administración'
+    };
+    var _DT_TIPOS_CONVOCANTE = {
+      OA:'Órgano de Administración', PRESIDENTE:'Presidente del Organismo',
+      OC:'Órgano de Control', COMITE_PROVISIONAL:'Comité Provisional'
+    };
+    var _DT_SUB_ASOCIACION = { JUVENIL:'Asociación Juvenil', RECREATIVA:'Asociación Recreativa' };
+    var _DT_RADIO = { si:'Sí', no:'No', no_aplica:'No aplica' };
+    var _DT_ORG = {
+      liga:'Ligas o asociaciones deportivas',
+      asociacion:'Asociaciones juveniles o recreativas',
+      federacion:'Federaciones deportivas'
+    };
+    function _dtRadio(v){ return _DT_RADIO[v] || v || '—'; }
+    function _dtArchivo(file) {
+      if (!file) return '—';
+      if (typeof file === 'object' && file.name) return file.name + (file.size ? ' · ' + file.size : '');
+      return 'Archivo adjunto';
+    }
+
+    /* ─────────────────────────────────────────────────────────────────
+       HELPER PRINCIPAL: renderTramiteDatosCompletos(t)
+       Renderiza TODOS los datos del trámite por secciones según el tipo
+       de organismo. Reutilizable en workspace y en modal del coordinador. */
+    function renderTramiteDatosCompletos(t) {
+      if (!t) return '<p class="ivc-detail-empty">Trámite no encontrado.</p>';
+      var d = t.datos || {};
+      var coordActor = (t.historico || []).find(function (h) {
+        return /asignad/i.test(h.accion || '') && (h.actor || '').toLowerCase().indexOf('coordinador') >= 0;
+      });
+      var coord = coordActor ? coordActor.actor : '—';
+      var orgLabel = _DT_ORG[t.tipoOrganismo] || t.tipoOrganismo || '—';
+      var area = t.area === 'aficionado' ? 'Deporte Aficionado' : t.area === 'profesional' ? 'Deporte Profesional' : (t.area || '—');
+      var plazo = (typeof t.plazoDias === 'number') ? t.plazoDias : 15;
+      var plazoTxt = plazo <= 0 ? 'Vencido' : plazo + ' días hábiles';
+
+      var html = '';
+
+      // 0. Identificación / Metadatos del trámite
+      html += _dtBlock('Identificación del trámite',
+        _dtCell('Número de radicado', t.id || '—', true) +
+        _dtCell('Tipo de organismo', orgLabel) +
+        _dtCell('Tipo de trámite', t.tipoTramite || '—') +
+        _dtCell('Área', area) +
+        _dtCell('Fecha de radicación', t.fechaRadicacion ? formatDate(t.fechaRadicacion) : '—') +
+        _dtCell('Plazo restante', plazoTxt) +
+        _dtCell('Estado actual', t.estado || '—') +
+        _dtCell('Coordinador asignador', coord) +
+        _dtCell('Profesional asignado', t.profesionalNombre || '—')
+      );
+
+      // 1. Datos generales del organismo
+      var generales = _dtCell('Nombre del organismo', d.nombre);
+      if (t.tipoOrganismo === 'liga') generales += _dtCell('NIT', d.nit, true);
+      generales += _dtCell('Dirección', d.direccion);
+      if (t.tipoOrganismo !== 'asociacion') generales += _dtCell('Municipio', d.municipio);
+      generales += _dtCell('Teléfono', d.telefono, true) + _dtCell('Correo electrónico', d.correo);
+      html += _dtBlock('Datos generales del organismo', generales);
+
+      // 2. F1 / F2 / F3 (Personería, Estatutos, Constitución)
+      if (t.tipoOrganismo === 'liga' && d.f1) {
+        var f1 = d.f1;
+        var c = _dtCell('N° Resolución Personería Jurídica', f1.no_res_personeria) +
+                _dtCell('Radicado Personería en IVC', f1.radicado_personeria, true) +
+                _dtCell('Fecha última Reforma Estatutaria', f1.fecha_reforma ? formatDate(f1.fecha_reforma) : '—') +
+                _dtCell('Radicado Estatutos en IVC', f1.radicado_estatutos, true) +
+                _dtCell('N° Resolución Inscripción Estatutos', f1.no_res_estatutos) +
+                _dtCell('Período Estatutario Inicial', f1.periodo_inicial) +
+                _dtCell('Período Estatutario Vigente', f1.periodo_vigente) +
+                _dtCell('N° Resolución RD anterior', f1.no_res_rd_anterior) +
+                _dtCell('Fecha Notificación RD anterior', f1.fecha_notif_rd ? formatDate(f1.fecha_notif_rd) : '—') +
+                _dtCell('Fecha Firmeza RD anterior', f1.fecha_firmeza_rd ? formatDate(f1.fecha_firmeza_rd) : '—') +
+                _dtCell('N° Resolución/Acta Inscripción Miembros', f1.f1_no_acta_miembros) +
+                _dtCell('¿Constancia Personería vigente?', _dtRadio(f1.tiene_constancia)) +
+                _dtCell('Fecha Constancia', f1.fecha_constancia ? formatDate(f1.fecha_constancia) : '—') +
+                _dtCell('N° Resolución de Mínimos', f1.no_res_minimos) +
+                _dtCell('N° de Mínimos', f1.n_minimos);
+        html += _dtBlock('Personería, Estatutos y Constitución (F1)', c);
+      }
+      if (t.tipoOrganismo === 'asociacion' && d.f2) {
+        var f2 = d.f2;
+        var c = _dtCell('Sub-tipo de Asociación', _DT_SUB_ASOCIACION[f2.sub_tipo] || f2.sub_tipo) +
+                _dtCell('N° y fecha doc. Personería Jurídica', f2.no_personeria) +
+                _dtCell('Radicado Personería en IVC', f2.radicado_personeria, true) +
+                _dtCell('Fecha Estatutos Sociales vigentes', f2.fecha_estatutos ? formatDate(f2.fecha_estatutos) : '—') +
+                _dtCell('Radicado Estatutos en IVC', f2.radicado_estatutos, true) +
+                _dtCell('N° Acta designación de sede', f2.no_acta_sede) +
+                _dtCell('Radicado Acta sede en IVC', f2.radicado_acta_sede, true) +
+                _dtCell('N° Acta Constitución/elección OA', f2.no_acta_constitucion) +
+                _dtCell('Radicado Acta constitución en IVC', f2.radicado_acta_constitucion, true) +
+                _dtCell('N° Resolución Inscripción Miembros', f2.no_inscripcion_miembros) +
+                _dtCell('Radicado Resolución Miembros en IVC', f2.radicado_inscripcion_miembros, true) +
+                _dtCell('¿Cuenta con inventario de bienes?', _dtRadio(f2.tiene_inventario)) +
+                _dtCell('Archivo inventario', _dtArchivo(f2.archivo_inventario)) +
+                _dtCell('¿Documentos de afiliación internacional?', _dtRadio(f2.tiene_afiliacion)) +
+                _dtCell('Archivo afiliación', _dtArchivo(f2.archivo_afiliacion));
+        html += _dtBlock('Personería, Estatutos y Estructura (F2)', c);
+      }
+      if (t.tipoOrganismo === 'federacion' && d.f3) {
+        var f3 = d.f3;
+        var c = _dtCell('N° Resolución Personería Jurídica', f3.no_res_personeria) +
+                _dtCell('Radicado Personería en IVC', f3.radicado_personeria, true) +
+                _dtCell('Período Estatutario Inicial', f3.f3_periodo_estatutario_inicial) +
+                _dtCell('N° Resolución de Mínimos', f3.f3_no_res_minimos) +
+                _dtCell('N° de Mínimos', f3.f3_n_minimos);
+        html += _dtBlock('Personería y Constitución (F3)', c);
+      }
+
+      // 3. Asamblea (F1 + F3)
+      if (d.asamblea && (t.tipoOrganismo === 'liga' || t.tipoOrganismo === 'federacion')) {
+        var a = d.asamblea;
+        if (t.tipoOrganismo === 'liga') {
+          // Tema + tabla de tipos + observaciones
+          var subTema = _dtBlock('Asamblea — Tema', _dtCell('Tema u objeto de la reunión', a.f1_tema));
+          var rowsAsamblea = (a.f1_reuniones || []).map(function(r){
+            return [
+              _DT_TIPOS_REUNION[r.tipo] || r.tipo || '—',
+              r.fechaConv ? formatDate(r.fechaConv) : '—',
+              r.fechaReal ? formatDate(r.fechaReal) : '—',
+              r.antelacion ? formatDate(r.antelacion) : '—',
+              _dtRadio(r.cumple)
+            ];
+          });
+          var tablaTipos = '<section class="ivc-detail-block"><h3 class="ivc-detail-block__title">Asamblea — Tipos de reunión realizados</h3>' +
+            _dtTable(['Tipo / Clase', 'Fecha Convocatoria', 'Fecha Realización', 'Antelación', '¿Cumple?'], rowsAsamblea) +
+            '</section>';
+          var obs = a.f1_obs_asamblea ? _dtBlock('Asamblea — Observaciones', _dtCell('Observaciones sobre la asamblea', a.f1_obs_asamblea)) : '';
+          // Convocante
+          var conv = _dtBlock('Convocante',
+            _dtCell('Tipo de convocante', _DT_TIPOS_CONVOCANTE[a.f1_tipo_convocante] || a.f1_tipo_convocante) +
+            _dtCell('¿Convocante elegido en período vigente?', _dtRadio(a.f1_convocante_vigente)) +
+            _dtCell('N° Res. Inscripción del convocante', a.f1_no_res_convocante) +
+            _dtCell('N° Acta OA que designa Presidente', a.f1_no_acta_designa_presidente) +
+            _dtCell('N° Res. nombramiento Comité Provisional', a.f1_no_res_comite_provisional) +
+            _dtCell('Vigencia Comité Provisional', a.f1_vigencia_comite_provisional) +
+            _dtCell('¿Comité designado por OA?', _dtRadio(a.f1_comite_designado_por_oa)) +
+            _dtCell('Ente Deportivo', a.f1_ente_deportivo)
+          );
+          // Asistentes
+          var asis = _dtBlock('Asistentes y quórum',
+            _dtCell('N° total de afiliados', a.f1_num_afiliados, true) +
+            _dtCell('N° afiliados asistentes', a.f1_num_asistentes, true) +
+            _dtCell('¿Se cumplió el quórum?', _dtRadio(a.f1_cumplio_quorum)) +
+            _dtCell('¿Cert. RF a la fecha de reunión?', _dtRadio(a.f1_adjunta_cert_rf_fecha)) +
+            _dtCell('Archivo cert. RF fecha', _dtArchivo(a.f1_archivo_cert_rf_fecha)) +
+            _dtCell('¿Cert. RF en la actualidad?', _dtRadio(a.f1_adjunta_cert_rf_actual)) +
+            _dtCell('Archivo cert. RF actualidad', _dtArchivo(a.f1_archivo_cert_rf_actual)) +
+            _dtCell('Observaciones sobre asistencia', a.f1_obs_asistencia)
+          );
+          html += subTema + tablaTipos + obs + conv + asis;
+        } else {
+          // F3 — Asamblea de Constitución + Asistentes
+          html += _dtBlock('Asamblea de Constitución (F3)',
+            _dtCell('Tipo de convocatoria', a.f3_tipo_convocatoria === 'COMITE_PROVISIONAL' ? 'Comité Provisional' : a.f3_tipo_convocatoria === 'INICIATIVA_PROPIA' ? 'Iniciativa Propia' : '—') +
+            _dtCell('Fecha de Convocatoria', a.f3_fecha_convocatoria ? formatDate(a.f3_fecha_convocatoria) : '—') +
+            _dtCell('Fecha de Realización', a.f3_fecha_realizacion ? formatDate(a.f3_fecha_realizacion) : '—')
+          );
+          html += _dtBlock('Asistentes y Quórum (F3)',
+            _dtCell('N° total de afiliados', a.f3_num_afiliados, true) +
+            _dtCell('N° afiliados asistentes', a.f3_num_asistentes, true) +
+            _dtCell('¿Se cumplió el quórum?', _dtRadio(a.f3_cumplio_quorum)) +
+            _dtCell('¿Cert. RF sobre afiliados?', _dtRadio(a.f3_adjunta_cert_rf)) +
+            _dtCell('Archivo cert. RF', _dtArchivo(a.f3_archivo_cert))
+          );
+        }
+      }
+
+      // 4. Estructura del organismo
+      if (d.estructura) {
+        var e = d.estructura;
+        if (t.tipoOrganismo === 'liga') {
+          var fund = (e.f1_fundadores || []).map(function(r){ return [r.nombre, r.no_res_reconocimiento]; });
+          var oa = (e.f1_miembros_oa || []).map(function(r){ return [r.nombre, r.identificacion, r.cargo, _dtRadio(r.capacitacion), r.nombrado_por, r.no_periodos]; });
+          var rf = (e.f1_revisor_fiscal || []).map(function(r){ return [r.display, r.nombre, r.identificacion]; });
+          var cd = (e.f1_comision_disciplinaria || []).map(function(r){ return [r.display, r.nombre]; });
+          var ct = (e.f1_comision_tecnica || []).map(function(r){ return [r.display, r.nombre]; });
+          var cj = (e.f1_comision_juzgamiento || []).map(function(r){ return [r.display, r.nombre]; });
+          var cp = (e.f1_comision_paradeporte || []).map(function(r){ return [r.display, r.nombre]; });
+
+          html += '<section class="ivc-detail-block"><h3 class="ivc-detail-block__title">Estructura del organismo (F1)</h3>' +
+            _dtSubBlock('A. Fundadores / Afiliados asistentes', _dtTable(['Nombre','N° Res. Reconocimiento Deportivo'], fund)) +
+            _dtSubBlock('B. Miembros del Órgano de Administración', _dtTable(['Nombre','Identificación','Cargo','¿Capacitación?','Nombrado por','N° Períodos'], oa)) +
+            _dtSubBlock('B. Datos extra OA', '<div class="ivc-data-grid">' +
+              _dtCell('¿Presidente tiene antecedentes disciplinarios?', _dtRadio(e.f1_presidente_antecedentes)) +
+              _dtCell('Persona con discapacidad / grupo poblacional', e.f1_persona_discapacidad) +
+            '</div>') +
+            _dtSubBlock('C. Revisor Fiscal', _dtTable(['Cargo','Nombre','Identificación'], rf)) +
+            _dtSubBlock('D. Comisión Disciplinaria', _dtTable(['Órgano electivo','Nombre'], cd)) +
+            _dtSubBlock('E. Comisión Técnica', _dtTable(['Integrante','Nombre'], ct)) +
+            _dtSubBlock('F. Comisión de Juzgamiento', _dtTable(['Integrante','Nombre'], cj)) +
+            (e.f1_aplica_paradeporte === 'si'
+              ? _dtSubBlock('G. Comisión Especializada / Paradeporte', _dtTable(['Integrante','Nombre'], cp) +
+                  '<div class="ivc-data-grid">' + _dtCell('Fecha asamblea elección Comisión Paradeporte', e.f1_paradeporte_fecha_asamblea ? formatDate(e.f1_paradeporte_fecha_asamblea) : '—') + '</div>')
+              : _dtSubBlock('G. Comisión Especializada / Paradeporte', '<p class="ivc-detail-empty">No aplica.</p>')
+            ) +
+          '</section>';
+        } else if (t.tipoOrganismo === 'asociacion') {
+          var sec = (e.f2_seccionales || []).map(function(r){ return [r.nombre_seccional, r.nombre_directivo]; });
+          html += '<section class="ivc-detail-block"><h3 class="ivc-detail-block__title">Entidades seccionales (F2)</h3>' +
+            _dtTable(['Nombre seccional','Nombre directivo'], sec) +
+          '</section>';
+        } else if (t.tipoOrganismo === 'federacion') {
+          var afi = (e.f3_afiliados || []).map(function(r){ return [r.nombre, r.no_res_reconocimiento]; });
+          var oa = (e.f3_miembros_oa || []).map(function(r){ return [r.nombre, r.cargo, r.identificacion, _dtRadio(r.tiene_capacitacion), r.nombrado_por, _dtRadio(r.acepta_cargo)]; });
+          var rf = (e.f3_revisor_fiscal || []).map(function(r){ return [r.display, r.nombre, r.identificacion, r.no_tarjeta_profesional, _dtRadio(r.acepta_cargo), _dtRadio(r.antecedentes_disciplinarios), _dtRadio(r.firma_revisoria)]; });
+          var cd = (e.f3_comision_disciplinaria || []).map(function(r){ return [r.display, r.nombre, r.identificacion, _dtRadio(r.acepta)]; });
+
+          html += '<section class="ivc-detail-block"><h3 class="ivc-detail-block__title">Estructura del organismo (F3)</h3>' +
+            _dtSubBlock('A. Afiliados constituyentes', _dtTable(['Nombre','N° Res. Reconocimiento Deportivo'], afi)) +
+            _dtSubBlock('B. Miembros del Órgano de Administración', _dtTable(['Nombre','Cargo','Identificación','¿Capacitación?','Nombrado por','¿Acepta cargo?'], oa)) +
+            _dtSubBlock('B. Datos extra OA', '<div class="ivc-data-grid">' +
+              _dtCell('Persona con discapacidad / grupo poblacional', e.f3_persona_discapacidad) +
+              _dtCell('Fecha reunión electiva del OA', e.f3_fecha_reunion_electiva_oa ? formatDate(e.f3_fecha_reunion_electiva_oa) : '—') +
+              _dtCell('Fecha reunión asignación de cargos', e.f3_fecha_reunion_asignacion ? formatDate(e.f3_fecha_reunion_asignacion) : '—') +
+              _dtCell('¿Acredita Cert. Residencia OA?', _dtRadio(e.f3_acredita_cert_residencia_oa)) +
+              _dtCell('Nombres cert. residencia OA', e.f3_nombres_cert_residencia_oa) +
+              _dtCell('Archivo cert. residencia OA', _dtArchivo(e.f3_archivo_cert_residencia_oa)) +
+            '</div>') +
+            _dtSubBlock('C. Órgano de Control (Revisor Fiscal)', _dtTable(['Cargo','Nombre','Identificación','N° Tarjeta','¿Acepta?','¿Antecedentes?','¿Firma revisoría?'], rf)) +
+            _dtSubBlock('C. Datos extra OC', '<div class="ivc-data-grid">' +
+              _dtCell('¿Acredita Cert. Residencia OC?', _dtRadio(e.f3_acredita_cert_residencia_oc)) +
+              _dtCell('Nombres cert. residencia OC', e.f3_nombres_cert_residencia_oc) +
+              _dtCell('Archivo cert. residencia OC', _dtArchivo(e.f3_archivo_cert_residencia_oc)) +
+            '</div>') +
+            _dtSubBlock('D. Comisión Disciplinaria', _dtTable(['Órgano electivo','Nombre','Identificación','¿Acepta?'], cd)) +
+            '<div class="ivc-data-grid">' +
+              _dtCell('Fecha reunión OA elección Miembro 3 CD', e.f3_fecha_reunion_oa_cd ? formatDate(e.f3_fecha_reunion_oa_cd) : '—') +
+            '</div>' +
+          '</section>';
+        }
+      }
+
+      // 5. Información Adicional y Cierre
+      if (d.cierre) {
+        var c2 = d.cierre;
+        var cierre = '';
+        if (t.tipoOrganismo === 'liga') {
+          cierre += _dtCell('¿Certificación conjunta estructura funcional?', _dtRadio(c2.f1_adjunta_cert_conjunta)) +
+                    _dtCell('Archivo cert. conjunta', _dtArchivo(c2.f1_archivo_cert_conjunta));
+        }
+        if (t.tipoOrganismo === 'federacion') {
+          cierre += _dtCell('¿Certificación del COC?', _dtRadio(c2.f3_adjunta_cert_coc)) +
+                    _dtCell('Archivo cert. COC', _dtArchivo(c2.f3_archivo_cert_coc)) +
+                    _dtCell('¿Aval del Comité Paralímpico Colombiano?', _dtRadio(c2.f3_adjunta_aval_paralimpico)) +
+                    _dtCell('Archivo Aval CPC', _dtArchivo(c2.f3_archivo_aval_paralimpico)) +
+                    _dtCell('¿Cert. conjunta no investigación disciplinaria/penal?', _dtRadio(c2.f3_adjunta_cert_conjunta_no_inv)) +
+                    _dtCell('Archivo cert. no investigación', _dtArchivo(c2.f3_archivo_cert_conjunta_no_inv));
+        }
+        cierre += _dtCell('N° radicado de la documentación adjunta', c2.no_radicado_doc, true) +
+                  _dtCell('Observaciones y documentación pendiente', c2.observaciones) +
+                  _dtCell('Archivos adjuntos al trámite', _dtArchivo(c2.archivos_adjuntos));
+        html += _dtBlock('Información adicional y cierre', cierre);
+      }
+
+      return html;
+    }
+
+    function renderDatosPanel() {
+      var t = state.tramite;
+      return renderTramiteDatosCompletos(t);
+    }
+
+    /* ───────── Render: Historial panel ───────── */
+    function timelineItemVariant(accion) {
+      var a = (accion || '').toLowerCase();
+      if (a.indexOf('no cumple') >= 0 || a.indexOf('rechaz') >= 0) return 'negative';
+      if (a.indexOf('subsana') >= 0)                                return 'info';
+      if (a.indexOf('cumple') >= 0 && a.indexOf('parcial') < 0)   return 'positive';
+      if (a.indexOf('parcial') >= 0 || a.indexOf('devuelt') >= 0) return 'caution';
+      if (a.indexOf('radicad') >= 0 || a.indexOf('asignad') >= 0 || a.indexOf('validaci') >= 0) return 'info';
+      return 'muted';
+    }
+    /* v1.13.13: badge label semántico para cada evento del historial. */
+    function timelineEventBadge(accion) {
+      var a = (accion || '').toLowerCase();
+      if (a.indexOf('subsanación radicada') >= 0)                  return { label: 'Subsanación', variant: 'informative' };
+      if (a.indexOf('no cumple') >= 0 || a.indexOf('rechaz') >= 0) return { label: 'No cumple',   variant: 'negative' };
+      if (a.indexOf('cumplimiento parcial') >= 0 || a.indexOf('parcial') >= 0 || a.indexOf('devuelt') >= 0)
+                                                                    return { label: 'Parcial',     variant: 'caution' };
+      if (a.indexOf('acto administrativo') >= 0 && a.indexOf('generado') >= 0)
+                                                                    return { label: 'Acto generado', variant: 'positive' };
+      if (a.indexOf('aprob') >= 0 && a.indexOf('coordinador') >= 0) return { label: 'Aprobado COO', variant: 'positive' };
+      if (a.indexOf('firma') >= 0)                                  return { label: 'Firma',       variant: 'positive' };
+      if (a.indexOf('notificad') >= 0)                              return { label: 'Notificado',  variant: 'informative' };
+      if (a.indexOf('vigente') >= 0)                                return { label: 'Vigente',     variant: 'positive' };
+      if (a.indexOf('asignad') >= 0)                                return { label: 'Asignación',  variant: 'informative' };
+      if (a.indexOf('radicad') >= 0)                                return { label: 'Radicado',    variant: 'informative' };
+      return null;
+    }
+
+    function renderHistorialPanel() {
+      var t = state.tramite;
+      var hist = (t.historico || []);
+      if (hist.length === 0) {
+        return '<div class="naowee-empty-state">' +
+          '<div class="naowee-empty-state__title">Sin eventos</div>' +
+          '<div class="naowee-empty-state__description">Aún no hay actividad registrada para este trámite.</div>' +
+        '</div>';
+      }
+      var ordered = hist.slice();
+      var listHtml = '<ol class="ivc-timeline">' +
+        ordered.map(function (ev) {
+          var accionText = ev.accion || ev.titulo || '—';
+          var variant = timelineItemVariant(accionText);
+          var badge = timelineEventBadge(accionText);
+          var badgeHtml = badge
+            ? ' <span class="naowee-badge naowee-badge--' + badge.variant + ' naowee-badge--quiet naowee-badge--small" style="margin-left:6px; vertical-align:middle;">' + badge.label + '</span>'
+            : '';
+          var meta = (ev.fecha || '') + (ev.hora ? ' · ' + ev.hora : (ev.meta ? ' · ' + ev.meta : ''));
+          return '<li class="ivc-timeline__item ivc-timeline__item--' + variant + '">' +
+            '<span class="ivc-timeline__dot"></span>' +
+            '<span class="ivc-timeline__title">' + accionText + badgeHtml + '</span>' +
+            '<span class="ivc-timeline__meta">' + meta + '</span>' +
+            '<span class="ivc-timeline__actor">' + (ev.actor || '—') + '</span>' +
+          '</li>';
+        }).join('') +
+      '</ol>';
+      /* v1.13.10: timeline en pattern colapsable (scroll-box + ver más + bottom fade).
+         Por defecto max-height 240px; el wireup en wireTrazaToggle() decide si
+         hay overflow y muestra el botón "Ver más". */
+      return '<div class="ivc-traza-wrap" id="histTrazaWrap">' +
+        '<div class="ivc-traza-box" id="histTrazaBox">' + listHtml + '</div>' +
+        '<button type="button" class="ivc-traza-toggle" id="histTrazaToggle" style="display:none;" onclick="window._toggleHistorialTraza()">' +
+          '<span class="ivc-traza-toggle__label">Ver más</span>' +
+          '<svg class="ivc-traza-toggle__chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>' +
+        '</button>' +
+      '</div>';
+    }
+
+    function renderHistorial() {
+      var panel = document.getElementById('panelHistorial');
+      if (panel) {
+        panel.innerHTML = renderHistorialPanel();
+        /* Esperar al next frame para medir el scrollHeight con el contenido ya pintado. */
+        setTimeout(wireHistorialTraza, 0);
+      }
+    }
+
+    /* v1.13.10: wireup del toggle/fade del timeline colapsable. */
+    function wireHistorialTraza() {
+      var box = document.getElementById('histTrazaBox');
+      var wrap = document.getElementById('histTrazaWrap');
+      var toggle = document.getElementById('histTrazaToggle');
+      if (!box || !wrap || !toggle) return;
+      var hasOverflow = box.scrollHeight > box.clientHeight + 4;
+      if (hasOverflow) {
+        wrap.classList.add('has-overflow');
+        toggle.style.display = 'inline-flex';
+      } else {
+        wrap.classList.remove('has-overflow');
+        toggle.style.display = 'none';
+      }
+    }
+
+    window._toggleHistorialTraza = function () {
+      var box = document.getElementById('histTrazaBox');
+      var toggle = document.getElementById('histTrazaToggle');
+      var label = toggle && toggle.querySelector('.ivc-traza-toggle__label');
+      if (!box || !toggle) return;
+      var isExpanded = box.classList.toggle('is-expanded');
+      toggle.classList.toggle('is-expanded', isExpanded);
+      if (label) label.textContent = isExpanded ? 'Ver menos' : 'Ver más';
+    };
+
+    /* v1.7.0: tabs interaction simplificado — patrón DS simple usa ::after
+       de .naowee-tab--selected como indicator (no requiere JS de posicionamiento). */
+    function wireTabs() {
+      var tabsEl = document.querySelector('.ivc-tabs-card .naowee-tabs');
+      if (!tabsEl) return;
+      tabsEl.querySelectorAll('.naowee-tab').forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          var key = tab.dataset.tab;
+          tabsEl.querySelectorAll('.naowee-tab').forEach(function (t) {
+            t.classList.toggle('naowee-tab--selected', t === tab);
+          });
+          document.querySelectorAll('.ivc-tab-panel').forEach(function (p) {
+            p.hidden = p.dataset.panel !== key;
+          });
+          state.activeTab = key;
+        });
+      });
+    }
+
+    /* ───────── Doc actions (tri-state + observación) ───────── */
+    /* data-r → state.validacion mapping: cumple|obs|nocumple → cumple|obs|no */
+    function mapToggleToState(r) {
+      if (r === 'nocumple') return 'no';
+      return r; /* cumple | obs */
+    }
+    function wireDocActions() {
+      document.addEventListener('click', function (ev) {
+        var btn = ev.target.closest('.ivc-ra-toggle__btn[data-r]');
+        if (!btn) return;
+        var docId = btn.getAttribute('data-doc');
+        var val = mapToggleToState(btn.getAttribute('data-r'));
+        state.docs = state.docs.map(function (d) {
+          if (d.id !== docId) return d;
+          return Object.assign({}, d, { validacion: d.validacion === val ? null : val });
+        });
+        rerenderDocs();
+      });
+      document.addEventListener('input', function (ev) {
+        var inp = ev.target.closest('[data-obs]');
+        if (!inp) return;
+        var docId = inp.getAttribute('data-obs');
+        state.docs = state.docs.map(function (d) {
+          if (d.id !== docId) return d;
+          return Object.assign({}, d, { observacion: inp.value });
+        });
+      });
+    }
+
+    function rerenderDocs() {
+      var host = document.getElementById('docsList');
+      if (host) host.innerHTML = buildDocRows();
+      updateProgress();
+    }
+
+    function updateProgress() {
+      var validados = state.docs.filter(function (d) { return d.validacion !== null; }).length;
+      var total = state.docs.length;
+      var pct = total > 0 ? (validados / total * 100) : 0;
+      var cntEl = document.getElementById('docsValidadosCount');
+      var fillEl = document.getElementById('progressFill');
+      if (cntEl) cntEl.textContent = validados;
+      if (fillEl) fillEl.style.width = pct + '%';
+
+      /* v1.5.4: semáforo según pct — rojo → naranja → verde */
+      var wrap = fillEl ? fillEl.closest('.ivc-checklist-progress') : null;
+      if (wrap) {
+        var tier = 'low';
+        if (pct === 100) tier = 'full';
+        else if (pct >= 67) tier = 'high';
+        else if (pct >= 34) tier = 'medium';
+        wrap.setAttribute('data-progress', tier);
+      }
+
+      /* v1.5.4 rev2: 1 solo CTA "Finalizar revisión" que cambia color/label/handler
+         según el estado del checklist (cumple / parcial / no cumple). */
+      var obligatorios = state.docs.filter(function (d) { return d.obligatorio; });
+      var obligatoriosValidados = obligatorios.filter(function (d) { return d.validacion !== null; }).length;
+      var todos = obligatoriosValidados === obligatorios.length;
+      var hayNo = obligatorios.some(function (d) { return d.validacion === 'no'; });
+      var hayObs = obligatorios.some(function (d) { return d.validacion === 'obs'; });
+      var todosCumplen = obligatorios.every(function (d) { return d.validacion === 'cumple'; });
+
+      var btn = document.getElementById('btnFinalizar');
+      var label = document.getElementById('btnFinalizarLabel');
+      var hint = document.getElementById('finalizarHint');
+      if (!btn) return;
+
+      if (!todos) {
+        btn.disabled = true;
+        btn.removeAttribute('data-result');
+        if (label) label.textContent = 'Finalizar revisión';
+        if (hint) hint.textContent = 'Marca todos los documentos obligatorios (' + obligatoriosValidados + ' de ' + obligatorios.length + ').';
+        return;
+      }
+
+      btn.disabled = false;
+      var result, lbl, msg;
+      if (hayNo) {
+        result = 'no';
+        lbl = 'Generar acto de no cumplimiento';
+        msg = obligatorios.filter(function(d){return d.validacion==='no'}).length + ' documento(s) marcados como No cumple. La decisión generará un acto administrativo de no cumplimiento.';
+      } else if (hayObs) {
+        result = 'parcial';
+        lbl = 'Devolver para subsanación';
+        msg = obligatorios.filter(function(d){return d.validacion==='obs'}).length + ' documento(s) con observaciones. La decisión devolverá el trámite al organismo.';
+      } else if (todosCumplen) {
+        result = 'cumple';
+        lbl = 'Generar acto de cumplimiento';
+        msg = 'Todos los documentos cumplen. La decisión generará el acto administrativo favorable.';
+      }
+      btn.setAttribute('data-result', result);
+      if (label) label.textContent = lbl;
+      if (hint) hint.textContent = msg;
+    }
+
+    /* v1.5.4 rev2: handler único — abre el modal apropiado según data-result */
+    function handleFinalizar() {
+      var btn = document.getElementById('btnFinalizar');
+      if (!btn || btn.disabled) return;
+      var result = btn.getAttribute('data-result');
+      if (result === 'cumple')  return openCumple();
+      if (result === 'parcial') return openParcial();
+      if (result === 'no')      return openNoCumple();
+    }
+
+    /* v1.5.4 rev2: mountFooter ya no monta el sticky footer — el CTA único
+       vive inline al final del tab Documentos. Solo refresca progress. */
+    function mountFooter() {
+      updateProgress();
+    }
+
+    /* v1.5.4 rev2: wireFooterActions ahora bindea el botón único + dispatch */
+    function wireFooterActions() {
+      /* Event delegation: el #btnFinalizar se re-crea cada renderDocsPanel */
+      document.addEventListener('click', function (ev) {
+        var btn = ev.target.closest && ev.target.closest('#btnFinalizar');
+        if (btn) handleFinalizar();
+      });
+    }
+
+    /* ───────── Modales ───────── */
+    function wireModales() {
+      bind('modalCumpleOverlay', 'modalCumpleClose', 'modalCumpleCancel');
+      bind('modalNoCumpleOverlay', 'modalNoCumpleClose', 'modalNoCumpleCancel');
+      bind('modalParcialOverlay', 'modalParcialClose', 'modalParcialCancel');
+      document.getElementById('modalCumpleConfirm').addEventListener('click', confirmCumple);
+      document.getElementById('modalNoCumpleConfirm').addEventListener('click', confirmNoCumple);
+      document.getElementById('modalParcialConfirm').addEventListener('click', confirmParcial);
+
+      function bind(ovId, closeId, cancelId) {
+        var ov = document.getElementById(ovId);
+        var closeBtn = document.getElementById(closeId);
+        var cancelBtn = document.getElementById(cancelId);
+        if (closeBtn) closeBtn.addEventListener('click', function () { ov.classList.remove('open'); });
+        if (cancelBtn) cancelBtn.addEventListener('click', function () { ov.classList.remove('open'); });
+        if (ov) ov.addEventListener('click', function (e) { if (e.target === ov) ov.classList.remove('open'); });
+      }
+    }
+
+    function nowStamp() {
+      var d = new Date();
+      var months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      var hh = String(d.getHours()).padStart(2, '0');
+      var mm = String(d.getMinutes()).padStart(2, '0');
+      return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear() + ', ' + hh + ':' + mm;
+    }
+
+    function nextActoNum() {
+      /* Mock: contador local. En real, vendría del backend. */
+      var key = 'ivc:next-acto';
+      var n = parseInt(localStorage.getItem(key) || '0', 10) + 1;
+      localStorage.setItem(key, String(n));
+      var pad = String(n).padStart(3, '0');
+      return '2026-' + pad;
+    }
+
+    function openCumple() {
+      var num = nextActoNum();
+      document.getElementById('cumpleNumActo').textContent = num;
+      document.getElementById('cumpleNumActo2').textContent = num;
+      document.getElementById('cumpleFechaGen').textContent = nowStamp();
+      document.getElementById('cumplePorLaCual').textContent =
+        '"Por la cual se otorga el Reconocimiento Deportivo a ' + (state.tramite.organismo || '—') + '"';
+      document.getElementById('cumpleConsiderando').textContent =
+        '1. Que ' + (state.tramite.organismo || '—') + ', identificada con NIT ' + (state.tramite.nit || '—') +
+        ', radicó solicitud bajo el número ' + state.tramite.id + ' el ' + formatDate(state.tramite.fechaRadicacion) + '.';
+      document.getElementById('modalCumpleOverlay').classList.add('open');
+    }
+
+    function openParcial() {
+      var parcialDocs = state.docs.filter(function (d) { return d.validacion === 'obs' || d.validacion === 'no'; });
+      var listEl = document.getElementById('docsParcialList');
+      if (parcialDocs.length === 0) {
+        listEl.innerHTML = '<span style="color:var(--text-muted); font-style:italic;">Ningún documento marcado con observación o no cumple.</span>';
+      } else {
+        listEl.innerHTML = '<ul style="margin:0; padding-left:18px;">' + parcialDocs.map(function (d) {
+          var tag = d.validacion === 'obs' ? 'Observación' : 'No cumple';
+          return '<li style="margin-bottom:6px;"><strong>' + d.titulo + '</strong> · ' + tag +
+            (d.observacion ? ' — <span style="color:var(--text-secondary);">' + d.observacion + '</span>' : '') + '</li>';
+        }).join('') + '</ul>';
+      }
+      document.getElementById('modalParcialOverlay').classList.add('open');
+    }
+
+    function openNoCumple() {
+      var num = nextActoNum();
+      var noCumplen = state.docs.filter(function (d) { return d.validacion === 'no'; });
+      var listEl = document.getElementById('docsNoCumpleList');
+      if (noCumplen.length === 0) {
+        listEl.innerHTML = '<span style="color:var(--text-muted); font-style:italic;">Ningún documento marcado como No cumple. Se rechaza por la descripción general.</span>';
+      } else {
+        listEl.innerHTML = '<ul style="margin:0; padding-left:18px;">' + noCumplen.map(function (d) {
+          return '<li style="margin-bottom:6px;"><strong>' + d.titulo + '</strong>' +
+            (d.observacion ? ' — <span style="color:var(--text-secondary);">' + d.observacion + '</span>' : '') + '</li>';
+        }).join('') + '</ul>';
+      }
+      document.getElementById('noCumpleNumActo').textContent = num;
+      document.getElementById('noCumpleNumActo2').textContent = num;
+      document.getElementById('noCumpleFechaGen').textContent = nowStamp();
+      document.getElementById('noCumplePorLaCual').textContent =
+        '"Por la cual se rechaza el trámite de ' + (state.tramite.tipoTramite || 'Otorgamiento') + ' presentado por ' + (state.tramite.organismo || '—') + '"';
+      document.getElementById('modalNoCumpleOverlay').classList.add('open');
+    }
+
+    function confirmCumple() {
+      var actor = 'Carlos Pérez (Profesional)';
+      /* v1.13.13: persistir el array de docs (todos cumple) al store. */
+      IVCStore.setDocumentos(state.tramite.id, state.docs);
+      /* v1.10.0: el veredicto Cumple ya no salta directo a estado 'Cumple'.
+         Va a 'PendienteCOO' (acto generado, esperando aprobación del
+         Coordinador). El Coordinador en su página dedicada de aprobación
+         lo cierra en 'Cumple' (acto aprobado, pendiente firma Director)
+         o lo devuelve a 'En validación' versionado (loop INS-004 COO). */
+      IVCStore.actualizarEstado(state.tramite.id, 'PendienteCOO', actor, 'Acto administrativo generado y enviado al Coordinador IVC para revisión.');
+      state.tramite = IVCStore.getTramite(state.tramite.id);
+      document.getElementById('modalCumpleOverlay').classList.remove('open');
+      window.IVCShell.showSnackbar('Acto administrativo generado. Enviado al Coordinador IVC para aprobación.', 'success');
+      renderHistorial();
+      applyLockState();   /* v1.8.0: lock inmediato post-decisión */
+    }
+
+    function confirmParcial() {
+      var obs = document.getElementById('parcialObsText').value;
+      var actor = 'Carlos Pérez (Profesional)';
+      /* v1.13.13: persistir el array de docs (cada uno con su validacion +
+         observacion). El portal público lo lee para listar exactamente
+         qué docs debe subsanar el organismo, con sus títulos reales. */
+      IVCStore.setDocumentos(state.tramite.id, state.docs);
+      IVCStore.actualizarEstado(state.tramite.id, 'Parcial', actor, obs || 'Devuelto para subsanación');
+      state.tramite = IVCStore.getTramite(state.tramite.id);
+      document.getElementById('modalParcialOverlay').classList.remove('open');
+      window.IVCShell.showSnackbar('Trámite devuelto al organismo para subsanación.', 'caution');
+      renderHistorial();
+      applyLockState();   /* v1.8.0 */
+    }
+
+    function confirmNoCumple() {
+      var causales = document.getElementById('causalesText').value;
+      var actor = 'Carlos Pérez (Profesional)';
+      IVCStore.setDocumentos(state.tramite.id, state.docs);
+      IVCStore.actualizarEstado(state.tramite.id, 'NoCumple', actor, causales || 'No cumple con los requisitos');
+      state.tramite = IVCStore.getTramite(state.tramite.id);
+      document.getElementById('modalNoCumpleOverlay').classList.remove('open');
+      window.IVCShell.showSnackbar('Acto de no cumplimiento generado. El organismo será notificado.', 'negative');
+      renderHistorial();
+      applyLockState();   /* v1.8.0 */
+    }
+
+    /* ───────── Helpers ───────── */
+    function formatDate(iso) {
+      if (!iso) return '—';
+      var p = iso.split('-');
+      var months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      return p[2] + ' ' + months[parseInt(p[1], 10) - 1] + ' ' + p[0];
+    }
+
+    function computeVence(fechaRadIso, plazoDiasInicial) {
+      if (!fechaRadIso) return '—';
+      var d = new Date(fechaRadIso);
+      d.setDate(d.getDate() + plazoDiasInicial);
+      return formatDate(d.toISOString().slice(0, 10));
+    }
+
+    function badgeForEstado(estado) {
+      if (estado === 'No asignada') return '<span class="naowee-badge naowee-badge--caution naowee-badge--quiet">En remisión</span>';
+      if (estado === 'Asignada')    return '<span class="naowee-badge naowee-badge--caution naowee-badge--quiet">Pendiente</span>';
+      if (estado === 'En validación') return '<span class="naowee-badge naowee-badge--informative naowee-badge--quiet">En validación</span>';
+      /* v1.10.0+v1.11.0: estados intermedios del flujo COO → firma Director → notificación. */
+      if (estado === 'PendienteCOO')     return '<span class="naowee-badge naowee-badge--caution naowee-badge--quiet">En aprobación COO</span>';
+      if (estado === 'PendienteFirma')   return '<span class="naowee-badge naowee-badge--informative naowee-badge--quiet">Pendiente firma Director</span>';
+      if (estado === 'Firmado')          return '<span class="naowee-badge naowee-badge--informative naowee-badge--quiet">Firmado</span>';
+      if (estado === 'NotifElectronica') return '<span class="naowee-badge naowee-badge--informative naowee-badge--quiet">Notif. electrónica</span>';
+      if (estado === 'NotifOficinas')    return '<span class="naowee-badge naowee-badge--caution naowee-badge--quiet">Notif. en oficinas</span>';
+      if (estado === 'Vigente')             return '<span class="naowee-badge naowee-badge--positive naowee-badge--quiet">Vigente</span>';
+      /* v1.11.4: estados del flujo de recursos. */
+      if (estado === 'PendienteRecursos')   return '<span class="naowee-badge naowee-badge--caution naowee-badge--quiet">Términos legales corriendo</span>';
+      if (estado === 'PendienteRecursoTipo') return '<span class="naowee-badge naowee-badge--caution naowee-badge--quiet">Eligiendo recurso</span>';
+      if (estado === 'EnApelacion')         return '<span class="naowee-badge naowee-badge--informative naowee-badge--quiet">En apelación</span>';
+      if (estado === 'EnReposicion')        return '<span class="naowee-badge naowee-badge--neutral naowee-badge--quiet">Reposición · cerrado</span>';
+      if (estado === 'Cumple')      return '<span class="naowee-badge naowee-badge--positive naowee-badge--quiet">Cumple</span>';
+      if (estado === 'NoCumple')    return '<span class="naowee-badge naowee-badge--negative naowee-badge--quiet">No cumple</span>';
+      if (estado === 'Parcial')     return '<span class="naowee-badge naowee-badge--caution naowee-badge--quiet">Parcial</span>';
+      return '<span class="naowee-badge naowee-badge--neutral naowee-badge--quiet">' + (estado || '—') + '</span>';
+    }
+  </script>
+</body>
+</html>
