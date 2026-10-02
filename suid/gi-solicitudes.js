@@ -250,8 +250,8 @@
       save(); m.close(); UI.toast(toast); repaint();
     }
     function on(sel, fn) { var b = m.el.querySelector(sel); if (b) b.addEventListener('click', fn); }
-    on('#gsRec', function () { mover('recibido', 'Recibido por el IVC', {}, 'Solicitud ' + r.id + ' marcada como recibida.'); });
-    on('#gsTra', function () { mover('tramite', 'La autoridad abrió procedimiento', {}, 'Solicitud ' + r.id + ' en trámite.'); });
+    on('#gsRec', function () { SUID.busy(m.el.querySelector('#gsRec'), 'Guardando…', function () { mover('recibido', 'Recibido por el IVC', {}, 'Solicitud ' + r.id + ' marcada como recibida.'); }, 600); });
+    on('#gsTra', function () { SUID.busy(m.el.querySelector('#gsTra'), 'Guardando…', function () { mover('tramite', 'La autoridad abrió procedimiento', {}, 'Solicitud ' + r.id + ' en trámite.'); }, 600); });
     on('#gsEnl', function () {
       var mismas = GI.all().filter(function (x) { return D.estadoRestriccion(x) !== 'Inactiva'; });
       var digs = r.doc.replace(/\D/g, '');
@@ -263,7 +263,7 @@
       act.querySelector('#gsEnlOk').addEventListener('click', function () {
         var v = act.querySelector('#gsMed').value;
         if (!v) { act.querySelector('#gsErr').hidden = false; return; }
-        mover('derivo', 'Derivó en la medida ' + v, { medida: v }, 'Solicitud enlazada a la medida ' + v + '.');
+        SUID.busy(act.querySelector('#gsEnlOk'), 'Enlazando…', function () { mover('derivo', 'Derivó en la medida ' + v, { medida: v }, 'Solicitud enlazada a la medida ' + v + '.'); }, 700);
       });
     });
     on('#gsArc', function () {
@@ -274,7 +274,7 @@
       act.querySelector('#gsArcOk').addEventListener('click', function () {
         var v = act.querySelector('#gsMot').value;
         if (!v) { act.querySelector('#gsErr').hidden = false; return; }
-        mover('archivado', 'Archivado · ' + v.charAt(0).toLowerCase() + v.slice(1), { motivoArchivo: v, notaArchivo: act.querySelector('#gsNota').value.trim() }, 'Solicitud archivada.');
+        SUID.busy(act.querySelector('#gsArcOk'), 'Archivando…', function () { mover('archivado', 'Archivado · ' + v.charAt(0).toLowerCase() + v.slice(1), { motivoArchivo: v, notaArchivo: act.querySelector('#gsNota').value.trim() }, 'Solicitud archivada.'); }, 700);
       });
     });
   }

@@ -121,7 +121,9 @@
       '</div>';
   }
 
-  function render() {
+  var tok = 0;
+  /* quiet: re-pintado tras una acción (sin esqueleto). La navegación sí pasa por el estado de carga. */
+  function render(quiet) {
     var r = routeInfo();
     var view = d.getElementById('view');
     var match = null;
@@ -131,26 +133,42 @@
     /* Entrada por defecto: la primera del menú (DC-280). */
     if (!r.path) { location.replace('#/control-acceso/consulta'); return; }
     var ctx = { route: r, rest: match ? r.path.slice(match.length).replace(/^\//, '').split('/').filter(Boolean) : [] };
-    if (match) {
-      SUID.views[match](view, ctx);
-    } else {
-      var id = r.parts[1] || 'esta sección';
-      view.innerHTML = '<div class="page-inner suid-ph"><h1 class="page-title">En construcción</h1>' +
-        '<p class="page-subtitle">Esta bandeja del IVC queda fuera de la demo. El trabajo está en Gestión de infractores.</p>' +
-        '<a class="naowee-btn naowee-btn--loud" href="#/control-acceso/infractores">Ir a Gestión de infractores</a></div>';
-      ctx.crumbs = [{ label: 'Inicio', href: '#/' }, { label: 'En construcción' }];
-    }
-    d.getElementById('view').scrollTop = 0;
     var ITEM = { 'control-acceso/consulta': 'consulta', 'control-acceso/solicitudes': 'solicitudes' };
     /* Registrar, editar, carga masiva y la ficha son acciones de Gestión, no ítems del menú. */
-    var active = { parent: '', item: match ? (ITEM[match] || 'infractores') : '' };
-    renderSidebar(active);
-    renderHeader(ctx.crumbs || [{ label: 'Inicio', href: '#/' }]);
+    renderSidebar({ parent: '', item: match ? (ITEM[match] || 'infractores') : '' });
+
+    function pinta() {
+      if (match) {
+        SUID.views[match](view, ctx);
+      } else {
+        view.innerHTML = '<div class="page-inner suid-ph"><h1 class="page-title">En construcción</h1>' +
+          '<p class="page-subtitle">Esta bandeja del IVC queda fuera de la demo. El trabajo está en Gestión de infractores.</p>' +
+          '<a class="naowee-btn naowee-btn--loud" href="#/control-acceso/infractores">Ir a Gestión de infractores</a></div>';
+        ctx.crumbs = [{ label: 'Inicio', href: '#/' }, { label: 'En construcción' }];
+      }
+      view.scrollTop = 0;
+      renderHeader(ctx.crumbs || [{ label: 'Inicio', href: '#/' }]);
+    }
+
+    var mine = ++tok, L = SUID.load;
+    var ms = quiet === true || !L ? 0 : L.delay(match, ctx);
+    if (!ms) { pinta(); if (L && quiet !== true) L.skip(ctx.crumbs ? ctx.crumbs[ctx.crumbs.length - 1].label : ''); return; }
+    var cr = L.crumbs(match, ctx);
+    renderHeader(cr);
+    view.scrollTop = 0;
+    L.begin(view, match, ctx, ms);
+    setTimeout(function () {
+      if (mine !== tok) return;
+      L.end(view, ms, cr[cr.length - 1].label);
+      pinta();
+    }, ms);
   }
 
   SUID.start = function () {
-    w.addEventListener('hashchange', render);
-    render();
+    w.addEventListener('hashchange', function () { render(false); });
+    if (SUID.load) SUID.load.control();
+    render(false);
   };
-  SUID.render = render;
+  SUID.render = function () { render(true); };
+  SUID.reload = function () { render(false); };
 })(window, document);

@@ -118,15 +118,15 @@
   function detalleHtml(p, i, volver) {
     var r = p.res, key = keyOf(p), back = volver ? '<button type="button" class="gc-back" data-back>' + UI.svg('back') + ' Volver a los resultados</button>' : '';
     if (p.menor && !st.abiertos[key]) {
-      return back + '<article class="gc-person"><div class="gc-person__head"><div><h2 class="gc-person__name" tabindex="-1">Persona menor de edad</h2>' +
-        '<p class="gc-person__doc">' + esc(p.tipo) + ' ' + esc(p.texto) + ' · datos reservados</p></div>' +
+      return back + '<article class="gc-person"><div class="gc-person__head"><div class="gc-person__who">' + w.GIBio.reservada() + '<div><h2 class="gc-person__name" tabindex="-1">Persona menor de edad</h2>' +
+        '<p class="gc-person__doc">' + esc(p.tipo) + ' ' + esc(p.texto) + ' · datos reservados</p></div></div>' +
         '<div class="gc-state">' + estadoBadge(r.estado) + '</div></div>' +
         '<div class="gc-lock"><p><strong>Reserva reforzada.</strong> El nombre y el detalle de la medida solo se abren con un motivo, y la apertura queda auditada.</p>' +
         '<button type="button" class="naowee-btn naowee-btn--loud gc-btn" data-open="' + i + '">Abrir con motivo</button></div></article>';
     }
     var aud = p.menor ? '<div class="gc-audit">Apertura auditada · ' + esc(st.abiertos[key].motivo) + ' · ' + esc(SUID.user.name) + ' · ' + U.fmt(U.now().fecha) + ' ' + U.now().hora + '</div>' : '';
-    return back + '<article class="gc-person"><div class="gc-person__head"><div><h2 class="gc-person__name" tabindex="-1">' + esc(p.nombre) + (p.menor ? ' ' + badge('neutral', 'Menor de edad') : '') + '</h2>' +
-      '<p class="gc-person__doc">' + esc(p.tipo) + ' ' + esc(p.texto) + ' · ' + plural(p.medidas.length, 'medida', 'medidas') + '</p></div>' +
+    return back + '<article class="gc-person"><div class="gc-person__head"><div class="gc-person__who">' + w.GIBio.par(p.numId) + '<div><h2 class="gc-person__name" tabindex="-1">' + esc(p.nombre) + (p.menor ? ' ' + badge('neutral', 'Menor de edad') : '') + '</h2>' +
+      '<p class="gc-person__doc">' + esc(p.tipo) + ' ' + esc(p.texto) + ' · ' + plural(p.medidas.length, 'medida', 'medidas') + '</p></div></div>' +
       '<div class="gc-state">' + estadoBadge(r.estado) + '<small>' + (r.estado === 'Vigente' ? 'Vigente hasta el ' + U.fmt(r.fin) + ' · ' + dias(r.dias) : r.estado === 'Cumplida' ? 'Terminó el ' + U.fmt(r.fin) : 'Aún sin efecto') + '</small></div></div>' +
       medidasHtml(p) + aud + '</article>';
   }
@@ -215,12 +215,9 @@
       '<button type="submit" class="naowee-btn naowee-btn--loud gc-btn gc-btn--q" id="gcGo">Consultar</button></form>' +
       '<div class="gt-tip" role="tooltip" id="gcTip" hidden><strong>Cómo buscar</strong><p>Por documento, escríbelo completo (mínimo 6 dígitos).</p><p>Por nombre, escribe al menos tres letras.</p>' +
       '<p>Los menores de edad no aparecen al buscar por nombre: solo se consultan por documento completo y con un motivo.</p></div>' +
-      '<div class="gk-vel" role="group" aria-label="Velocidad de la consulta simulada"><span class="gk-vel__l">Velocidad de la consulta</span><div class="gi-seg">' +
-      '<button type="button" class="gi-seg__b" data-vel="real" aria-pressed="' + (GICapa.vel() === 'real') + '">Tiempo real</button>' +
-      '<button type="button" class="gi-seg__b" data-vel="slow" aria-pressed="' + (GICapa.vel() === 'slow') + '">Slow motion</button></div></div></section>' +
-      '<div id="gcCapa" class="gk-wrap"></div>' +
-      '<div id="gcOut" class="gc-out" aria-live="polite"></div></div>';
-    var inp = d.getElementById('gcQ'), out = d.getElementById('gcOut'), form = d.getElementById('gcForm'), go = d.getElementById('gcGo'), capa = GICapa.crear(d.getElementById('gcCapa')), tbtn = d.getElementById('gcTryBtn'), tlist = d.getElementById('gcTryList');
+      '</section>' +
+            '<div id="gcOut" class="gc-out" aria-live="polite"></div></div>';
+    var inp = d.getElementById('gcQ'), out = d.getElementById('gcOut'), form = d.getElementById('gcForm'), go = d.getElementById('gcGo'), tbtn = d.getElementById('gcTryBtn'), tlist = d.getElementById('gcTryList');
 
     function paint(enfoque) {
       var b, html = '', det = null, vol = false;
@@ -251,34 +248,39 @@
     out.addEventListener('click', function (e) {
       var t = e.target.closest('[data-sel],[data-pg],[data-back],[data-doc]');
       if (!t) return;
-      if (t.hasAttribute('data-sel')) { st.sel = t.getAttribute('data-sel'); paint(true); }
+      if (t.hasAttribute('data-sel')) { st.sel = t.getAttribute('data-sel'); cargar('persona', function () { paint(true); }); }
       else if (t.hasAttribute('data-pg')) { st.page += +t.getAttribute('data-pg'); paint(true); }
       else if (t.hasAttribute('data-back')) { st.sel = ''; paint(true); }
       else if (t.hasAttribute('data-doc')) { var p = personas().filter(function (x) { return x.numId === t.getAttribute('data-doc'); })[0]; consultar(GI.fmtDoc(p.tipo, p.numId), true); }
     });
 
-    /* La consulta simula 1,5 s (DC-299) mostrando el recorrido (DC-300); sin datos válidos no hay nada que consultar y responde al instante. */
+    /* La consulta tarda 1 s fijo: el loader ocupa el lugar de los resultados (tabla o ficha). Sin datos válidos responde al instante. */
+    var ESPERA = 1000, tm = 0, salvado = '';
     function ocupado(si) {
       form.setAttribute('aria-busy', String(si)); form.classList.toggle('is-busy', si);
       go.textContent = si ? 'Consultando…' : 'Consultar';
     }
-    function detener() { capa.cancelar(); ocupado(false); out.hidden = false; }
+    function detener() {
+      if (!tm) return;
+      clearTimeout(tm); tm = 0; ocupado(false); out.removeAttribute('aria-busy'); out.innerHTML = salvado;
+    }
+    function cargar(forma, fin) {
+      clearTimeout(tm);
+      if (!tm) salvado = out.innerHTML;
+      ocupado(true); out.setAttribute('aria-busy', 'true'); view.firstChild.classList.remove('gc-page--fill');
+      out.innerHTML = SUID.load.fragmento(forma);
+      tm = setTimeout(function () {
+        tm = 0; if (!out.isConnected) return;
+        ocupado(false); out.removeAttribute('aria-busy'); fin();
+      }, ESPERA);
+    }
     function consultar(q, enfoque) {
       inp.value = st.q = st.cq = q; st.page = 1; st.sel = '';
       var b; try { b = buscar(q); } catch (e) { b = { modo: 'error', res: [] }; }
       if (b.modo === 'vacio' || b.modo === 'corto' || b.modo === 'invalido') { detener(); paint(enfoque); return; }
       if (out.contains(d.activeElement)) inp.focus({ preventScroll: true }); /* el reciente pulsado desaparece mientras se consulta */
-      out.hidden = true; ocupado(true); view.firstChild.classList.remove('gc-page--fill');
-      capa.correr(recorrido(b), function () {
-        if (!out.isConnected) return;
-        out.hidden = false; ocupado(false); paint(enfoque);
-      });
+      cargar(b.res.length === 1 ? 'persona' : 'resultados', function () { paint(enfoque); });
     }
-    form.parentNode.querySelector('.gk-vel').addEventListener('click', function (e) {
-      var v = e.target.closest('[data-vel]'); if (!v) return;
-      capa.setVel(v.getAttribute('data-vel'));
-      [].forEach.call(this.querySelectorAll('[data-vel]'), function (x) { x.setAttribute('aria-pressed', String(x === v)); });
-    });
 
     /* Tooltip de «Cómo buscar» (DC-298): mismo patrón del ⓘ de los insights; hover/foco lo muestran, el clic lo fija y Esc lo cierra. */
     var ibtn = d.getElementById('gcInfo'), itip = d.getElementById('gcTip');
@@ -338,7 +340,7 @@
     d.getElementById('gcForm').addEventListener('submit', function (e) { e.preventDefault(); ejemplos(false); consultar(inp.value, true); });
     /* Escribir no consulta: cancela la que corre y, con el campo vacío, vuelve a Recientes. */
     inp.addEventListener('input', function () {
-      st.q = inp.value; if (capa.activa()) detener();
+      st.q = inp.value; detener();
       if (!st.q.trim() && st.cq) { st.cq = ''; st.page = 1; st.sel = ''; paint(false); }
     });
     if (onResize) w.removeEventListener('resize', onResize);

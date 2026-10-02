@@ -532,10 +532,13 @@
       showErrors([['numActo', 'Ya existe un registro equivalente (' + dup.id + '): misma persona, mismo acto y misma ejecutoria.']]);
       return;
     }
-    var out;
-    if (editId) { out = GI.update(editId, rec, 'Registro actualizado por el profesional.'); UI.toast('Cambios guardados.'); }
-    else { out = GI.add(rec); UI.toast('Registro ' + out.id + ' creado en estado Recibido.'); }
-    location.hash = UI.BASE.slice(1) + '/' + out.id;
+    /* Los errores de forma se muestran al instante; solo el guardado válido espera. */
+    SUID.busy(view.querySelector('#giSave'), editId ? 'Guardando cambios…' : 'Guardando registro…', function () {
+      var out;
+      if (editId) { out = GI.update(editId, rec, 'Registro actualizado por el profesional.'); UI.toast('Cambios guardados.'); }
+      else { out = GI.add(rec); UI.toast('Registro ' + out.id + ' creado en estado Recibido.'); }
+      location.hash = UI.BASE.slice(1) + '/' + out.id;
+    }, 900);
   }
 
   /* ───────── eventos ───────── */

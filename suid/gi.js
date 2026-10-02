@@ -342,7 +342,7 @@
       return '<dl class="gi-kv">' + rows.map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + (x[1] === '' || x[1] == null ? '—' : x[1]) + '</dd></div>'; }).join('') + '</dl>';
     }
     function persona(p, titulo) {
-      return '<section class="gi-card"><h3 class="gi-card__title">' + titulo + '</h3>' + kv([
+      return '<section class="gi-card"><h3 class="gi-card__title">' + titulo + '</h3>' + (titulo === 'Infractor' ? '<div class="gi-bio">' + w.GIBio.par(p.numId) + '</div>' : '') + kv([
         ['Documento', esc(p.tipoId) + ' · ' + esc(GI.fmtDoc(p.tipoId, p.numId))], ['Nombre completo', esc((p.nombres + ' ' + p.apellidos).trim())],
         ['Residencia', esc([p.ciudad, p.depto, p.pais].filter(Boolean).join(', '))], ['Dirección', esc(p.dir)],
         ['Teléfono', p.telefono ? esc(p.indicativo + ' ' + p.telefono) : ''], ['Correo', esc(p.correo)],
@@ -393,9 +393,12 @@
     if (aVal) aVal.addEventListener('click', function () {
       var m = modal({ title: 'Validar registro', sub: r.id, body: '<p class="gi-p">Se confirma que el expediente cumple los requisitos formales. La restricción pasará a <strong>Activa</strong> si su vigencia está corriendo.</p><label class="gi-lbl">Observación (opcional)<textarea class="gi-ta" id="vObs" rows="3"></textarea></label>',
         footer: '<button class="naowee-btn naowee-btn--mute" data-x>Cancelar</button><button class="naowee-btn naowee-btn--loud" id="vOk">Validar</button>' });
-      m.el.querySelector('#vOk').addEventListener('click', function () {
-        GI.setEstado(r.id, 'Validado', m.el.querySelector('#vObs').value.trim() || 'Cumple los requisitos formales.');
-        m.close(); toast('Registro validado. La restricción quedó ' + D.estadoRestriccion(GI.get(r.id)).toLowerCase() + '.'); viewFicha(view, ctx, id); SUID.render();
+      var okBtn = m.el.querySelector('#vOk');
+      okBtn.addEventListener('click', function () {
+        SUID.busy(okBtn, 'Validando…', function () {
+          GI.setEstado(r.id, 'Validado', m.el.querySelector('#vObs').value.trim() || 'Cumple los requisitos formales.');
+          m.close(); toast('Registro validado. La restricción quedó ' + D.estadoRestriccion(GI.get(r.id)).toLowerCase() + '.'); viewFicha(view, ctx, id); SUID.render();
+        }, 800);
       });
     });
     if (aSub) aSub.addEventListener('click', function () {
@@ -404,8 +407,10 @@
       m.el.querySelector('#sOk').addEventListener('click', function () {
         var mot = m.el.querySelector('#sMot').value.trim();
         if (!mot) { m.el.querySelector('#sErr').hidden = false; return; }
-        GI.setEstado(r.id, 'Por Subsanar', mot);
-        m.close(); toast('Registro devuelto por subsanar.', 'warn'); SUID.render();
+        SUID.busy(m.el.querySelector('#sOk'), 'Devolviendo…', function () {
+          GI.setEstado(r.id, 'Por Subsanar', mot);
+          m.close(); toast('Registro devuelto por subsanar.', 'warn'); SUID.render();
+        }, 800);
       });
     });
   }

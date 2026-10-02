@@ -116,7 +116,11 @@
         document.getElementById('kc-form-login').addEventListener('submit', function (e) {
             e.preventDefault();
             try { sessionStorage.setItem('suid.demo.user', u.value || 'funcionario.ivc@mindeporte.gov.co'); } catch (x) {}
-            location.href = 'suid/app.html';
+            var modo = 'normal'; try { modo = localStorage.getItem('suid.demo.carga') || 'normal'; } catch (x) {}
+            var ms = { off: 0, normal: 900, lenta: 2700 }[modo]; if (ms == null) ms = 900;
+            var btn = document.getElementById('kc-login');
+            if (ms) { btn.disabled = true; btn.value = 'Iniciando sesión…'; btn.style.opacity = '.85'; btn.style.cursor = 'progress'; }
+            setTimeout(function () { location.href = 'suid/app.html'; }, ms);
         });
     </script>
 </body>
