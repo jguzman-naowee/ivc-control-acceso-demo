@@ -36,7 +36,7 @@ Menú del profesional del IVC (`suite-web-ivc`): "Mi bandeja" es relleno y lleva
 ## Estados de carga
 
 - **Esqueletos:** cada pantalla (Búsqueda, Gestión, ficha, registro, carga masiva, Solicitudes) muestra primero su esqueleto, con la forma de la pantalla real, y una barra de progreso bajo la cabecera.
-- **Tiempos:** entre 0,35 y 1 s por pantalla en modo Normal. El control **DEMO · Carga** (abajo al centro) los cambia a Instantánea (sin esqueletos) o Lenta (×3) y muestra el tiempo de la última carga. El modo se recuerda en el navegador.
+- **Una sola velocidad**, fija: de 0,7 s (secciones en construcción) a 2 s (Gestión). Búsqueda espera 1 s fijo al consultar.
 - **Acciones:** guardar, validar, devolver por subsanar, enlazar y archivar deshabilitan el botón y muestran "Guardando…", "Validando…", etc. El login también ("Iniciando sesión…").
 - Respeta `prefers-reduced-motion`: sin brillo animado.
-- Archivos: `skeleton.js` (esqueletos, tiempos, control y `SUID.busy`) y `skeleton.css`.
+- Archivos: `skeleton.js` (esqueletos, tiempos y `SUID.busy`) y `skeleton.css`.

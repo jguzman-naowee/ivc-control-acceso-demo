@@ -152,23 +152,21 @@
 
     var mine = ++tok, L = SUID.load;
     var ms = quiet === true || !L ? 0 : L.delay(match, ctx);
-    if (!ms) { pinta(); if (L && quiet !== true) L.skip(ctx.crumbs ? ctx.crumbs[ctx.crumbs.length - 1].label : ''); return; }
+    if (!ms) { pinta(); return; }
     var cr = L.crumbs(match, ctx);
     renderHeader(cr);
     view.scrollTop = 0;
     L.begin(view, match, ctx, ms);
     setTimeout(function () {
       if (mine !== tok) return;
-      L.end(view, ms, cr[cr.length - 1].label);
+      L.end(view);
       pinta();
     }, ms);
   }
 
   SUID.start = function () {
     w.addEventListener('hashchange', function () { render(false); });
-    if (SUID.load) SUID.load.control();
     render(false);
   };
   SUID.render = function () { render(true); };
-  SUID.reload = function () { render(false); };
 })(window, document);

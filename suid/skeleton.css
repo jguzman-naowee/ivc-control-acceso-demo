@@ -37,19 +37,6 @@
 .sk-spin { display: inline-block; width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; vertical-align: -2px; margin-right: 6px; animation: skSpin .7s linear infinite; }
 @keyframes skSpin { to { transform: rotate(360deg); } }
 
-/* Control DEMO */
-.sk-demo { position: fixed; z-index: 400; left: 50%; bottom: 14px; transform: translateX(-50%); font-size: 13px; }
-.sk-demo__btn { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px 0 6px; border: 1px solid var(--border-dark); border-radius: 999px; background: #fff; color: var(--text-primary); font: inherit; font-weight: 600; cursor: pointer; box-shadow: var(--shadow-md); }
-.sk-demo__tag { background: var(--naranja); color: #fff; border-radius: 999px; padding: 3px 9px; font-size: 11px; font-weight: 800; letter-spacing: .4px; }
-.sk-demo__last { color: var(--text-secondary); font-weight: 500; }
-.sk-demo__panel { position: absolute; bottom: 44px; left: 50%; transform: translateX(-50%); width: 280px; background: #fff; border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-lg); padding: 8px; display: none; }
-.sk-demo.is-open .sk-demo__panel { display: block; }
-.sk-opt { display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left; padding: 9px 12px; border: 0; border-radius: 8px; background: none; font: inherit; cursor: pointer; color: var(--text-primary); }
-.sk-opt:hover { background: #f5f6fa; }
-.sk-opt.is-on { background: var(--accent-bg); }
-.sk-opt strong { font-size: 14px; } .sk-opt small { color: var(--text-secondary); font-size: 12px; }
-.sk-demo__foot { margin: 6px 4px 2px; padding-top: 8px; border-top: 1px solid var(--border); color: var(--text-secondary); font-size: 12px; }
-
 @media (prefers-reduced-motion: reduce) {
   .sk-b, .sk-spin { animation: none; }
   .sk-progress.is-on i { transition: none; }

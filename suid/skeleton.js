@@ -1,16 +1,11 @@
 /* Estados de carga de la demo: esqueletos, tiempos simulados por vista y estado ocupado de los botones. */
 (function (w, d) {
   'use strict';
-  var KEY = 'suid.demo.carga';
-  var MODOS = { off: ['Instantánea', 0], normal: ['Normal', 1], lenta: ['Lenta', 3] };
-  /* Milisegundos en modo Normal; el modo Lenta los triplica para poder mostrar los esqueletos. */
+  /* Una sola velocidad: el doble de la base, entre la «normal» (×1) y la «lenta» (×3) que se probaron antes. */
   var BASE = { busqueda: 500, lista: 1000, ficha: 750, form: 700, masiva: 450, solicitudes: 900, ph: 350 };
-  var modo = 'normal', ultima = null, timer = 0;
+  var FACTOR = 2, timer = 0;
 
-  try { var g = localStorage.getItem(KEY); if (MODOS[g]) modo = g; } catch (e) {}
-
-  function escala(ms) { return Math.round(ms * MODOS[modo][1]); }
-  function seg(ms) { return (ms / 1000).toFixed(1).replace('.', ',') + ' s'; }
+  function escala(ms) { return Math.round(ms * FACTOR); }
 
   /* ───── piezas ───── */
   function b(wd, h, st) { return '<i class="sk-b" style="width:' + wd + ';height:' + h + 'px;' + (st || '') + '"></i>'; }
@@ -96,7 +91,7 @@
     return 'ficha';
   }
 
-  /* ───── barra, control y ciclo de carga ───── */
+  /* ───── barra y ciclo de carga ───── */
   var prog = null;
   function barra() {
     if (prog) return prog;
@@ -104,37 +99,6 @@
     d.querySelector('.main').appendChild(prog);
     return prog;
   }
-  function pintaControl() {
-    var el = d.getElementById('skDemo');
-    if (!el) return;
-    el.querySelector('.sk-demo__mode').textContent = MODOS[modo][0];
-    el.querySelector('.sk-demo__last').textContent = ultima ? '· ' + seg(ultima.ms) : '';
-    el.querySelector('.sk-demo__foot').textContent = ultima ? 'Última carga: ' + ultima.nombre + ' · ' + seg(ultima.ms) : 'Aún no se ha cargado ninguna pantalla.';
-    el.querySelectorAll('.sk-opt').forEach(function (o) { o.classList.toggle('is-on', o.getAttribute('data-m') === modo); });
-  }
-  function control() {
-    if (d.getElementById('skDemo')) return;
-    var el = d.createElement('div'); el.className = 'sk-demo'; el.id = 'skDemo';
-    el.innerHTML = '<button type="button" class="sk-demo__btn" aria-haspopup="true" aria-expanded="false"><span class="sk-demo__tag">DEMO</span>Carga: <strong class="sk-demo__mode"></strong><span class="sk-demo__last"></span></button>' +
-      '<div class="sk-demo__panel" role="menu"><button type="button" class="sk-opt" data-m="off" role="menuitemradio"><strong>Instantánea</strong><small>Sin esqueletos: para mostrar el flujo rápido</small></button>' +
-      '<button type="button" class="sk-opt" data-m="normal" role="menuitemradio"><strong>Normal</strong><small>Entre 0,4 y 1 s por pantalla, como en producción</small></button>' +
-      '<button type="button" class="sk-opt" data-m="lenta" role="menuitemradio"><strong>Lenta</strong><small>Tres veces más, para ver los esqueletos con calma</small></button>' +
-      '<p class="sk-demo__foot"></p></div>';
-    d.body.appendChild(el);
-    var btn = el.querySelector('.sk-demo__btn');
-    btn.addEventListener('click', function (e) { e.stopPropagation(); var on = el.classList.toggle('is-open'); btn.setAttribute('aria-expanded', on); });
-    d.addEventListener('click', function (e) { if (!el.contains(e.target)) { el.classList.remove('is-open'); btn.setAttribute('aria-expanded', 'false'); } });
-    d.addEventListener('keydown', function (e) { if (e.key === 'Escape') el.classList.remove('is-open'); });
-    el.querySelectorAll('.sk-opt').forEach(function (o) {
-      o.addEventListener('click', function () {
-        modo = o.getAttribute('data-m');
-        try { localStorage.setItem(KEY, modo); } catch (e) {}
-        el.classList.remove('is-open'); pintaControl(); SUID.reload();
-      });
-    });
-    pintaControl();
-  }
-
   /* Loader de una zona: ocupa el lugar de los resultados mientras se busca el dato. */
   var FR = {
     resultados: function () {
@@ -172,14 +136,11 @@
       void p.offsetWidth;
       p.style.setProperty('--sk-ms', ms + 'ms'); p.classList.add('is-on');
     },
-    end: function (view, ms, nombre) {
+    end: function (view) {
       view.removeAttribute('aria-busy');
       var p = barra(); p.classList.remove('is-on'); p.classList.add('is-done');
       clearTimeout(timer); timer = setTimeout(function () { p.classList.remove('is-done'); }, 450);
-      ultima = { ms: ms, nombre: nombre }; pintaControl();
-    },
-    skip: function (nombre) { ultima = { ms: 0, nombre: nombre }; pintaControl(); },
-    control: control
+    }
   };
 
   /* Botón ocupado: deshabilita, muestra el giro y el texto del trabajo, y ejecuta `fn` al terminar. */
