@@ -10,7 +10,7 @@
 /* Datos calculados: solo etiqueta y valor (DC-289/290) */
 .gf-ro { gap: 4px; }
 .gf-ro .gi-lbl { font-weight: 600; color: var(--text-secondary); }
-.gf-val { display: block; font-size: 16px; font-weight: 600; line-height: 1.4; color: var(--text-primary); overflow-wrap: anywhere; }
+.gf-val { display: block; font-size: 18px; font-weight: 600; line-height: 1.4; color: var(--text-primary); overflow-wrap: anywhere; }
 .gf-val--sub { font-size: 14px; font-weight: 500; color: var(--text-secondary); }
 .gf-ro > .naowee-badge, .gf-ro > div { align-self: flex-start; }
 
@@ -143,7 +143,6 @@
 }
 .gi-form .naowee-badge { font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .gf-bar > i, .gf-sw__trk, .gf-sw__trk i { transition: none; } }
-.gi-form .gi-f > .gi-lbl { flex-wrap: wrap; row-gap: 4px; }
 .gf-vig__k .gi-n, .gf-ro .gi-n { margin-right: 8px; }
 
 /* DC-117: la lista de bloques gana aire vertical y no lleva padding lateral. */
@@ -155,5 +154,31 @@
 .gi-form .gi-grid12 > .gi-f, .gi-form .gi-grid12 > .gi-sub { margin: -1px 0 0 -1px; padding: 16px 20px; border: 0; border-top: 1px solid var(--border); border-left: 1px solid var(--border); }
 .gi-form .gi-grid12 > .gi-sub { padding: 0; }
 .gi-form .gi-sub__t { margin: 0; padding: 16px 20px 0; font-size: 14px; }
-.gi-form .gi-lbl { font-size: 16px; }
 .gi-form .gi-f { gap: 10px; }
+/* DC-157: etiqueta de una sola línea; el texto se recorta y el número y el asterisco no. */
+.gi-form .gi-lbl, .gi-form .gi-f > .gi-lbl { display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 6px; height: 24px; font-size: 14px; line-height: 24px; white-space: nowrap; overflow: hidden; }
+.gi-form .gi-lbl .gi-n { flex: none; margin-right: 0; }
+.gi-form .gi-lbl .gf-lt { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.gi-form .gi-lbl--req::after { flex: none; }
+.gf-vig__k .gi-n, .gf-ro .gi-n { margin-right: 0; }
+
+/* DC-155: la fecha de registro cierra el último bloque como dato informativo. */
+.gi-form .gi-grid12 > .gf-regdate { margin: -1px 0 0 -1px; padding: 16px 20px; border-top: 1px solid var(--border); border-left: 1px solid var(--border); font-size: 14px; color: var(--text-secondary); }
+.gf-regdate strong { color: var(--text-primary); }
+#errSum small { display: block; margin-top: 6px; font-size: 13px; opacity: .85; }
+
+/* DC-156: dirección en rejilla de 4 columnas iguales, controles de 48 px y grupos con encabezado. */
+.gi-form .gi-addr { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.gi-form .gi-addr > * { grid-column: span 1; }
+.gi-form .gi-addr > .gf-addr-h, .gi-form .gi-addr > .gf-w4, .gi-form .gi-addr > .gf-swa.gf-w4 { grid-column: 1 / -1; }
+.gi-form .gi-addr > .gf-w2 { grid-column: span 2; }
+.gi-form .gi-addr > .gf-adic { display: contents; }
+.gf-addr-h { margin: -1px 0 0 -1px; padding: 12px 20px 0; border-top: 1px solid var(--border); border-left: 1px solid var(--border); font-size: 14px; font-weight: 700; color: var(--text-secondary); }
+.gi-form .gi-addr .gi-in, .gi-form .gi-addr .gf-sw { height: 48px; min-height: 48px; box-sizing: border-box; }
+.gi-form .gi-addr .gf-swa { justify-content: flex-start; }
+@media (max-width: 800px) {
+  .gi-form .gi-addr { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gi-form .gi-addr > .gf-w2 { grid-column: 1 / -1; }
+}
+.gi-form .gi-addr .gf-seg { gap: 6px; }
+.gi-form .gi-addr .gf-opt span { min-height: 48px; min-width: 48px; padding: 0 12px; }

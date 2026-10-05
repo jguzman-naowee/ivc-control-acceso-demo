@@ -39,7 +39,7 @@
       { id: 'actos-coord', label: 'Aprobación de actos', icon: img('icon-actos'), ph: 1 }
     ] },
     { sec: 'Control de acceso', items: [
-      { id: 'consulta', label: 'Búsqueda y novedades', icon: img('icon-busqueda'), href: '#/control-acceso/consulta' },
+      { id: 'consulta', label: 'Búsqueda y nuevos casos', icon: img('icon-busqueda'), href: '#/control-acceso/consulta' },
       { id: 'infractores', label: 'Gestión de sanciones', icon: img('icon-acceso'), href: '#/control-acceso/infractores' },
       { id: 'solicitudes', label: 'Solicitudes', icon: img('icon-solicitudes'), href: '#/control-acceso/solicitudes' }
     ] },
@@ -116,7 +116,6 @@
     d.getElementById('topHeader').innerHTML =
       '<nav class="suid-bc" aria-label="Migas de pan">' + bc + '</nav>' +
       '<div class="top-header__right">' +
-        '<span class="suid-demo">Demostración con datos ficticios</span>' +
         '<button class="suid-bell" type="button" aria-label="Notificaciones">' + I.bell + '</button>' +
         '<div class="suid-avatar"><span class="suid-avatar__ring">' + SUID.user.initials + '</span>' + I.chevD + '</div>' +
       '</div>';

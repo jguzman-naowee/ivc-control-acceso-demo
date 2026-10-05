@@ -39,6 +39,21 @@
     return pg;
   };
 
+  /* Alterna .is-stuck en la tabla mientras su thead está pegado bajo la barra; se ata una vez por vista (las filas repintan solo el tbody). */
+  GI.stickyHead = function (table) {
+    var sc = d.querySelector('.main-scroll'), th = table && table.tHead, ticking = false;
+    if (!sc || !th) return;
+    function medir() {
+      ticking = false;
+      if (!table.isConnected) { sc.removeEventListener('scroll', alScroll); return; }
+      var tope = sc.getBoundingClientRect().top + sc.clientTop + parseFloat(getComputedStyle(th.rows[0].cells[0]).top || 0) + parseFloat(getComputedStyle(sc).paddingTop || 0);
+      table.classList.toggle('is-stuck', th.getBoundingClientRect().top <= tope + 0.5 && table.getBoundingClientRect().bottom > tope + th.offsetHeight);
+    }
+    function alScroll() { if (!ticking) { ticking = true; w.requestAnimationFrame(medir); } }
+    sc.addEventListener('scroll', alScroll, { passive: true });
+    medir();
+  };
+
   /* Filas clicables: clic, Enter y Espacio abren la fila `tr[data-id]`; cada fila lleva tabindex="0". */
   GI.filasClicables = function (tbody, abrir) {
     tbody.addEventListener('click', function (e) { var tr = e.target.closest('tr[data-id], .gc-persona[data-id]'); if (tr && !e.target.closest('a, button')) abrir(tr.getAttribute('data-id'), tr); });

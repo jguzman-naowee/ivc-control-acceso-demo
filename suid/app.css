@@ -25,8 +25,6 @@ body { background: var(--surface-alt); font-family: var(--font-sans); }
 .suid-bc .is-current { color: var(--text-primary); font-weight: 700; }
 .suid-bc__sep { display: inline-flex; color: var(--text-secondary); margin: 0 4px; }
 .suid-bell { border: 0; background: transparent; color: var(--text-primary); width: 40px; height: 40px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
-.suid-demo { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 999px; background: var(--surface-alt); border: 1px solid var(--border, #e3e4ee); color: var(--text-primary); font-size: 12px; font-weight: 600; white-space: nowrap; }
-@media (max-width: 900px) { .suid-demo { display: none; } }
 .suid-bell:hover { background: #f5f6fa; }
 .suid-avatar { display: inline-flex; align-items: center; gap: 4px; color: var(--text-primary); cursor: pointer; }
 .suid-avatar__ring { width: 44px; height: 44px; border-radius: 50%; background: var(--blue-bg); color: var(--accent); font-weight: 700; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; }

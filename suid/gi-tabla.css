@@ -24,7 +24,7 @@
 .gt-table td strong { font-weight: 600; }
 .gt-empty { text-align: center; color: var(--text-secondary); padding: 36px 20px !important; }
 .gt-actions { text-align: right; white-space: nowrap; }
-.gt-pag { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; padding: 14px 20px; border-top: 1px solid var(--border); }
+.gt-pag { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; padding: 24px 20px 14px; border-top: 1px solid var(--border); }
 .gt-pag[hidden] { display: none; }
 .gt-pag__n { margin: 0; grid-column: 3; grid-row: 1; font-size: 14px; font-weight: 600; color: var(--text-secondary); justify-self: end; }
 .gt-pag__b { grid-column: 2; grid-row: 1; justify-self: center; display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; }
@@ -42,3 +42,6 @@
 
 /* Título fuera de la tarjeta (DC-044): queda entre los dos bloques, con aire arriba. */
 .gt-head--fuera { padding: 12px 4px 0; margin-top: 8px; }
+
+/* Sombra del encabezado solo mientras está pegado (GI.stickyHead pone .is-stuck); cae sobre las filas que pasan por debajo. */
+.gt-table.is-stuck thead th { box-shadow: 0 6px 8px -4px rgba(20, 20, 40, .22); }

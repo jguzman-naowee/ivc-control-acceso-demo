@@ -159,7 +159,7 @@
   function chartHtml(silent) {
     var n = chartN || (w.innerWidth < 600 ? 6 : 12), S = GI.stats.serieMensual(n), nu = 0, sa = 0, mx = 0;
     S.forEach(function (m) { nu += m.nuevos; sa += m.salen; mx = Math.max(mx, m.nuevos, m.salen); });
-    var neto = nu - sa, paso = mx <= 4 ? 1 : mx <= 8 ? 2 : 5, top = Math.ceil(mx / paso) * paso || paso;
+    var neto = nu - sa, paso = mx <= 4 ? 1 : mx <= 8 ? 2 : mx <= 30 ? 5 : 10, top = Math.ceil(mx / paso) * paso || paso;
     var resumen = 'Infractores mes a mes, de ' + MES[S[0].mes] + ' ' + S[0].anio + ' a ' + MES[S[n - 1].mes] + ' ' + S[n - 1].anio + ' (' + n + ' meses): ' + nu + ' nuevos con medida vigente y ' + sa + ' salidas por cumplimiento; neto ' + signo(neto) + '.';
     chartS = { neto: neto, nu: nu, sa: sa, n: n, S: S, top: top, paso: paso, resumen: resumen };
     return '<figure class="gi-panel gi-chart gt-chart"><header class="gi-panel__head gi-chart__head"><h2 class="gi-panel__title" id="giChT">Infractores mes a mes</h2>' +
@@ -272,7 +272,7 @@
   }
 
   function viewList(view, ctx) {
-    ctx.crumbs = [{ label: 'Inicio', href: '#/' }, { label: 'Control de acceso' }, { label: 'Gestión' }];
+    ctx.crumbs = [{ label: 'Inicio', href: '#/' }, { label: 'Control de acceso' }, { label: 'Gestión de sanciones' }];
     var all = GI.all();
     function filtrar() {
       var q = filt.q.trim().toLowerCase();
@@ -320,6 +320,7 @@
 
     /* Los filtros repintan toda la vista (pag vuelve a 1); la búsqueda lo hace en su handler. */
     var pag = 1;
+    GI.stickyHead(d.querySelector('#giCard .gi-reg'));
     function paint() {
       var rows = filtrar(), T = GI.TABLA_PAG;
       var tn = d.getElementById('giTabRN'); if (tn) tn.textContent = rows.length;
@@ -392,7 +393,7 @@
   function viewFicha(view, ctx, id) {
     var r = GI.get(id);
     if (!r) { location.hash = BASE; return; }
-    ctx.crumbs = [{ label: 'Inicio', href: '#/' }, { label: 'Control de acceso' }, { label: 'Gestión', href: BASE }, { label: r.id }];
+    ctx.crumbs = [{ label: 'Inicio', href: '#/' }, { label: 'Control de acceso' }, { label: 'Gestión de sanciones', href: BASE }, { label: r.id }];
     var menor = D.esMenor(r), X = GI.expediente;
     var acciones = '';
     if (r.estadoRegistro === 'Recibido' || r.estadoRegistro === 'Por Subsanar') {

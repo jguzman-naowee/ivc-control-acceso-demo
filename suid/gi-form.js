@@ -3,10 +3,12 @@
   'use strict';
   var GI = w.GI, U = GI.util, D = GI.derive, C = GI.cat, UI = w.GIUI, esc = SUID.esc;
   var st, editId, view, ctxRef;
-  var lastDep = {}, auto = {}, touched = {}, evs = [], pcache = {}, cur = 'start', visited = {};
-  var SECS = ['ctrl', 'inf', 'rep', 'hec', 'san', 'int'];
-  var TITLES = { ctrl: 'Control del registro', inf: 'Infractor', rep: 'Representante o tutor', hec: 'Hechos y conducta', san: 'Sobre la sanción', int: 'Gestión interna' };
-  var HINTS = { ctrl: 'La fecha de registro la genera el sistema.', inf: 'Identificación, residencia y contacto.', rep: 'Solo si el infractor es menor de edad.', hec: 'Fecha, evento deportivo y conductas.', san: 'Acto administrativo, ejecutoria y meses de sanción.', int: 'Radicado y profesional responsable.' };
+  var lastDep = {}, auto = {}, touched = {}, evs = [], pcache = {}, cur = 'start', visited = {}, tried = null;
+  var SECS = ['inf', 'rep', 'hec', 'san', 'int'];
+  /* La fecha de registro es automática: no es un paso, se muestra como dato al final (DC-155). */
+  var LET = { inf: 'B', rep: 'C', hec: 'D', san: 'E', int: 'F' };
+  var TITLES = { inf: 'Infractor', rep: 'Representante o tutor', hec: 'Hechos y conducta', san: 'Sobre la sanción', int: 'Gestión interna' };
+  var HINTS = { inf: 'Identificación, residencia y contacto.', rep: 'Solo si el infractor es menor de edad.', hec: 'Fecha, evento deportivo y conductas.', san: 'Acto administrativo, ejecutoria y meses de sanción.', int: 'Radicado y profesional responsable.' };
   var NEXT = '<svg class="gi-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
   /* Ayuda en lenguaje natural bajo los campos que se pre-llenan; se ocultan al editarlos. */
   var AH = { fechaRadicado: 'Usamos la fecha de hoy.', radEntrada: 'Tomamos el siguiente radicado disponible; cámbialo si es otro.', profesional: 'Te asignamos como responsable; puedes elegir a otra persona.', meses: 'Tomamos el mínimo del rango de la conducta; ajústalo según el acto.', descripcion: 'Partimos del texto base de la conducta; completa con los hechos.' };
@@ -61,7 +63,7 @@
   }
   function sw(path, label, o) {
     o = o || {};
-    return '<div class="gi-f gi-c' + (o.c || 12) + ' gf-swf' + (o.cls ? ' ' + o.cls : '') + '"><button type="button" class="gf-sw" role="switch" aria-checked="false" data-sw="' + path + '"' + (o.help ? ' aria-describedby="' + o.help[0] + '"' : '') + '><i class="gf-sw__trk" aria-hidden="true"><i></i></i><b>' + label + '</b><em>No</em></button>' +
+    return '<div class="gi-f gi-c' + (o.c === 0 ? 0 : o.c || 12) + ' gf-swf' + (o.cls ? ' ' + o.cls : '') + '">' + (o.lbl ? '<span class="gi-lbl">' + o.lbl + '</span>' : '') + '<button type="button" class="gf-sw" role="switch"' + (o.aria ? ' aria-label="' + o.aria + '"' : '') + ' aria-checked="false" data-sw="' + path + '"' + (o.help ? ' aria-describedby="' + o.help[0] + '"' : '') + '><i class="gf-sw__trk" aria-hidden="true"><i></i></i><b>' + label + '</b><em>No</em></button>' +
       (o.help ? '<p class="gi-help" id="' + o.help[0] + '">' + o.help[1] + '</p>' : '') + '</div>';
   }
   function chips(path, opts) {
@@ -92,22 +94,21 @@
     var L = function (path) { return sel(path, C.letra, '—'); };
     var B = function (path) { return sel(path, ['Bis'], '—'); };
     var S = function (path) { return sel(path, C.sentido.map(function (x) { return x; }), '—'); };
+    var H = function (t) { return '<p class="gf-addr-h">' + t + '</p>'; }, A = function (n, l, inner, o) { o = o || {}; o.c = 0; return fld(n, l, inner, o); };
+    var N = function (n, l, path, err) { return A(n, l, inp(path, { max: 3, attr: 'inputmode="numeric"' }), { req: 1, err: err }); };
     h += '<div class="gi-sub gi-c12 js-urbana-' + k + AD + '"><p class="gi-sub__t">Dirección de residencia</p><div class="gi-grid12 gi-addr">' +
-      fld('1', 'Vía principal', seg(k + '.a.via', C.viaUrbana.map(function (x) { return [x[0], x[0]]; }), 'Vía principal'), { c: 12, req: 1, err: k + '.a.via' }) +
-      fld('2', 'Número', inp(k + '.a.n1', { max: 3, attr: 'inputmode="numeric"' }), { c: 2, req: 1, err: k + '.a.n1' }) +
-      fld('3', 'Letra', L(k + '.a.l1'), { c: 1 }) + fld('4', 'Bis', B(k + '.a.b1'), { c: 1 }) + fld('5', 'Letra', L(k + '.a.l2'), { c: 1 }) + fld('6', 'Sentido', S(k + '.a.s1'), { c: 2 }) +
-      '<div class="gi-c4 gf-sp"></div><div class="gi-c1 gf-sp"></div>' +
-      '<div class="gi-f gi-c1 gi-fixed"><label class="gi-lbl">#</label><div class="gi-in gi-in--fixed">#</div></div>' +
-      fld('8', 'Número', inp(k + '.a.n2', { max: 3, attr: 'inputmode="numeric"' }), { c: 2, req: 1, err: k + '.a.n2' }) +
-      fld('9', 'Letra', L(k + '.a.l3'), { c: 1 }) + fld('10', 'Bis', B(k + '.a.b2'), { c: 1 }) + fld('11', 'Letra', L(k + '.a.l4'), { c: 1 }) +
-      '<div class="gi-f gi-c1 gi-fixed"><label class="gi-lbl">-</label><div class="gi-in gi-in--fixed">-</div></div>' +
-      fld('13', 'Número', inp(k + '.a.n3', { max: 3, attr: 'inputmode="numeric"' }), { c: 2, req: 1, err: k + '.a.n3' }) + fld('14', 'Sentido', S(k + '.a.s2'), { c: 2 }) +
-      '<div class="gi-c1 gf-sp"></div>' +
-      sw(k + '.a.adicOn', 'Agregar indicación adicional (apartamento, bloque, interior…)', {}) +
-      '<div class="gi-c12 js-adic-' + k + '"><div class="gi-grid12">' +
-      fld('15', 'Información adicional', sel(k + '.a.adic', C.infoAdicional.map(function (x) { return x[0]; }), 'Seleccionar'), { c: 6 }) +
-      fld('16', 'Indicación', inp(k + '.a.indic', { max: 40 }), { c: 6 }) +
-      '</div></div></div></div>';
+      H('Vía principal') +
+      A('1', 'Vía principal', seg(k + '.a.via', C.viaUrbana.map(function (x) { return [x[0], x[0]]; }), 'Vía principal'), { cls: 'gf-w4', req: 1, err: k + '.a.via' }) +
+      N('2', 'Número', k + '.a.n1', k + '.a.n1') + A('3', 'Letra', L(k + '.a.l1')) + A('4', 'Bis', B(k + '.a.b1')) + A('5', 'Letra', L(k + '.a.l2')) +
+      H('Vía generadora (#)') +
+      N('8', 'Número', k + '.a.n2', k + '.a.n2') + A('9', 'Letra', L(k + '.a.l3')) + A('10', 'Bis', B(k + '.a.b2')) + A('11', 'Letra', L(k + '.a.l4')) +
+      H('Placa (-), sentido y complemento') +
+      N('13', 'Número placa', k + '.a.n3', k + '.a.n3') + A('6', 'Sentido vía principal', S(k + '.a.s1')) + A('14', 'Sentido placa', S(k + '.a.s2')) +
+      sw(k + '.a.adicOn', 'Agregar', { c: 0, cls: 'gf-swa', lbl: 'Indicación adicional', aria: 'Agregar indicación adicional (apartamento, bloque, interior…)' }) +
+      '<div class="gf-adic js-adic-' + k + '">' +
+      A('15', 'Información adicional', sel(k + '.a.adic', C.infoAdicional.map(function (x) { return x[0]; }), 'Seleccionar'), { cls: 'gf-w2' }) +
+      A('16', 'Indicación', inp(k + '.a.indic', { max: 40 }), { cls: 'gf-w2' }) +
+      '</div></div></div>';
     h += '<div class="gi-sub gi-c12 js-libre-' + k + AD + '">' + fld(num(8) + 'L', 'Dirección de residencia', inp(k + '.dirLibre', { max: 160 }), { c: 12, req: 1, err: k + '.dirLibre' }) + '</div>';
     h += fld(num(8), 'Dirección consolidada', '<strong class="gf-val" data-dircons="' + k + '" title="Se arma con los datos de arriba y las abreviaturas de la vía.">—</strong>', { c: 12, calc: 1, cls: AD });
     h += fld(num(9), 'Indicativo del país', '<strong class="gf-val" data-indic="' + k + '">+57</strong>', { c: 2, calc: 1 });
@@ -122,10 +123,9 @@
 
   function build() {
     var f = '', PROF = UI.PROFESIONALES;
-    f += section('ctrl', 'A', 'Control del registro', 'Lo genera el sistema; no hay nada que completar aquí.', fld('1', 'Fecha de registro', '<strong class="gf-val">' + U.fmt(editId ? GI.get(editId).fechaRegistro : U.today()) + '</strong>', { c: 4, calc: 1 }));
-    f += section('inf', 'B', 'Identificación y contacto del infractor', '', personHtml('i', 2));
-    f += section('rep', 'C', 'Identificación y contacto del representante o tutor', 'Aplica cuando el infractor es menor de edad (Ley 1098 de 2006).', personHtml('r', 18), ' hidden');
-    f += section('hec', 'D', 'Hechos y conducta', '',
+    f += section('inf', LET.inf, 'Identificación y contacto del infractor', '', personHtml('i', 2));
+    f += section('rep', LET.rep, 'Identificación y contacto del representante o tutor', 'Aplica cuando el infractor es menor de edad (Ley 1098 de 2006).', personHtml('r', 18), ' hidden');
+    f += section('hec', LET.hec, 'Hechos y conducta', '',
       fld('33', 'Fecha de los hechos', inp('fechaHechos', { type: 'date', attr: 'max="' + U.addDays(U.today(), -1) + '"' }) + '<div class="gf-evs" id="gfEvents" hidden></div>', { c: 12, req: 1, err: 'fechaHechos', help: 'No puede ser hoy ni futura, y debe ser anterior a la fecha del acto.' }) +
       fld('34', 'Competición', seg('competicion', C.competicion.map(function (x) { return [x, x]; }), 'Competición'), { c: 12, req: 1, err: 'competicion' }) +
       '<div class="gi-f gi-c12 js-otra" data-req="otraCompeticion"><label class="gi-lbl gi-lbl--req"><span class="gi-n">34.1</span>Otra competición</label>' + seg('otraCompeticion', C.otraCompeticion.map(function (x) { return [x, x]; }), 'Otra competición') + '<p class="gi-ferr" data-err="otraCompeticion"></p></div>' +
@@ -140,7 +140,7 @@
       sw('ui.agrOn', '¿Hay agravantes?', { help: ['gfAgrHelp', 'Opcional. Actívalo solo si aplica alguno de los agravantes del catálogo.'] }) +
       '<div class="gi-f gi-c12 js-agr"><label class="gi-lbl"><span class="gi-n">39</span>Agravantes de las conductas</label>' + chips('agravantes', C.agravantes) + '<p class="gi-ferr" data-err="agravantes"></p></div>' +
       fld('40', 'Descripción breve de la conducta', '<textarea class="gi-in gi-ta" data-p="descripcion" rows="3" maxlength="600">' + esc(st.f.descripcion) + '</textarea><div class="gf-ta-row"><button type="button" class="naowee-btn naowee-btn--quiet naowee-btn--small gf-base" data-base hidden>Usar texto base de la conducta</button><span class="gi-help" id="descCnt">0 de 600</span></div>', { c: 12, req: 1, err: 'descripcion', tag: 'descripcion' }));
-    f += section('san', 'E', TITLES.san, '',
+    f += section('san', LET.san, TITLES.san, '',
       fld('41', 'Fecha del acto administrativo', inp('fechaActo', { type: 'date', attr: 'max="' + U.today() + '"' }), { c: 4, req: 1, err: 'fechaActo' }) +
       fld('42', 'No. del acto administrativo', inp('numActo', { max: 20, ph: 'Alfanumérico, máx. 20' }), { c: 4, req: 1, err: 'numActo' }) +
       fld('43', 'Fecha de la constancia de ejecutoria', inp('fechaEjecutoria', { type: 'date', attr: 'max="' + U.today() + '"' }), { c: 4, req: 1, err: 'fechaEjecutoria' }) +
@@ -150,7 +150,7 @@
       '<div class="gf-vig__c"><div class="gf-vig__k"><span class="gi-n">47</span>Estado de la restricción</div><div id="estRes" title="Inactiva mientras el registro esté Recibido o Por Subsanar; Activa al Validarse; Cumplida un día después del fin de vigencia."></div></div></div>' +
       sw('ui.multaOn', '¿La sanción incluye multa?', { help: ['gfMultaHelp', 'Su cobro no se gestiona aquí.'] }) +
       fld('46', 'Valor de la sanción', '<div class="gf-money gi-money"><span>$</span><input class="gi-in" data-p="valor" inputmode="numeric" value="' + esc(st.f.valor) + '"></div>', { c: 4, err: 'valor', cls: 'js-multa', help: 'Multa en pesos.' }));
-    f += section('int', 'F', 'Gestión interna', '',
+    f += section('int', LET.int, 'Gestión interna', '',
       fld('48', 'Fecha de radicado de entrada', inp('fechaRadicado', { type: 'date', attr: 'max="' + U.today() + '"' }), { c: 4, req: 1, err: 'fechaRadicado', tag: 'fechaRadicado' }) +
       fld('49', 'Radicado de entrada en Mindeporte', inp('radEntrada', { max: 40, ph: 'Según GESDOC' }), { c: 4, req: 1, err: 'radEntrada', tag: 'radEntrada' }) +
       fld('50', 'Respuesta al radicado', inp('respuesta', { max: 40, ph: 'Según GESDOC' }), { c: 4 }) +
@@ -159,7 +159,8 @@
       '<div class="gi-c4 gf-sp"></div>' +
       fld('53', 'Profesional responsable del IVC', seg('profSel', PROF.map(function (p) { return [p, p]; }).concat([['__otro', 'Otro…']]), 'Profesional responsable') + '<input class="gi-in js-prof-txt" data-p="profesional" maxlength="80" placeholder="Nombre del profesional" aria-label="Nombre del profesional" value="' + esc(st.f.profesional) + '">', { c: 8, req: 1, err: 'profesional', tag: 'profesional' }) +
       fld('54', 'Estado de registro y seguimiento', '<div id="estReg" title="Lo mueve el profesional desde la ficha: Validado o Por Subsanar."></div>', { c: 4, calc: 1 }) +
-      fld('55', 'Observaciones del procedimiento del IVC', '<textarea class="gi-in gi-ta" data-p="observaciones" rows="3">' + esc(st.f.observaciones) + '</textarea>', { c: 12 }));
+      fld('55', 'Observaciones del procedimiento del IVC', '<textarea class="gi-in gi-ta" data-p="observaciones" rows="3">' + esc(st.f.observaciones) + '</textarea>', { c: 12 }) +
+      '<div class="gi-c12 gf-regdate">Fecha de registro: <strong>' + U.fmt(editId ? GI.get(editId).fechaRegistro : U.today()) + '</strong> · la genera el sistema</div>');
 
     var back = editId ? UI.BASE + '/' + editId : UI.BASE;
     view.innerHTML = '<div class="page-inner gi-page gi-form">' +
@@ -172,8 +173,8 @@
       '<div class="gf-total"><div class="gf-total__pct"><strong id="gfPct">0 %</strong><span>completo</span></div>' +
       '<div class="gf-bar" id="gfTotBar" role="progressbar" aria-label="Avance total del formulario" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0 % completo"><i></i></div>' +
       '<small id="gfTotCnt">0 de 0 campos obligatorios</small></div>' +
-      SECS.map(function (id, i) {
-        return '<a href="#" data-go="' + id + '" class="gi-step" id="go-' + id + '"><span>' + 'ABCDEF'[i] + '</span><div><b>' + TITLES[id] + '</b>' +
+      SECS.map(function (id) {
+        return '<a href="#" data-go="' + id + '" class="gi-step" id="go-' + id + '"><span>' + LET[id] + '</span><div><b>' + TITLES[id] + '</b>' +
           '<div class="gf-srow" data-srow="' + id + '"><div class="gf-bar" data-sbar="' + id + '" role="progressbar" aria-label="' + TITLES[id] + ': campos obligatorios completados" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0"><i></i></div>' +
           '<small class="gf-badge" data-scount="' + id + '" aria-hidden="true">—</small></div></div>' + CHECK + '</a>';
       }).join('') + '</nav><form class="gi-formcol" id="giForm" novalidate>' + (editId ? '' : startHtml()) + f + '</form></div>' +
@@ -187,9 +188,9 @@
   }
   /* Solo el alta lo trae: al editar los datos ya existen y se abre directo en el primer bloque. */
   function startHtml() {
-    var rows = SECS.map(function (id, i) {
-      var cnt = id === 'ctrl' ? '<small class="gf-badge">Automático</small>' : id === 'rep' ? '<small class="gf-badge">Si aplica</small>' : '<small class="gf-badge" data-startcnt="' + id + '"></small>';
-      return '<li><span class="gi-sec__tag">' + 'ABCDEF'[i] + '</span><div><b>' + TITLES[id] + '</b><span>' + HINTS[id] + '</span></div>' + cnt + '</li>';
+    var rows = SECS.map(function (id) {
+      var cnt = id === 'rep' ? '<small class="gf-badge">Si aplica</small>' : '<small class="gf-badge" data-startcnt="' + id + '"></small>';
+      return '<li><span class="gi-sec__tag">' + LET[id] + '</span><div><b>' + TITLES[id] + '</b><span>' + HINTS[id] + '</span></div>' + cnt + '</li>';
     }).join('');
     return '<section class="gi-sec gf-start" id="sec-start" aria-label="Registro individual">' +
       '<ol class="gf-start__list">' + rows + '</ol>' +
@@ -198,6 +199,13 @@
   /* Une cada control con su etiqueta para lectores de pantalla. */
   function labelControls() {
     var n = 0;
+    /* Una línea por etiqueta: el texto se recorta (con title) y el asterisco queda siempre visible. */
+    view.querySelectorAll('.gi-form .gi-lbl, .gi-lbl').forEach(function (lb) {
+      var t = '';
+      Array.prototype.slice.call(lb.childNodes).forEach(function (nd) { if (nd.nodeType === 3 || (nd.nodeType === 1 && !nd.classList.contains('gi-n'))) { t += nd.textContent; lb.removeChild(nd); } });
+      if (!t.trim()) return;
+      var sp = d.createElement('span'); sp.className = 'gf-lt'; sp.textContent = t; sp.title = t.trim(); lb.appendChild(sp);
+    });
     view.querySelectorAll('.gi-f').forEach(function (fe) {
       var lb = fe.querySelector(':scope > label.gi-lbl'); if (!lb) return;
       lb.id = lb.id || 'gfl' + (++n);
@@ -293,7 +301,7 @@
     });
     return out;
   }
-  function evLabel(e) { return e.competicion + ' · ' + e.local + ' vs ' + e.visitante + (e.ciudad ? ' · ' + e.ciudad : ''); }
+  function evLabel(e) { return e.competicion + ' · ' + GI.titulo(e.local) + ' vs ' + GI.titulo(e.visitante) + (e.ciudad ? ' · ' + GI.titulo(e.ciudad) : ''); }
   function matches() { var h = st.f.fechaHechos; return h ? evs.filter(function (e) { return e.fecha === h; }) : []; }
   function renderEvents() {
     var box = view.querySelector('#gfEvents'), ms = matches(), h;
@@ -433,7 +441,7 @@
     var eq = comp && !otra ? C.equipos[comp] : (otra ? C.equipos['Liga'] : []);
     if (lastDep.comp !== comp) {
       f.local = ''; f.visitante = '';
-      var base = (eq || []).slice(); if (otra) base.push('Otro');
+      var base = (eq || []).map(function (x) { return [x, GI.titulo(x)]; }); if (otra) base.push('Otro');
       fillSel(null, base, 'local', comp ? 'Seleccionar equipo' : 'Elige primero la competición', !comp);
       fillSel(null, base, 'visitante', comp ? 'Seleccionar equipo' : 'Elige primero la competición', !comp);
       lastDep.comp = comp;
@@ -549,10 +557,10 @@
     });
     progress();
   }
-  function banner(errs) {
+  function banner(errs, soft) {
     var sum = view.querySelector('#errSum');
     sum.hidden = !errs.length;
-    sum.innerHTML = errs.length ? '<strong>No se puede guardar todavía.</strong> Corrige ' + errs.length + ' punto(s):<ul>' + errs.slice(0, 6).map(function (e) { return '<li>' + esc(e[1]) + '</li>'; }).join('') + (errs.length > 6 ? '<li>… y ' + (errs.length - 6) + ' más.</li>' : '') + '</ul>' : '';
+    sum.innerHTML = errs.length ? '<strong>' + (soft ? 'Este bloque está incompleto.' : 'No se puede guardar todavía.') + '</strong> Corrige ' + errs.length + ' punto(s):<ul>' + errs.slice(0, 6).map(function (e) { return '<li>' + esc(e[1]) + '</li>'; }).join('') + (errs.length > 6 ? '<li>… y ' + (errs.length - 6) + ' más.</li>' : '') + '</ul>' + (soft ? '<small>Pulse Siguiente de nuevo para continuar sin completar este bloque.</small>' : '') : '';
   }
   function firstInvalid() {
     var bad = secEl(cur).querySelector('.is-invalid'); if (!bad) return;
@@ -586,14 +594,17 @@
     view.scrollTop = 0;
     var s = secEl(id), h = s && s.querySelector('h2'); if (h) h.focus({ preventScroll: true });
   }
-  /* Saltar hacia adelante por el nav no puede dejar atrás un bloque incompleto. */
+  /* Con errores, el primer intento avisa y el segundo (sin editar nada) deja explorar; los errores quedan marcados. */
   function guard(from, to) {
     var list = steps();
     for (var i = from; i < to; i++) {
       var e = blockErrors(list[i]);
       if (!e.length) { showErrors([], secEl(list[i])); continue; }
+      var sig = list[i] + '|' + e.map(function (x) { return x[0]; }).join();
+      if (tried === sig) { showErrors(e, secEl(list[i])); continue; }
+      tried = sig;
       if (list[i] !== cur) go(list[i]);
-      showErrors(e, secEl(list[i])); firstInvalid();
+      showErrors(e, secEl(list[i])); banner(e, true); firstInvalid();
       return false;
     }
     return true;
@@ -630,6 +641,8 @@
   }
   function bind() {
     var form = view.querySelector('#giForm');
+    ['input', 'change'].forEach(function (ev) { form.addEventListener(ev, function () { tried = null; }, true); });
+    form.addEventListener('click', function (e) { if (e.target.closest('[data-sw]')) tried = null; }, true);
     form.addEventListener('input', function (e) {
       var t = e.target, p = t.getAttribute('data-p');
       if (!p) return;
@@ -710,11 +723,11 @@
 
   w.GIForm = {
     open: function (v, ctx, id) {
-      view = v; ctxRef = ctx; editId = id; lastDep = {}; auto = {}; touched = {}; pcache = {}; visited = {};
+      view = v; ctxRef = ctx; editId = id; lastDep = {}; auto = {}; touched = {}; pcache = {}; visited = {}; tried = null;
       var rec = id ? GI.get(id) : null;
       if (id && !rec) { location.hash = UI.BASE; return; }
       /* Editar abre en el primer bloque con todo desbloqueado: los datos ya existen. */
-      cur = id ? 'ctrl' : 'start';
+      cur = id ? 'inf' : 'start';
       if (id) SECS.forEach(function (s) { visited[s] = true; });
       st = { i: blankPerson(), r: blankPerson(), f: blankFlat(), ui: { menorOn: false, mismaDir: false, agrOn: false, multaOn: false, profOtro: false, paisOtro: { i: false, r: false } } };
       evs = buildEvents();
@@ -742,7 +755,7 @@
       build(); bind();
       if (rec) {
         lastDep.comp = rec.competicion;
-        var eq = C.equipos[rec.competicion] || C.equipos['Liga'];
+        var eq = (C.equipos[rec.competicion] || C.equipos['Liga']).map(function (x) { return [x, GI.titulo(x)]; });
         fillSel(null, eq, 'local', 'Seleccionar equipo'); fillSel(null, eq, 'visitante', 'Seleccionar equipo');
       }
       sync();

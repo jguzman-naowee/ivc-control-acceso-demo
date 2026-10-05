@@ -53,7 +53,7 @@
 .gi-chart { position: relative; display: flex; flex-direction: column; }
 .gi-chart__head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: flex-start; }
 .gi-seg { display: inline-flex; border: 1px solid var(--border-dark); border-radius: 999px; overflow: hidden; }
-.gi-seg__b { min-height: 44px; min-width: 44px; padding: 0 16px; border: 0; background: #fff; font: inherit; font-size: 14px; font-weight: 600; color: var(--text-primary); cursor: pointer; }
+.gi-seg__b { min-height: 28px; min-width: 28px; padding: 0 10px; border: 0; background: #fff; font: inherit; font-size: 13px; font-weight: 600; color: var(--text-primary); cursor: pointer; }
 .gi-seg__b[aria-pressed="true"] { background: var(--azul); color: #fff; }
 .gi-seg__b:focus-visible, .gi-plot-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .gi-chart__neto { display: flex; align-items: center; gap: 12px; background: var(--bg-soft); border-radius: var(--radius-md); padding: 6px 14px; margin: 8px 0 0; min-height: 36px; }
@@ -188,7 +188,7 @@ label.gi-lbl { flex-direction: column; gap: 6px; } .gi-f > label.gi-lbl { flex-d
 
 /* DC-007: leyenda y neto en una sola fila, como dos tarjetas; el texto del neto se acorta según el ancho de la tarjeta. */
 .gi-chart { container-type: inline-size; }
-.gi-chart__foot { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin-top: 0; }
+.gi-chart__foot { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin-top: 0; padding-top: 16px; }
 .gi-chart__foot .gt-legend { margin: 0; flex: none; align-items: center; gap: 4px 12px; background: var(--bg-soft); border-radius: var(--radius-md); padding: 6px 10px; min-height: 36px; }
 .gi-chart__foot .gt-legend li { gap: 6px; }
 .gi-chart__foot .gi-chart__neto { margin: 0; flex: 1 1 auto; gap: 6px; padding: 6px 8px; }
@@ -246,6 +246,15 @@ label.gi-lbl { flex-direction: column; gap: 6px; } .gi-f > label.gi-lbl { flex-d
 /* DC-134: renglones a 8 px dentro de la celda; el alto sobrante de la fila queda fuera, no entre ellos. */
 .gi-insights { grid-auto-rows: 1fr; }
 .gi-insight { justify-content: center; gap: 8px; }
-/* DC-126: encabezado de Gestión pegado bajo la barra superior, con sombra al desplazarse. */
+/* DC-126: encabezado de Gestión pegado bajo la barra superior; la sombra la pone GI.stickyHead (gi-tabla.css). */
 .gt-wrap:has(.gi-reg) { overflow-x: clip; }
-.gt-table.gi-reg thead th { position: sticky; top: -28px; z-index: 3; box-shadow: 0 3px 6px -3px rgba(20, 20, 40, .22); }
+.gt-table.gi-reg thead th { position: sticky; top: -28px; z-index: 3; }
+/* DC-148: el área táctil del ⓘ (::before, -8px) desbordaba la lista; el aire a la derecha la deja dentro. */
+.gi-insight__head { padding-right: 8px; }
+/* DC-148: si cifra y estado no caben en el ancho de la celda, el estado baja en vez de empujar la lista. */
+.gi-insight__row { flex-wrap: wrap; }
+
+/* DC-174: el ícono visible toca el borde derecho del contenido; el área táctil no se sale de la celda (sin scroll). */
+.gi-insight__head { padding-right: 0; }
+.gi-insight .gt-info { width: 18px; height: 18px; margin: 3px 0; }
+.gi-insight .gt-info::before { inset: -8px 0 -8px -8px; }
