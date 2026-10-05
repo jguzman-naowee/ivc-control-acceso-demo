@@ -378,3 +378,51 @@
         justify-content: center;
     }
 }
+
+/* ============================================================================
+   LOGIN SIN SCROLL VERTICAL EN ESCRITORIO (DC-176)
+   ============================================================================ */
+
+/* Header + auth-container ocupan 100dvh; el formulario se comprime por altura. */
+@media (min-width: 901px) {
+    .login-pf body { height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
+    .login-pf .auth-container { flex: 1 1 0; min-height: 0; }
+    .login-pf .brand-panel { min-height: 0; padding: clamp(12px, 2.4vh, 24px); }
+    .login-pf .content-panel__wrapper { overflow: hidden; padding: clamp(8px, 2vh, 24px) 24px; }
+    .login-pf .auth-card { flex-shrink: 1; min-height: 0; }
+    .login-pf .naowee-credit { padding-top: clamp(4px, 1vh, 32px); flex-shrink: 0; }
+    .login-pf .auth-card__title { font-size: clamp(24px, 3.6vh, 32px); line-height: 1.12; margin-bottom: clamp(4px, 1vh, 16px); }
+    .login-pf .auth-card__subtitle { font-size: clamp(14px, 1.9vh, 16px); line-height: 1.4; }
+    .login-pf .auth-card__header { margin-bottom: 4px; }
+    .login-pf .auth-form { margin-top: clamp(4px, 1vh, 16px); }
+    .login-pf .auth-form__group { margin-bottom: clamp(8px, 1.5vh, 16px); }
+    .login-pf .forgot-password-link { margin-top: clamp(2px, 0.8vh, 16px); margin-bottom: clamp(4px, 1.2vh, 24px); font-size: 14px; line-height: 20px; }
+    .login-pf .auth-card__footer { margin-top: clamp(6px, 1.5vh, 32px); }
+    .login-pf .footer-links { margin-bottom: clamp(4px, 1.2vh, 32px); }
+    .login-pf .help-section { margin-top: clamp(4px, 1vh, 24px); padding-top: 0; }
+    .login-pf .help-section__label { margin-bottom: clamp(2px, 0.8vh, 16px); }
+    .login-pf .help-section__text { margin-bottom: 4px; }
+}
+
+@media (min-width: 901px) and (max-height: 800px) {
+    .login-pf .main-header { height: 72px; }
+    .login-pf .header-logo-img--suid { height: 48px; }
+    .login-pf .auth-form__input { padding-top: 6px; padding-bottom: 6px; }
+    .login-pf .auth-form__label { margin-bottom: 4px; }
+}
+
+@media (min-width: 901px) and (max-height: 700px) {
+    .login-pf .main-header { height: 56px; }
+    .login-pf .header-logo-img--suid { height: 40px; }
+    .login-pf .auth-form__button--primary { min-height: 40px; }
+    .login-pf .help-section { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 4px 8px; }
+    .login-pf .help-section__label { margin: 0; }
+    .login-pf .help-section__text { display: none; }
+}
+
+/* Móvil y ancho angosto: scroll normal de la página. */
+@media (max-width: 900px) {
+    .login-pf body { height: auto; min-height: 100dvh; overflow-y: auto; }
+    .login-pf .auth-container { overflow: visible; }
+    .login-pf .content-panel__wrapper { overflow: visible; }
+}
