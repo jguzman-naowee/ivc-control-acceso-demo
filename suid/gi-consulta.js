@@ -151,10 +151,12 @@
   function recientesHtml() {
     var todos = personas().filter(filtra).sort(porUrgencia).slice(0, 30), pg = Math.min(Math.max(st.rec, 1), Math.max(1, Math.ceil(todos.length / PAG_REC))), ini = (pg - 1) * PAG_REC;
     st.rec = pg; pgCfg = { k: 'rec', total: todos.length, page: pg, size: PAG_REC, label: 'Paginación de recientes' };
+    var pagina = todos.slice(ini, ini + PAG_REC);
+    w.GIBio.repartir(pagina.filter(function (p) { return !p.menor; }).map(function (p) { return p.numId; }));
     return '<div class="gc-headrow">' + GI.tablaHead({ id: 'gcRec', titulo: 'Recientes', total: todos.length, fuera: true }) +
       '<a class="naowee-btn naowee-btn--mute gc-btn" href="' + BASE + '">Ver todos</a></div>' +
       '<section class="gt-card gc-lista" aria-labelledby="gcRecT">' + (todos.length ? '' : '<p class="gc-count">Ninguna persona coincide con los filtros.</p>') + '<div class="gc-grid">' +
-      todos.slice(ini, ini + PAG_REC).map(function (p) {
+      pagina.map(function (p) {
         var r = p.res, ag = agregada(p);
         return '<article class="gc-persona" tabindex="0" data-id="' + esc(keyOf(p)) + '" data-k="sel"><div class="gc-persona__foto">' + w.GIBio.foto(p.numId, { menor: p.menor, sin: r.estado === 'En validación' || !p.menor && +String(p.numId).slice(-1) % 4 === 0 }) + '</div>' + estadoBadge(r.estado) +
           '<strong' + (cerrado(p) ? '' : ' title="' + esc(p.nombre) + '"') + '>' + lineas(p) + '</strong><small>' + docPersona(p) + '</small>' +

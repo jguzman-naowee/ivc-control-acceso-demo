@@ -44,7 +44,7 @@ Menú del profesional del IVC (`suite-web-ivc`): "Mi bandeja" es relleno y lleva
 
 ## Foto y huella
 
-- Las imágenes de `img/fotos/` son generadas con IA; no hay personas reales. Cada persona usa una de tres fotos de hincha (tomadas de `prototype/svn/assets/fotos`), elegida por documento, así que se repiten. Si se suman más fotos, basta agregarlas a la lista `FOTOS` de `gi-bio.js`.
+- Son 15 fotos de hinchas generadas con IA (no personas reales): `hincha-01…12` recortadas 4:3 de una cuadrícula propia, más `hincha-sonriente/serio/enojado`. Se asignan por la posición del documento (módulo 15) y la rejilla «Recientes» las reparte sin repetir dentro de cada página; el panel y la ficha respetan lo fijado. El menor sigue siempre con `nino-difuminado` (difuminado). Para sumar fotos, agregarlas a `FOTOS` en `gi-bio.js`.
 - **Menores:** muestran `nino-difuminado.jpg`, recortado y difuminado con `ffmpeg` (`gblur=sigma=22`) a partir de la imagen original, más que ella. Con reserva reforzada sin abrir, solo se ve el candado.
 - **Huella:** una sola imagen (`huella.jpg`) que cambia de giro, espejo y encuadre según el documento.
 
