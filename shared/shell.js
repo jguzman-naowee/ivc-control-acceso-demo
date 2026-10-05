@@ -318,7 +318,7 @@
     '</header>';
   }
 
-  /* ───── Demo Role Switcher (chip flotante — solo sandbox) ───── */
+  /* ───── Demo Role Switcher (chip flotante — solo en la demo) ───── */
   function renderDemoSwitcher() {
     var perfilId = (window.IVCData && window.IVCData.getPerfil()) || 'usuario-externo';
     var perfiles = (window.IVCData && window.IVCData.getAllPerfiles && window.IVCData.getAllPerfiles()) || [];

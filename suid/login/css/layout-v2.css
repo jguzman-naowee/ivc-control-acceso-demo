@@ -48,6 +48,48 @@
     min-height: 0;
 }
 
+/* Foto en screen al 30 % sobre el navy y viñeta de borde del mismo navy (DC-145). */
+.brand-panel__inner {
+    position: relative;
+    isolation: isolate;
+}
+
+.brand-panel__inner::before,
+.brand-panel__inner::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+}
+
+.brand-panel__inner::before {
+    z-index: -2;
+    background: url("../img/patinadora.jpg") 50% 30% / cover no-repeat;
+    mix-blend-mode: screen;
+    opacity: 0.5;
+}
+
+.brand-panel__inner::after {
+    z-index: -1;
+    background:
+        linear-gradient(to bottom, #001A3D 0%, rgba(0, 26, 61, 0.6) 35%, rgba(0, 26, 61, 0.2) 70%, rgba(0, 26, 61, 0) 100%),
+        linear-gradient(to top, #001A3D 0%, rgba(0, 26, 61, 0.6) 35%, rgba(0, 26, 61, 0.2) 70%, rgba(0, 26, 61, 0) 100%),
+        linear-gradient(to right, #001A3D 0%, rgba(0, 26, 61, 0.6) 35%, rgba(0, 26, 61, 0.2) 70%, rgba(0, 26, 61, 0) 100%),
+        linear-gradient(to left, #001A3D 0%, rgba(0, 26, 61, 0.6) 35%, rgba(0, 26, 61, 0.2) 70%, rgba(0, 26, 61, 0) 100%);
+    background-size:
+        100% 26%,
+        100% 26%,
+        26% 100%,
+        26% 100%;
+    background-position:
+        top,
+        bottom,
+        left,
+        right;
+    background-repeat: no-repeat;
+}
+
 /* Brand panel: variante evento */
 .brand-panel--event .brand-panel__inner {
     padding: 0;

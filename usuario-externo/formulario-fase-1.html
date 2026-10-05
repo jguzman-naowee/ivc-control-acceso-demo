@@ -1152,7 +1152,7 @@
      Path relativo: cuando el archivo vive en /naowee-ivc/prototype/usuario-externo/
      resuelve a ../shared/ivc-store.js. Si falla (demo standalone en /IVC/),
      el formulario funciona sin persistencia a bandeja. Para end-to-end
-     local, abrir ambos desde /Users/dvargas/Desktop/naowee-ivc/prototype/. -->
+     local, abrir ambos desde carpeta de desarrollo local. -->
 <script src="../shared/ivc-store.js"
         onerror="console.warn('[IVC] Store no cargado — modo standalone (sin persistencia a bandeja)');"></script>
 <script>
@@ -4432,7 +4432,7 @@ render();
   var YEAR = new Date().getFullYear();
   /* Logo desde el archivo SVG real (mismo asset que bandeja.html usa via
      ../shared/logos/naowee.svg). Path relativo desde demo-fase-1-formulario.html
-     resuelve a /Users/dvargas/Desktop/IVC/logos/naowee.svg en file://
+     resuelve a archivo de logo local en file://
      y a /naowee-ivc/prototype/usuario-externo/logos/naowee.svg en Pages. */
   var LOGO_SRC = 'logos/naowee.svg';
   var footer = document.createElement('div');

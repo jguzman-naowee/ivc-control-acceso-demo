@@ -369,7 +369,7 @@ a { color: inherit; text-decoration: none; }
 .page-inner { display: flex; flex-direction: column; gap: 20px; max-width: 1200px; margin: 0 auto; }
 .page-fade-in { animation: fadeInUp .4s var(--ease-in-out) backwards; }
 
-/* ═══ Demo role switcher (pill flotante — solo sandbox)
+/* ═══ Demo role switcher (pill flotante — solo en la demo)
    v1.4.9 (2026-05-23): movido de right:20px a left:50%+transform para
    centrar horizontalmente. El footer flotante canónico (naowee-floating-footer)
    ahora ocupa bottom-right; el demo-switcher vive al centro inferior y

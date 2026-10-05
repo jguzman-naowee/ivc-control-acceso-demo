@@ -3,10 +3,10 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Sign in to Nao Suite</title>
+    <title>IVC · Demo (datos ficticios)</title>
     <link rel="icon" type="image/x-icon" href="suid/login/img/favicon.ico">
     <link rel="stylesheet" href="shared/fonts/google-sans.css">
-    <!-- Tema Keycloak "naowee" copiado del login real (sandbox). El login de este demo es falso. -->
+    <!-- Tema Keycloak "naowee" copiado del login real. El login de este demo es falso. -->
     <link href="suid/login/css/base-v2.css" rel="stylesheet">
     <link href="suid/login/css/layout-v2.css" rel="stylesheet">
     <link href="suid/login/css/components-v2.css" rel="stylesheet">
@@ -30,7 +30,7 @@
 
     <div class="auth-container">
         <aside class="brand-panel">
-            <div class="brand-panel__inner"></div>
+            <div class="brand-panel__inner" role="img" aria-label="Patinadora de la selección Colombia sonriendo con su dorsal número 1"></div>
         </aside>
 
         <main class="content-panel">
@@ -80,6 +80,8 @@
                         </div>
                     </div>
 
+                    <p class="auth-card__subtitle text-center demo-aviso">Demostración con datos ficticios. No use información real.</p>
+
                     <div class="auth-card__footer">
                         <p class="footer-links">
                             <a href="#" class="footer-link">Política de tratamiento de datos</a>
@@ -112,10 +114,10 @@
 
         // Demo: entra con cualquier dato, incluso vacío. Se autollenan para que se vea llena.
         var u = document.getElementById('username'), p = document.getElementById('password');
-        u.value = 'funcionario.ivc@mindeporte.gov.co'; p.value = 'demo-demo-demo';
+        u.value = 'funcionario.ivc@ejemplo.test'; p.value = 'demo-demo-demo';
         document.getElementById('kc-form-login').addEventListener('submit', function (e) {
             e.preventDefault();
-            try { sessionStorage.setItem('suid.demo.user', u.value || 'funcionario.ivc@mindeporte.gov.co'); } catch (x) {}
+            try { sessionStorage.setItem('suid.demo.user', u.value || 'funcionario.ivc@ejemplo.test'); } catch (x) {}
             var ms = 1800, btn = document.getElementById('kc-login');
             btn.disabled = true; btn.value = 'Iniciando sesión…'; btn.style.opacity = '.85'; btn.style.cursor = 'progress';
             setTimeout(function () { location.href = 'suid/app.html'; }, ms);

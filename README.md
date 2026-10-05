@@ -26,6 +26,6 @@ Todos los datos son **ficticios** y se guardan en el `localStorage` del navegado
 
 - `index.html`: login.
 - `suid/`: la demo (shell, vistas y datos). Detalle en [`suid/README.md`](suid/README.md).
-- `shared/`, `profesional/`, `coordinador/`, `director/`, `usuario-externo/`, `selector-perfiles-ivc.html`: copia del prototipo de diseño [`naowee-tech/design-naowee-ivc`](https://github.com/naowee-tech/design-naowee-ivc), usada como base de estilos y componentes.
+- `shared/`, `profesional/`, `coordinador/`, `director/`, `usuario-externo/`, `selector-perfiles-ivc.html`: copia del repositorio interno de diseño, usada como base de estilos y componentes.
 
 HTML, CSS y JS planos, sin build. Se puede abrir con doble clic en `index.html` o servir con cualquier servidor estático.
