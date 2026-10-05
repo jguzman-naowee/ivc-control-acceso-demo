@@ -138,7 +138,7 @@
 
   /* Personas que el SVN reporta y que Búsqueda también lista: cada medida es un registro de Gestión (INF-…, continúa tras los de arriba). */
   var SVN_P = [
-    ['CC', '718944471', 'Julián Andrés', 'Posada', '1991-06-14', 'Hombre', 'Antioquia', 'Medellín'],
+    ['CC', '71894447', 'Julián Andrés', 'Posada', '1991-06-14', 'Hombre', 'Antioquia', 'Medellín'],
     ['CC', '1045223871', 'Carlos Eduardo', 'Ramírez Soto', '1989-02-03', 'Hombre', 'Atlántico', 'Barranquilla'],
     ['CC', '43871022', 'Luz Marina', 'Ramírez Gil', '1978-09-27', 'Mujer', 'Antioquia', 'Medellín'],
     ['CC', '1143267894', 'Jhon Alexander', 'Ramírez Mora', '1996-12-08', 'Hombre', 'Valle del Cauca', 'Cali'],
@@ -213,10 +213,10 @@
   function promedio(v) { return v.length ? v.reduce(function (a, b) { return a + b; }, 0) / v.length : null; }
 
   /* Entra: el día que queda Validada. Sale: el día siguiente al fin de vigencia. */
-  /* Valores de demostración (10 a 90), volátiles a propósito: se cruzan varias veces y al final salen > nuevos (DC-175).
-     De más viejo a más nuevo, más los registros reales; el último mes está en curso. */
-  var BASE_NUEVOS = [52, 84, 38, 88, 30, 78, 24, 86, 46, 82, 70, 34];
-  var BASE_SALEN = [30, 44, 72, 20, 66, 40, 80, 32, 74, 28, 52, 76];
+  /* Valores de demostración (10 a 90), a mano: irregulares, con meses iguales y cruces; al final salen > nuevos (DC-177).
+     Del más viejo al más nuevo, más los registros reales; el último mes está en curso. */
+  var BASE_NUEVOS = [34, 52, 49, 77, 88, 62, 40, 43, 71, 66, 38, 27];
+  var BASE_SALEN = [78, 41, 50, 30, 22, 64, 44, 46, 29, 40, 52, 68];
   function serieMensual(n) {
     var hoy = parse(today()), regs = load(), out = [];
     function acota(v) { return Math.max(10, Math.min(90, v)); }

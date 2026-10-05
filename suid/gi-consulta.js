@@ -5,7 +5,7 @@
   var BASE = UI.BASE, PAGINA = 5, PAG_REC = 15;
   var st = { q: '', cq: '', abiertos: {}, page: 1, sel: '', rec: 1, f: { est: '', tipo: '', ciu: '' } }; /* q: lo escrito; cq: lo consultado; abiertos: menores abiertos con motivo; sel: persona elegida */
   var MOTIVOS = ['Verificar una medida vigente antes de permitir el ingreso', 'Requerimiento de una autoridad', 'Trámite de un recurso o una solicitud de la persona', 'Auditoría interna'];
-  var CASOS = [{ t: 'Ramírez', q: 'Ramírez' }, { t: '71.894.4471', q: '71.894.4471' }, { t: 'Menor', q: '1020200003' }];
+  var CASOS = [{ t: 'Ramírez', q: 'Ramírez' }, { t: '71.894.447', q: '71.894.447' }, { t: 'Menor', q: '1020200003' }];
   var CORTA = ['Armas u objetos peligrosos', 'Estupefacientes', 'Violencia contra la fuerza pública', 'Invasión del terreno de juego', 'No atender a logística', 'Bebidas alcohólicas', 'Agresión física', 'Agresión verbal', 'Daño a infraestructura'];
 
   function abrev(t) { var m = /\(([^)]+)\)/.exec(t || ''); return m ? m[1] : (t || ''); }

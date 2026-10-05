@@ -50,17 +50,30 @@
   .gi-panel--ins .gi-insights { flex: 1; overflow-y: auto; }
 }
 
-.gi-chart { position: relative; display: flex; flex-direction: column; }
-.gi-chart__head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: flex-start; }
-.gi-seg { display: inline-flex; border: 1px solid var(--border-dark); border-radius: 999px; overflow: hidden; }
-.gi-seg__b { min-height: 28px; min-width: 28px; padding: 0 10px; border: 0; background: #fff; font: inherit; font-size: 13px; font-weight: 600; color: var(--text-primary); cursor: pointer; }
-.gi-seg__b[aria-pressed="true"] { background: var(--azul); color: #fff; }
-.gi-seg__b:focus-visible, .gi-plot-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.gi-chart__neto { display: flex; align-items: center; gap: 12px; background: var(--bg-soft); border-radius: var(--radius-md); padding: 6px 14px; margin: 8px 0 0; min-height: 36px; }
-.gi-chart__neto strong { font-size: 24px; font-weight: 800; line-height: 1; color: var(--text-primary); }
-.gi-chart__neto span { font-size: 14px; line-height: 1.4; color: var(--text-secondary); }
-.gi-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; list-style: none; margin: 0 0 6px; padding: 0; font-size: 14px; color: var(--text-primary); }
-.gi-legend li { display: inline-flex; align-items: center; gap: 8px; }
+/* Selector sin borde hasta el hover: el periodo es contexto de la tarjeta, no un filtro de la tabla. */
+.gi-chart { position: relative; display: flex; flex-direction: column; container-type: inline-size; }
+.gi-chart__head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center; }
+#giChPH .gs-pick__btn { height: 32px; min-height: 32px; padding: 0 10px; gap: 6px; border-color: transparent; border-radius: 8px; color: var(--text-primary); font-size: 13px; }
+#giChPH .gs-pick__btn:hover, #giChPH .gs-pick__btn[aria-expanded="true"] { background: var(--bg-soft); border-color: var(--border); }
+#giChPH .gs-pick__btn .gs-opt__t strong { font-weight: 600; }
+#giChPH .gs-pick__car { width: 6px; height: 6px; border-width: 0 1.5px 1.5px 0; }
+.gt-cal { flex: none; color: var(--text-secondary); }
+.gt-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 6px; }
+.gt-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 10px 0 8px; border: 1px solid var(--border); border-radius: 999px; background: #fff; font: inherit; font-size: 13px; font-weight: 500; color: var(--text-primary); cursor: pointer; transition: background .2s, color .2s, border-color .2s; }
+.gt-chip:hover { border-color: var(--border-dark); }
+.gt-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.gt-chip[aria-pressed="false"] { background: var(--bg-soft); border-style: dashed; color: var(--text-secondary); }
+.gt-chip[aria-pressed="false"] .gt-mk { fill: #fff; stroke: var(--text-secondary); stroke-width: 1.5; }
+.gt-chip[aria-disabled="true"] { cursor: default; }
+.gt-dot { flex: none; overflow: visible; }
+.gt-dot .gt-mk { stroke-width: 0; }
+/* El neto sin caja: los chips de arriba ya hacen de leyenda y el pie no debe competir con ellos. */
+.gi-chart__neto { display: flex; align-items: center; gap: 8px; min-height: 28px; margin: 4px 0 0; padding-top: 8px; border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+.gi-chart__neto strong { font-size: 16px; font-weight: 800; line-height: 1; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.gi-chart__neto span { font-size: 13px; line-height: 1.4; color: var(--text-secondary); white-space: nowrap; }
+.gi-chart__neto .gt-n-c { display: none; }
+@container (max-width: 560px) { .gi-chart__neto .gt-n-l { display: none; } .gi-chart__neto .gt-n-c { display: inline; } }
+@container (max-width: 360px) { .gi-chart__neto span { white-space: normal; } }
 
 @media (max-width: 1180px) { .gi-panel-row { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 600px) { .gi-insights { grid-template-columns: 1fr; } .gi-chips { padding: 12px 16px 0; } }
@@ -153,29 +166,52 @@ label.gi-lbl { flex-direction: column; gap: 6px; } .gi-f > label.gi-lbl { flex-d
 .gt-cond__txt { min-width: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.35; }
 
 /* DC-260: gráfica de líneas. Nuevos = continua roja con círculos; Salen = punteada verde con rombos. */
-.gt-chart .gi-chart__head { margin-bottom: 8px; }
-.gt-legend { margin: 0 0 4px; }
-.gt-legsw { flex: none; overflow: visible; }
-.gt-plotwrap { flex: 1; min-width: 0; border-radius: var(--radius-md); }
+.gt-plotwrap { flex: 1; min-width: 0; min-height: 0; border-radius: var(--radius-md); }
 .gt-plotwrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .gt-plot { position: relative; width: 100%; touch-action: pan-y; }
-.gt-plot svg { display: block; }
+.gt-plot svg { display: block; overflow: visible; }
 .gt-plot svg [hidden] { display: none; }
 .gt-s-in { stroke: var(--red); } .gt-s-out { stroke: var(--green); }
-.gt-line { fill: none; stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
-.gt-legsw line { stroke-width: 2.5; }
-.gt-mk.gt-s-in { fill: var(--red); stroke: #fff; stroke-width: 1.5; }
-.gt-mk.gt-s-out { fill: var(--green); stroke: #fff; stroke-width: 1.5; }
-.gt-legsw .gt-mk { stroke-width: 1.5; }
-.gt-grid { stroke: var(--border); stroke-width: 1; }
-.gt-guide { stroke: var(--border-strong); stroke-width: 1; stroke-dasharray: 3 3; }
-.gt-ring circle { fill: none; stroke-width: 2; } .gt-ring-in { stroke: var(--red); } .gt-ring-out { stroke: var(--green); }
-.gt-ytxt, .gt-xtxt { font-size: 14px; fill: var(--text-secondary); font-family: inherit; }
-.gt-xtxt { fill: var(--text-primary); }
+.gt-gs-in { stop-color: var(--red); } .gt-gs-out { stop-color: var(--green); }
+.gt-line { fill: none; stroke-width: 2.25; stroke-linejoin: round; stroke-linecap: round; }
+.gt-mk { stroke: #fff; stroke-width: 1.5; transform-box: fill-box; transform-origin: center; transition: transform .2s ease-out; }
+.gt-mk.gt-s-in { fill: var(--red); } .gt-mk.gt-s-out { fill: var(--green); }
+.gt-mk.is-on { transform: scale(1.25); }
+.gt-hv .gt-mk { stroke-width: 2; }
+.gt-hv-in .gt-halo { fill: color-mix(in srgb, var(--red) 14%, transparent); } .gt-hv-out .gt-halo { fill: color-mix(in srgb, var(--green) 16%, transparent); }
+/* Ocultar serie: fundido de su área, línea y puntos (clase en .gt-plot, que sobrevive al redibujo). */
+.gt-plot [class*="gt-ser-"] { transition: opacity .3s ease-out; }
+.gt-off-in .gt-ser-in, .gt-off-out .gt-ser-out { opacity: 0; }
+.gt-grid { stroke: color-mix(in srgb, var(--border) 45%, transparent); stroke-width: 1; }
+.gt-now { fill: color-mix(in srgb, var(--azul) 2.5%, transparent); }
+.gt-nowtxt { font-size: 10px; font-weight: 500; fill: var(--text-secondary); letter-spacing: .2px; }
+.gt-guide { stroke: color-mix(in srgb, var(--azul) 22%, transparent); stroke-width: 1; stroke-dasharray: 3 3; }
+.gt-guide, .gt-hv, .gt-tipc { transition: transform .18s ease-out, opacity .3s ease-out; }
+.gt-jump .gt-guide, .gt-jump .gt-hv, .gt-jump .gt-tipc { transition: none; }
+.gt-ytxt, .gt-xtxt { font-size: 11px; fill: var(--text-secondary); font-family: inherit; font-variant-numeric: tabular-nums; transition: fill .15s; }
+.gt-xtxt { font-size: 12px; }
+.gt-xtxt.is-now, .gt-xtxt.is-on { fill: var(--text-primary); font-weight: 600; }
 .gt-hit { cursor: crosshair; }
-.gt-tipc { position: absolute; z-index: 5; display: flex; flex-direction: column; gap: 2px; background: #fff; border: 1px solid var(--border-dark); border-radius: var(--radius-md); box-shadow: var(--shadow-md); padding: 8px 12px; font-size: 14px; line-height: 1.4; color: var(--text-primary); white-space: nowrap; pointer-events: none; }
+.gt-tipc { position: absolute; left: 0; top: 0; z-index: 5; display: flex; flex-direction: column; gap: 4px; min-width: 168px; box-sizing: border-box; background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: 0 12px 28px -8px color-mix(in srgb, var(--azul) 30%, transparent), 0 2px 6px color-mix(in srgb, var(--azul) 8%, transparent); padding: 10px 12px; font-size: 14px; line-height: 1.4; color: var(--text-primary); white-space: nowrap; pointer-events: none; }
 .gt-tipc[hidden] { display: none; }
-.gt-tipc__r { display: flex; align-items: center; gap: 6px; } .gt-tipc__n { color: var(--text-secondary); }
+.gt-tipc__h { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 2px; font-weight: 700; }
+.gt-tipc__h em { font-style: normal; font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 999px; background: var(--bg-soft); color: var(--text-secondary); }
+.gt-tipc__r { display: flex; align-items: center; gap: 6px; color: var(--text-secondary); }
+.gt-tipc__r b { margin-left: auto; padding-left: 12px; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.gt-tipc__d { display: flex; align-items: center; gap: 6px; margin-top: 4px; padding-top: 6px; border-top: 1px solid var(--border); font-size: 13px; }
+span.gt-trend { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; font-size: 9px; line-height: 1; }
+span.gt-trend--up { color: var(--red); background: color-mix(in srgb, var(--red) 12%, transparent); }
+span.gt-trend--down { color: var(--green); background: color-mix(in srgb, var(--green) 12%, transparent); }
+span.gt-trend--eq { color: var(--text-secondary); background: var(--bg-soft); }
+/* Entrada: las líneas se dibujan, las áreas aparecen y los marcadores brotan en orden. */
+.gt-anim .gt-draw { stroke-dasharray: 1 1; animation: gtDraw 1s cubic-bezier(.33, 1, .68, 1) backwards; }
+.gt-anim .gt-area { animation: gtFade .8s .35s ease-out backwards; }
+.gt-anim .gt-now, .gt-anim .gt-nowtxt { animation: gtFade .6s .2s ease-out backwards; }
+.gt-anim .gt-mk[data-i] { animation: gtPop .32s var(--d, 0ms) cubic-bezier(.34, 1.4, .64, 1) backwards; }
+@keyframes gtDraw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes gtFade { from { opacity: 0; } }
+@keyframes gtPop { from { opacity: 0; transform: scale(.2); } }
+@media (prefers-reduced-motion: reduce) { .gt-plot *, .gi-chart * { animation: none !important; transition: none !important; } }
 /* DC-025: el buscador llena el ancho libre de la barra (gi-tabla.css lo limita a 420 px). */
 #giCard .gt-search { flex: 1 1 220px; max-width: none; }
 /* Tabla de Gestión (.gt-table.gi-reg): 8 columnas, así que el aire lateral baja a 10 px para no desbordar; los bordes alinean con la tarjeta. */
@@ -186,17 +222,6 @@ label.gi-lbl { flex-direction: column; gap: 6px; } .gi-f > label.gi-lbl { flex-d
 .gi-reg td:nth-child(2) { min-width: 170px; }
 .gi-reg td:nth-child(5) small { white-space: nowrap; }
 
-/* DC-007: leyenda y neto en una sola fila, como dos tarjetas; el texto del neto se acorta según el ancho de la tarjeta. */
-.gi-chart { container-type: inline-size; }
-.gi-chart__foot { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin-top: 0; padding-top: 16px; }
-.gi-chart__foot .gt-legend { margin: 0; flex: none; align-items: center; gap: 4px 12px; background: var(--bg-soft); border-radius: var(--radius-md); padding: 6px 10px; min-height: 36px; }
-.gi-chart__foot .gt-legend li { gap: 6px; }
-.gi-chart__foot .gi-chart__neto { margin: 0; flex: 1 1 auto; gap: 6px; padding: 6px 8px; }
-.gi-chart__foot .gi-chart__neto span { white-space: nowrap; }
-.gi-chart__foot .gt-n-c { display: none; }
-@container (max-width: 680px) { .gi-chart__foot .gt-n-l { display: none; } .gi-chart__foot .gt-n-c { display: inline; } }
-/* Solo en angosto bajan de fila: la leyenda ocupa el ancho y el neto queda debajo. */
-@container (max-width: 540px) { .gi-chart__foot .gt-legend { flex: 1 1 100%; } .gi-chart__foot .gi-chart__neto { min-width: 0; } .gi-chart__foot .gi-chart__neto span { white-space: normal; } }
 
 /* DC-284: el tag del artículo va invertido: fondo azul oscuro y texto blanco (contraste > 12:1). */
 .gi-page .gt-cond__tag.naowee-badge { background: var(--azul); color: #fff; }

@@ -59,7 +59,7 @@ Menú del profesional del IVC (`suite-web-ivc`): "Mi bandeja" es relleno y lleva
 ## Perfil y afinidad (datos ficticios)
 
 - Muestra el club afín y las señales de la persona (tribuna habitual, frecuencia, viajes de visitante, con quién va, intentos fallidos). Aparece en el panel y la ficha de Gestión, en Solicitudes y en Búsqueda, siempre con el mismo resultado para la misma persona.
-- **Los datos son ficticios.** Se generan en `gi-perfil.js` solo a partir de los dígitos del documento, así que no cambian al recargar ni al editar el registro. Julián Andrés Posada (718944471) lleva los valores del SVN. Solo Atlético Nacional e Independiente Medellín tienen escudo; los demás clubes llevan monograma.
+- **Los datos son ficticios.** Se generan en `gi-perfil.js` solo a partir de los dígitos del documento, así que no cambian al recargar ni al editar el registro. Julián Andrés Posada (71894447) lleva los valores del SVN. Solo Atlético Nacional e Independiente Medellín tienen escudo; los demás clubes llevan monograma.
 - Los menores y los documentos incompletos no se calculan: se muestra una nota de reserva. Con menos de 60 % de certeza o de 6 partidos en 6 meses el resultado es «no concluyente» y no se afirma un club. Esos umbrales son una propuesta, pendiente de confirmar con producto.
 - Las señales informan, no deciden: no hay un puntaje de peligrosidad y solo el club afín interviene en una regla de acceso (partidos sin hinchada visitante); aquí solo se consulta.
 

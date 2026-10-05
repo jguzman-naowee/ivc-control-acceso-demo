@@ -141,90 +141,145 @@
 
   /* Gráfica de líneas en SVG inline (DC-260): se dibuja con el ancho real del contenedor para que el texto no se escale. */
   var MESL = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-  var NS = 'http://www.w3.org/2000/svg';
-  var chartS = null, chartRO = null;
-  function mk(sh, cx, cy, r, cls) {
-    cx = +cx; cy = +cy;
-    return sh === 'c' ? '<circle class="' + cls + '" cx="' + cx + '" cy="' + cy + '" r="' + r + '"/>'
-      : '<polygon class="' + cls + '" points="' + cx + ',' + (cy - r - 1) + ' ' + (cx + r + 1) + ',' + cy + ' ' + cx + ',' + (cy + r + 1) + ' ' + (cx - r - 1) + ',' + cy + '"/>';
+  var chartS = null, chartRO = null, chartUid = 0, chartQuiet = 0, chartOff = { in: false, out: false };
+  var SER = [['in', 'nuevos', 'Nuevos', 'c'], ['out', 'salen', 'Salen por cumplimiento', 'd']];
+  function mk(sh, cx, cy, r, cls, extra) {
+    cx = +cx; cy = +cy; extra = extra || '';
+    return sh === 'c' ? '<circle class="' + cls + '" cx="' + cx + '" cy="' + cy + '" r="' + r + '"' + extra + '/>'
+      : '<polygon class="' + cls + '" points="' + cx + ',' + (cy - r - 1) + ' ' + (cx + r + 1) + ',' + cy + ' ' + cx + ',' + (cy + r + 1) + ' ' + (cx - r - 1) + ',' + cy + '"' + extra + '/>';
   }
-  function legSw(sh, cls, dash) {
-    return '<svg class="gt-legsw" width="28" height="14" viewBox="0 0 28 14" aria-hidden="true"><line class="' + cls + '" x1="1" y1="7" x2="27" y2="7"' + (dash ? ' stroke-dasharray="6 4"' : '') + '/>' + mk(sh, 14, 7, 4, 'gt-mk ' + cls) + '</svg>';
-  }
+  /* Punto de la serie con la misma forma del marcador: el rombo distingue Salen sin depender del color. */
+  function dot(sh, cls) { return '<svg class="gt-dot" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">' + mk(sh, 6, 6, 4, 'gt-mk ' + cls) + '</svg>'; }
+  /* Neto positivo = crece el registro de infractores: sube en rojo (la serie de Nuevos), baja en verde. */
+  function trend(v) { return '<span class="gt-trend gt-trend--' + (v > 0 ? 'up' : v < 0 ? 'down' : 'eq') + '" aria-hidden="true">' + (v > 0 ? '▲' : v < 0 ? '▼' : '=') + '</span>'; }
 
-  function netoHtml(neto, n, nu, sa) {
-    return '<strong>' + signo(neto) + '</strong><span><span class="gt-n-l">Neto de ' + n + ' meses: entran ' + nu + ' y salen ' + sa + '.</span><span class="gt-n-c">Neto ' + n + ' m: entran ' + nu + ', salen ' + sa + '</span></span>';
+  /* Con una serie oculta el neto pierde sentido: se muestra solo el total de la serie visible. */
+  function netoHtml() {
+    var c = chartS, n = c.n;
+    if (chartOff.out) return '<strong>' + c.nu + '</strong><span>Entran ' + c.nu + ' en ' + n + ' meses.</span>';
+    if (chartOff.in) return '<strong>' + c.sa + '</strong><span>Salen ' + c.sa + ' en ' + n + ' meses.</span>';
+    return trend(c.neto) + '<strong>' + signo(c.neto) + '</strong><span><span class="gt-n-l">Neto de ' + n + ' meses: entran ' + c.nu + ' y salen ' + c.sa + '.</span><span class="gt-n-c">Neto ' + n + ' m: entran ' + c.nu + ', salen ' + c.sa + '</span></span>';
   }
-  /* silent: el neto se rellena después del repintado para que el lector lo anuncie al cambiar el periodo. */
-  function chartHtml(silent) {
-    var n = chartN || (w.innerWidth < 600 ? 6 : 12), S = GI.stats.serieMensual(n), nu = 0, sa = 0, mx = 0;
-    S.forEach(function (m) { nu += m.nuevos; sa += m.salen; mx = Math.max(mx, m.nuevos, m.salen); });
-    var neto = nu - sa, paso = mx <= 4 ? 1 : mx <= 8 ? 2 : mx <= 30 ? 5 : 10, top = Math.ceil(mx / paso) * paso || paso;
+  function chartHtml() {
+    var n = chartN || (w.innerWidth < 600 ? 6 : 12), S = GI.stats.serieMensual(n), nu = 0, sa = 0;
+    S.forEach(function (m) { nu += m.nuevos; sa += m.salen; });
+    /* La serie viene acotada a 10–90 (gi-data.js): la escala fija 0–100 no cambia al filtrar ni al cambiar de periodo. */
+    var neto = nu - sa;
     var resumen = 'Infractores mes a mes, de ' + MES[S[0].mes] + ' ' + S[0].anio + ' a ' + MES[S[n - 1].mes] + ' ' + S[n - 1].anio + ' (' + n + ' meses): ' + nu + ' nuevos con medida vigente y ' + sa + ' salidas por cumplimiento; neto ' + signo(neto) + '.';
-    chartS = { neto: neto, nu: nu, sa: sa, n: n, S: S, top: top, paso: paso, resumen: resumen };
-    return '<figure class="gi-panel gi-chart gt-chart"><header class="gi-panel__head gi-chart__head"><h2 class="gi-panel__title" id="giChT">Infractores mes a mes</h2>' +
-      '<div class="gi-seg" role="group" aria-label="Periodo de la gráfica">' + [6, 12].map(function (k) { return '<button type="button" class="gi-seg__b" data-n="' + k + '" aria-pressed="' + (k === n) + '">' + k + ' meses</button>'; }).join('') + '</div></header>' +
+    chartS = { neto: neto, nu: nu, sa: sa, n: n, S: S, top: 100, paso: 20, resumen: resumen };
+    return '<figure class="gi-panel gi-chart gt-chart"><header class="gi-panel__head gi-chart__head"><h2 class="gi-panel__title" id="giChT">Infractores mes a mes</h2><div id="giChPH"></div></header>' +
+      '<div class="gt-chips" role="group" aria-label="Series visibles en la gráfica">' + SER.map(function (s) {
+        return '<button type="button" class="gt-chip gt-chip--' + s[0] + '" data-serie="' + s[1] + '" aria-pressed="' + !chartOff[s[0]] + '" aria-disabled="' + (!chartOff[s[0]] && chartOff[s[0] === 'in' ? 'out' : 'in']) + '">' + dot(s[3], 'gt-s-' + s[0]) + s[2] + '</button>';
+      }).join('') + '</div>' +
       '<div class="gt-plotwrap" tabindex="0" role="group" aria-label="Gráfica de líneas por mes. Con las flechas izquierda y derecha ves el dato de cada mes."><div class="gt-plot"></div></div>' +
-      /* DC-007: leyenda y neto, en una sola fila. Clase propia: `.gt-foot` es el pie de la tabla (gi-tabla.css). */
-      '<div class="gi-chart__foot"><ul class="gi-legend gt-legend"><li>' + legSw('c', 'gt-s-in') + 'Nuevos</li><li>' + legSw('d', 'gt-s-out', 1) + 'Salen por cumplimiento</li></ul>' +
-      '<div class="gi-chart__neto" role="status" aria-live="polite">' + (silent ? '' : netoHtml(neto, n, nu, sa)) + '</div></div>' +
+      '<div class="gi-chart__neto" role="status" aria-live="polite">' + netoHtml() + '</div>' +
       '<div class="sr-only"><table><caption>Infractores mes a mes: nuevos con medida vigente y salidas por cumplimiento</caption><thead><tr><th scope="col">Mes</th><th scope="col">Nuevos</th><th scope="col">Salen por cumplimiento</th><th scope="col">Neto</th></tr></thead><tbody>' +
       S.map(function (m) { return '<tr><th scope="row">' + MES[m.mes] + ' ' + m.anio + '</th><td>' + m.nuevos + '</td><td>' + m.salen + '</td><td>' + signo(m.nuevos - m.salen) + '</td></tr>'; }).join('') +
       '</tbody></table></div></figure>';
   }
+  /* Selector de periodo con el listbox común; al elegir se rehace la tarjeta y el foco vuelve al selector. */
+  var CAL = '<svg class="gt-cal" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.500"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>';
+  function periodoInit(cc) {
+    GI.selectGrafico({ host: cc.querySelector('#giChPH'), id: 'giChP', label: 'Periodo de la gráfica', value: String(chartS.n),
+      items: [6, 12].map(function (k) { return { v: String(k), n: 'Últimos ' + k + ' meses', av: CAL, tag: '' }; }),
+      onPick: function (v) {
+        if (+v === chartS.n) return;
+        chartN = +v; cc.innerHTML = chartHtml(); initChart(cc, true);
+        /* El neto se mide lleno (fija el alto de la gráfica) y se vacía y rellena para que el lector lo anuncie. */
+        var nb = cc.querySelector('.gi-chart__neto'), nh = nb.innerHTML; nb.innerHTML = '';
+        setTimeout(function () { nb.innerHTML = nh; }, 60);
+        d.getElementById('giChP').focus();
+      } });
+  }
 
-  function drawChart(cc) {
+  /* anim: solo al entrar a la vista o al cambiar de periodo; el redibujo por resize o filtros no repite la entrada. */
+  function drawChart(cc, anim) {
     var plot = cc.querySelector('.gt-plot'), wrap = cc.querySelector('.gt-plotwrap'), C0 = chartS;
     if (!plot || !C0) return;
     var W = Math.floor(plot.clientWidth), H = 230;
     if (W < 120) return;
     /* En escritorio la tarjeta tiene alto fijo: la gráfica ocupa lo que queda entre el encabezado y el pie. */
-    if (w.innerWidth > 1180) { plot.innerHTML = ''; H = Math.max(200, Math.min(320, Math.floor(wrap.clientHeight))); }
-    var S = C0.S, n = C0.n, top = C0.top, pl = 34, pr = 14, pt = 14, pb = 30, iw = W - pl - pr, ih = H - pt - pb, step = iw / n;
+    if (w.innerWidth > 1180) { plot.innerHTML = ''; H = Math.max(180, Math.min(320, Math.floor(wrap.clientHeight))); }
+    anim = anim && !(w.matchMedia && w.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    var S = C0.S, n = C0.n, top = C0.top, pl = 30, pr = 10, pt = 22, pb = 28, iw = W - pl - pr, ih = H - pt - pb, step = iw / n, base = H - pb, u = 'gtc' + (++chartUid);
     function X(i) { return pl + (i + .5) * step; }
     function Y(v) { return pt + ih - v / top * ih; }
+    function f1(v) { return v.toFixed(1); }
     var g = '', y = '';
-    for (var t = 0; t <= top; t += C0.paso) { g += '<line class="gt-grid" x1="' + pl + '" x2="' + (W - pr) + '" y1="' + Y(t) + '" y2="' + Y(t) + '"/>'; y += '<text class="gt-ytxt" x="' + (pl - 8) + '" y="' + (Y(t) + 5) + '" text-anchor="end">' + t + '</text>'; }
+    for (var t = 0; t <= top; t += C0.paso) { g += '<line class="gt-grid" x1="' + pl + '" x2="' + (W - pr) + '" y1="' + Y(t) + '" y2="' + Y(t) + '"/>'; y += '<text class="gt-ytxt" x="' + (pl - 8) + '" y="' + (Y(t) + 3.5) + '" text-anchor="end">' + t + '</text>'; }
     var xl = S.map(function (m, i) {
-      return '<text class="gt-xtxt" x="' + X(i) + '" y="' + (H - pb + 20) + '" text-anchor="middle">' + MES[m.mes] + '</text>';
+      return '<text class="gt-xtxt' + (i === n - 1 ? ' is-now' : '') + '" data-i="' + i + '" x="' + X(i) + '" y="' + (base + 20) + '" text-anchor="middle">' + MES[m.mes] + '</text>';
     }).join('');
-    /* Curva monótona: suaviza sin pasarse de los valores (nunca baja de 0 ni sube del máximo entre puntos). */
-    function curva(k) {
-      var P = S.map(function (m, i) { return [X(i), Y(m[k])]; }), dl = [], t = [], d0 = '';
-      for (var i = 0; i < P.length - 1; i++) dl.push((P[i + 1][1] - P[i][1]) / step);
-      for (i = 0; i < P.length; i++) t.push(i === 0 ? dl[0] : i === P.length - 1 ? dl[i - 1] : dl[i - 1] * dl[i] <= 0 ? 0 : 2 * dl[i - 1] * dl[i] / (dl[i - 1] + dl[i]));
-      d0 = 'M' + P[0][0].toFixed(1) + ',' + P[0][1].toFixed(1);
-      for (i = 0; i < P.length - 1; i++) d0 += ' C' + (P[i][0] + step / 3).toFixed(1) + ',' + (P[i][1] + t[i] * step / 3).toFixed(1) + ' ' + (P[i + 1][0] - step / 3).toFixed(1) + ',' + (P[i + 1][1] - t[i + 1] * step / 3).toFixed(1) + ' ' + P[i + 1][0].toFixed(1) + ',' + P[i + 1][1].toFixed(1);
+    var now = '<rect class="gt-now" x="' + f1(pl + (n - 1) * step + 2) + '" y="' + (pt - 16) + '" width="' + f1(step - 4) + '" height="' + (base - pt + 16) + '" rx="6"/>' +
+      '<text class="gt-nowtxt" x="' + f1(Math.min(X(n - 1), W - 22)) + '" y="' + (pt - 6) + '" text-anchor="middle">en curso</text>';
+    /* Catmull-Rom cardinal a Béziers (extremos duplicados, pendientes suavizadas .25/.5/.25): pasa por los puntos, sin esquinas. */
+    function spline(k) {
+      var P = S.map(function (m, i) { return [X(i), Y(m[k])]; }), M = P.map(function (p, i) { var a = P[Math.max(0, i - 1)], b = P[Math.min(P.length - 1, i + 1)]; return (b[1] - a[1]) / ((b[0] - a[0]) || 1); });
+      function sua(A) { return A.map(function (m, i) { return .25 * A[Math.max(0, i - 1)] + .5 * m + .25 * A[Math.min(A.length - 1, i + 1)]; }); }
+      return { P: P, T: sua(M) };
+    }
+    /* Las ordenadas de control se acotan a la escala 0–100 para que la curva nunca salga del eje. */
+    function curva(sp) {
+      var P = sp.P, k = step * .42, lo = Y(top), hi = Y(0);
+      function cl(v) { return f1(Math.max(lo, Math.min(hi, v))); }
+      var d0 = 'M' + f1(P[0][0]) + ',' + f1(P[0][1]);
+      for (var i = 0; i < P.length - 1; i++) d0 += ' C' + f1(P[i][0] + k) + ',' + cl(P[i][1] + sp.T[i] * k) + ' ' + f1(P[i + 1][0] - k) + ',' + cl(P[i + 1][1] - sp.T[i + 1] * k) + ' ' + f1(P[i + 1][0]) + ',' + f1(P[i + 1][1]);
       return d0;
     }
-    function pts(k) { return S.map(function (m, i) { return X(i).toFixed(1) + ',' + Y(m[k]).toFixed(1); }).join(' '); }
-    var pin = S.map(function (m, i) { return mk('c', X(i).toFixed(1), Y(m.nuevos).toFixed(1), 4.5, 'gt-mk gt-s-in'); }).join('');
-    var pout = S.map(function (m, i) { return mk('d', X(i).toFixed(1), Y(m.salen).toFixed(1), 4.5, 'gt-mk gt-s-out'); }).join('');
-    var hit = S.map(function (m, i) { return '<rect class="gt-hit" x="' + (pl + i * step).toFixed(1) + '" y="0" width="' + step.toFixed(1) + '" height="' + (H - pb) + '" fill="transparent"/>'; }).join('');
-    plot.innerHTML = '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(C0.resumen) + '">' +
-      g + y + xl + '<line class="gt-guide" y1="' + pt + '" y2="' + (H - pb) + '" hidden/>' +
-      '<path class="gt-line gt-s-out" stroke-dasharray="7 5" fill="none" d="' + curva('salen') + '"/>' +
-      '<path class="gt-line gt-s-in" fill="none" d="' + curva('nuevos') + '"/>' + pout + pin +
-      '<g class="gt-ring" hidden><circle class="gt-ring-in" r="8"/><circle class="gt-ring-out" r="8"/></g>' + hit + '</svg>' +
+    function dl(i) { return anim ? ' style="--d:' + Math.round(200 + 700 * i / Math.max(1, n - 1)) + 'ms"' : ''; }
+    /* Degradado en coordenadas del plot: intenso en los picos y casi nulo abajo, donde rojo y verde se cruzan y se ensuciarían. */
+    /* Marcador fijo solo en picos, valles y el mes en curso; el resto aparece al pasar por el mes. */
+    function clave(k, i) { var v = S[i][k]; if (i === n - 1) return true; if (!i) return false; var a = S[i - 1][k], b = S[i + 1][k]; return (v > a && v >= b) || (v < a && v <= b); }
+    var capas = SER.map(function (s) {
+      var sp = spline(s[1]), dd = curva(sp), c = 'gt-s-' + s[0];
+      return {
+        area: '<path class="gt-area gt-ser-' + s[0] + '" fill="url(#' + u + s[0] + ')" d="' + dd + ' L' + f1(sp.P[n - 1][0]) + ',' + base + ' L' + f1(sp.P[0][0]) + ',' + base + ' Z"/>',
+        line: '<path class="gt-line gt-draw gt-ser-' + s[0] + ' ' + c + '" pathLength="1" d="' + dd + '"/>',
+        mk: S.map(function (m, i) { return clave(s[1], i) ? mk(s[3], f1(X(i)), f1(Y(m[s[1]])), 3.5, 'gt-mk gt-ser-' + s[0] + ' ' + c, ' data-i="' + i + '"' + dl(i)) : ''; }).join(''),
+        hv: '<g class="gt-hv gt-hv-' + s[0] + ' gt-ser-' + s[0] + '"><circle class="gt-halo" r="9"/>' + mk(s[3], 0, 0, 4, 'gt-mk ' + c) + '</g>',
+        gr: '<linearGradient id="' + u + s[0] + '" gradientUnits="userSpaceOnUse" x1="0" y1="' + pt + '" x2="0" y2="' + base + '"><stop class="gt-gs-' + s[0] + '" offset="0" stop-opacity=".3"/><stop class="gt-gs-' + s[0] + '" offset=".45" stop-opacity=".08"/><stop class="gt-gs-' + s[0] + '" offset=".9" stop-opacity="0"/></linearGradient>'
+      };
+    });
+    function de(p) { return capas.map(function (c) { return c[p]; }).join(''); }
+    var hit = S.map(function (m, i) { return '<rect class="gt-hit" x="' + f1(pl + i * step) + '" y="0" width="' + f1(step) + '" height="' + base + '" fill="transparent"/>'; }).join('');
+    plot.classList.toggle('gt-anim', !!anim);
+    plot.classList.toggle('gt-off-in', chartOff.in); plot.classList.toggle('gt-off-out', chartOff.out);
+    plot.innerHTML = '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(C0.resumen) + '"><defs>' + de('gr') + '</defs>' +
+      now + g + y + xl + de('area') +
+      '<line class="gt-guide" x1="0" x2="0" y1="' + (pt - 16) + '" y2="' + base + '" hidden/>' +
+      de('line') + de('mk') + '<g class="gt-ring" hidden>' + de('hv') + '</g>' + hit + '</svg>' +
       '<div class="gt-tipc" role="status" aria-live="polite" hidden></div>';
     var guide = plot.querySelector('.gt-guide'), ring = plot.querySelector('.gt-ring'), tip = plot.querySelector('.gt-tipc'), act = -1;
-    function clear() { act = -1; guide.setAttribute('hidden', ''); ring.setAttribute('hidden', ''); tip.hidden = true; }
-    function show(i) {
-      i = Math.max(0, Math.min(n - 1, i)); act = i;
-      var m = S[i], x = X(i);
-      guide.removeAttribute('hidden'); guide.setAttribute('x1', x); guide.setAttribute('x2', x); ring.removeAttribute('hidden');
-      var ri = ring.querySelector('.gt-ring-in'), ro = ring.querySelector('.gt-ring-out');
-      ri.setAttribute('cx', x); ri.setAttribute('cy', Y(m.nuevos)); ro.setAttribute('cx', x); ro.setAttribute('cy', Y(m.salen));
-      tip.innerHTML = '<strong>' + MES[m.mes] + ' ' + m.anio + '</strong><span class="gt-tipc__r">' + legSw('c', 'gt-s-in') + 'Nuevos: <b>' + m.nuevos + '</b></span>' +
-        '<span class="gt-tipc__r">' + legSw('d', 'gt-s-out', 1) + 'Salen: <b>' + m.salen + '</b></span><span class="gt-tipc__n">Neto: <b>' + signo(m.nuevos - m.salen) + '</b></span>';
-      tip.hidden = false;
-      var tw = tip.offsetWidth, left = x + 14; if (left + tw > W) left = x - tw - 14;
-      tip.style.left = Math.max(0, left) + 'px'; tip.style.top = (pt + 4) + 'px';
+    var hIn = ring.querySelector('.gt-hv-in'), hOut = ring.querySelector('.gt-hv-out');
+    function mark(i) {
+      [].forEach.call(plot.querySelectorAll('[data-i].is-on'), function (e) { e.classList.remove('is-on'); });
+      if (i >= 0) [].forEach.call(plot.querySelectorAll('[data-i="' + i + '"]'), function (e) { e.classList.add('is-on'); });
     }
+    function clear() { act = -1; mark(-1); guide.setAttribute('hidden', ''); ring.setAttribute('hidden', ''); tip.hidden = true; }
+    function show(i, force) {
+      i = Math.max(0, Math.min(n - 1, i));
+      if (i === act && !force) return;
+      /* Desde oculto, guía y tooltip aparecen en su sitio; entre meses se deslizan. */
+      var jump = act < 0; act = i;
+      var m = S[i], x = X(i), dv = m.nuevos - m.salen;
+      plot.classList.toggle('gt-jump', jump);
+      guide.removeAttribute('hidden'); ring.removeAttribute('hidden'); mark(i);
+      guide.style.transform = 'translate(' + x + 'px,0)';
+      hIn.style.transform = 'translate(' + x + 'px,' + Y(m.nuevos) + 'px)'; hOut.style.transform = 'translate(' + x + 'px,' + Y(m.salen) + 'px)';
+      tip.innerHTML = '<span class="gt-tipc__h">' + MESL[m.mes] + ' ' + m.anio + (i === n - 1 ? '<em>en curso</em>' : '') + '</span>' +
+        (chartOff.in ? '' : '<span class="gt-tipc__r">' + dot('c', 'gt-s-in') + '<span>Nuevos</span><b>' + m.nuevos + '</b></span>') +
+        (chartOff.out ? '' : '<span class="gt-tipc__r">' + dot('d', 'gt-s-out') + '<span>Salen</span><b>' + m.salen + '</b></span>') +
+        (chartOff.in || chartOff.out ? '' : '<span class="gt-tipc__d">' + trend(dv) + '<b>' + (dv ? signo(dv) + ' vs. Salen' : 'Se equilibran') + '</b></span>');
+      tip.hidden = false;
+      var tw = tip.offsetWidth, left = x + 18; if (left + tw > W) left = x - tw - 18;
+      tip.style.transform = 'translate(' + Math.max(0, left) + 'px,' + (pt - 6) + 'px)';
+      if (jump) { void plot.offsetWidth; plot.classList.remove('gt-jump'); }
+    }
+    plot.gtRefresh = function () { if (act >= 0) show(act, true); };
     function idx(e) { var r = plot.getBoundingClientRect(); return Math.floor((e.clientX - r.left - pl) / step); }
-    plot.addEventListener('pointermove', function (e) { var i = idx(e); if (i >= 0 && i < n) show(i); else clear(); });
-    plot.addEventListener('pointerdown', function (e) { var i = idx(e); if (i >= 0 && i < n) show(i); });
-    plot.addEventListener('pointerleave', function (e) { if (e.pointerType === 'mouse' && d.activeElement !== wrap) clear(); });
+    plot.onpointermove = function (e) { var i = idx(e); if (i >= 0 && i < n) show(i); else clear(); };
+    plot.onpointerdown = function (e) { var i = idx(e); if (i >= 0 && i < n) show(i); };
+    plot.onpointerleave = function (e) { if (e.pointerType === 'mouse' && d.activeElement !== wrap) clear(); };
     wrap.onfocus = function () { if (act < 0) show(n - 1); };
     wrap.onblur = clear;
     wrap.onkeydown = function (e) {
@@ -234,8 +289,24 @@
       e.preventDefault();
     };
   }
-  function initChart(cc) {
-    drawChart(cc);
+  /* Ocultar una serie solo cambia clases: el fundido lo hace CSS sin redibujar. Siempre queda al menos una visible. */
+  function serieToggle(cc, b) {
+    var k = b.getAttribute('data-serie') === 'nuevos' ? 'in' : 'out', o = k === 'in' ? 'out' : 'in';
+    if (!chartOff[k] && chartOff[o]) return;
+    chartOff[k] = !chartOff[k];
+    [].forEach.call(cc.querySelectorAll('.gt-chip'), function (c) {
+      var ck = c.getAttribute('data-serie') === 'nuevos' ? 'in' : 'out';
+      c.setAttribute('aria-pressed', !chartOff[ck]);
+      c.setAttribute('aria-disabled', !chartOff[ck] && chartOff[ck === 'in' ? 'out' : 'in'] ? 'true' : 'false');
+    });
+    var plot = cc.querySelector('.gt-plot');
+    plot.classList.toggle('gt-off-in', chartOff.in); plot.classList.toggle('gt-off-out', chartOff.out);
+    if (plot.gtRefresh) plot.gtRefresh();
+    cc.querySelector('.gi-chart__neto').innerHTML = netoHtml();
+  }
+  function initChart(cc, anim) {
+    periodoInit(cc);
+    drawChart(cc, anim);
     if (chartRO) chartRO.disconnect();
     var plot = cc.querySelector('.gt-plot'), lw = plot ? plot.clientWidth : 0;
     if (plot && w.ResizeObserver) {
@@ -353,18 +424,11 @@
       });
     });
     d.getElementById('giQ').addEventListener('input', function (e) { filt.q = e.target.value; pag = 1; paint(); });
-    filtrosInit(function (v) { filt.reg = v; viewList(view, ctx); d.getElementById('giReg').focus(); },
-      function (v) { filt.res = v; viewList(view, ctx); d.getElementById('giRes').focus(); });
+    filtrosInit(function (v) { filt.reg = v; chartQuiet = 1; viewList(view, ctx); d.getElementById('giReg').focus(); },
+      function (v) { filt.res = v; chartQuiet = 1; viewList(view, ctx); d.getElementById('giRes').focus(); });
     var cc = d.getElementById('giChartCard');
-    cc.addEventListener('click', function (e) {
-      var b = e.target.closest('[data-n]'); if (!b) return;
-      chartN = +b.getAttribute('data-n');
-      cc.innerHTML = chartHtml(true); initChart(cc);
-      var nb = cc.querySelector('.gi-chart__neto'), cs = chartS;
-      setTimeout(function () { if (nb) nb.innerHTML = netoHtml(cs.neto, cs.n, cs.nu, cs.sa); }, 60);
-      var f = cc.querySelector('[data-n="' + chartN + '"]'); if (f) f.focus();
-    });
-    initChart(cc); initTips(view);
+    cc.addEventListener('click', function (e) { var b = e.target.closest('.gt-chip'); if (b) serieToggle(cc, b); });
+    initChart(cc, !chartQuiet); chartQuiet = 0; initTips(view);
     var tb = d.getElementById('giBody');
     GI.filasClicables(tb, abrirPanel);
     /* filasClicables ignora los botones: el de «Ver expediente» de cada fila abre el mismo panel. */
