@@ -22,10 +22,6 @@
     }).join('') + '</dl>';
   }
   function aviso(a) { return '<p class="gx-aviso gx-aviso--' + esc(a.tono || 'info') + '" role="note">' + a.html + '</p>'; }
-  function more(m) {
-    if (!m.mas || !m.mas.length) return '';
-    return '<ul class="gx-more" aria-label="Se ve completo en el expediente">' + m.mas.map(function (t) { return '<li>+ ' + esc(t) + '</li>'; }).join('') + '</ul>';
-  }
 
   /* Caja de estado: cada línea cabe en una sola (nowrap + elipsis) y, recortada, se lee por el title (DC-069). */
   function estadoBox(e, grande) {
@@ -71,21 +67,21 @@
   /* Una fila: escudo + club + barras + %. `mini` = versión de una línea junto a foto y huella. */
   function clubRow(p, mini) {
     var c = p.club, pct = c.cert == null ? 'Sin dato' : '<span class="gx-sr">Certeza: </span>' + c.cert + ' %', nombre = c.concluyente ? c.nombre : 'No concluyente';
-    if (mini) return '<div class="gx-club gx-club--mini">' + escudo(c, 30) + '<div class="gx-club__t"><b>' + esc(nombre) + '</b><span>Señal inferida · ' + pct + '</span></div></div>';
+    if (mini) return '<div class="gx-club gx-club--mini">' + escudo(c, 30) + '<div class="gx-club__t"><b>' + esc(nombre) + '</b><span>Indicador inferido · ' + pct + '</span></div></div>';
     return '<div class="gx-club">' + escudo(c, 40) + '<div class="gx-club__t"><span class="gx-cap">Club afín</span><b>' + esc(nombre) + '</b><span>' + esc(c.por) + '</span></div>' +
       '<div class="gx-club__c">' + barras(c) + '<b>' + pct + '</b></div></div>';
   }
   function reserva(p) {
     return '<p class="gx-reserva" role="note"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span>' + esc(motivoReserva(p)) + '</span></p>';
   }
-  var NOTA_FIC = 'Señal inferida: informa, no decide. Datos ficticios del demo.';
+  var NOTA_FIC = 'Indicador inferido.';
 
   /* ───────── compacto ───────── */
   function bloqueResumen(m) {
     if (!m.resumen || !m.resumen.length) return '';
     var extra = (m.relato ? '<p class="gx-relato">' + esc(m.relato) + '</p>' : '') +
       (m.chips && m.chips.length ? '<ul class="gx-chips">' + m.chips.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>' : '');
-    return sec((m.resumenTitulo === '' ? '' : cap(m.resumenTitulo || (m.caso === 'solicitud' ? 'Qué reporta' : 'Resumen de la medida'))) + kv(m.resumen, m.resumenColumnas === 1 ? 'gx-kv--1' : m.caso === 'medida' ? 'gx-kv--lista' : '') + extra);
+    return sec((m.resumenTitulo === '' ? '' : cap(m.resumenTitulo || (m.caso === 'solicitud' ? 'Qué reporta' : 'Resumen de la medida'))) + kv(m.resumen, 'gx-kv--lista') + extra);
   }
   function bloquePersona(m, p) {
     return sec('<div class="gx-persona">' + bio(m, 'sm') + '</div>');
@@ -111,7 +107,7 @@
       c.push(sec(estadoBox(m.estado), { cls: 'gx-sec--1' }));
       c.push(sec(cap(m.etapasTitulo || 'Estado del registro') + steps(m.etapas) + (m.etapasNota ? '<p class="gx-nota">' + esc(m.etapasNota) + '</p>' : '') + avisos));
       c.push(bloqueResumen(m));
-      if (m.interna && m.interna.length) c.push(sec(cap(m.internaTitulo || 'Gestión interna') + kv(m.interna)));
+      if (m.interna && m.interna.length) c.push(sec(cap(m.internaTitulo || 'Gestión interna') + kv(m.interna, 'gx-kv--lista')));
       c.push(bloquePersonaAfinidad(m, p));
     } else if (m.caso === 'solicitud') {
       if (m.estado) c.push(sec(estadoBox(m.estado), { cls: 'gx-sec--1' }));
@@ -126,7 +122,6 @@
       c.push(bloqueAfinidad(m, p));
       c.push(bloqueMov(m));
     }
-    c.push(more(m));
     return {
       id: m.id, tag: (m.badges || []).map(bd).join(''), meta: m.meta || m.id, titulo: m.nombre,
       chip: m.menor && !m.reservado ? bd({ t: 'Menor de edad', tono: 'neu' }) : '', sub: m.sub || '',
@@ -135,7 +130,7 @@
   }
 
   /* ───────── interno ───────── */
-  function card(t, inner, extra) { return '<section class="gx-card"><h3 class="gx-card__t">' + esc(t) + (extra || '') + '</h3>' + inner + '</section>'; }
+  function card(t, inner, extra, cls) { return '<section class="gx-card' + (cls ? ' ' + cls : '') + '"><h3 class="gx-card__t">' + esc(t) + (extra || '') + '</h3>' + inner + '</section>'; }
   function tarjeta(s) { return card(s.t, s.html != null ? '<div class="gx-card__p">' + s.html + '</div>' : kv(s.kv, 'gx-kv--3')); }
   function afinidadCard(m, p) {
     if (!p || m.sinAfinidad) return '';
@@ -160,7 +155,8 @@
     left.push(afinidadCard(m, p));
     if (m.rep) left.push(card(m.rep.t, kv(m.rep.kv, 'gx-kv--3')));
     (m.secciones || []).forEach(function (s) { left.push(tarjeta(s)); });
-    right.push(card('Estados', estadoBox(m.estado, false) + steps(m.etapasInterno || m.etapas, true) + (m.estadosNota ? '<div class="gx-card__p">' + m.estadosNota + '</div>' : '')));
+    right.push(card('Estados', estadoBox(m.estado, false) + steps(m.etapasInterno || m.etapas, true) + (m.estadosNota ? '<div class="gx-card__p">' + m.estadosNota + '</div>' : ''), '',
+      'gx-card--est' + (m.estado ? ' gx-card--' + esc(m.estado.tono || 'gr') : '')));
     right.push(card('Historial', m.historial && m.historial.length ? tlHtml(m.historial) : '<p class="gx-nota">Sin movimientos.</p>'));
     if (m.relacionados && m.relacionados.length) right.push(card('Relacionados', kv(m.relacionados, 'gx-kv--1')));
     return '<div class="gx-int"><div class="gx-int__col">' + left.join('') + '</div><aside class="gx-int__side" aria-label="Estados, historial y relacionados">' + right.join('') + '</aside></div>';
@@ -196,16 +192,16 @@
       return { t: h.de === h.a || !h.de ? h.a : h.de + ' → ' + h.a, por: h.usuario || 'Sistema', nota: h.nota, fecha: U.fmt(h.fecha) + ' ' + h.hora };
     });
     var i0 = r.origen[0], conducta = '<span class="gx-tag">' + esc(artDe(i0)) + '</span> ' + esc(CORTA[i0] || '') + (r.origen.length > 1 ? ' <span class="gx-mas">(+' + (r.origen.length - 1) + ')</span>' : '');
-    var sancion = r.meses + ' meses' + (r.valor ? ' · ' + dinero(r.valor) : '');
-    var resumen = val ? [{ k: 'Conducta', v: conducta }, { k: 'Acto', v: esc(r.numActo) }, { k: 'Evento', v: esc(r.local + ' vs. ' + r.visitante) + ' · ' + dd(r.fechaHechos) }, { k: 'Sanción', v: esc(sancion) }]
-      : [{ k: 'Conducta', v: conducta }, { k: 'Acto', v: esc(r.numActo) + ' · ' + dd(r.fechaActo) }, { k: 'Ejecutoria', v: U.fmt(r.fechaEjecutoria) }, { k: 'Sanción', v: esc(sancion) }];
+    var sancion = [{ k: 'Tiempo', v: r.meses + ' meses' }].concat(r.valor ? [{ k: 'Valor', v: dinero(r.valor) }] : []);
+    var resumen = val ? [{ k: 'Conducta', v: conducta }, { k: 'Acto', v: esc(r.numActo) }, { k: 'Evento', v: esc(GI.titulo(r.local + ' vs. ' + r.visitante)) }, { k: 'Fecha', v: U.fmt(r.fechaHechos) }].concat(r.ciudadHechos ? [{ k: 'Lugar', v: esc(GI.titulo(r.ciudadHechos)) }] : [], sancion)
+      : [{ k: 'Conducta', v: conducta }, { k: 'Acto', v: esc(r.numActo) }, { k: 'Fecha del acto', v: U.fmt(r.fechaActo) }, { k: 'Ejecutoria', v: U.fmt(r.fechaEjecutoria) }].concat(sancion);
     var enlHtml = enl.length ? enl.map(function (x) { return '<a href="' + SOLS + '">' + esc(x.id) + '</a>' + (x.origen ? ' · ' + esc(x.origen) : ''); }).join('<br>') : '';
     var otras = misma.length ? misma.map(function (x) { return '<a href="' + BASE + '/' + esc(x.id) + '">' + esc(x.id) + '</a>'; }).join(', ') : 'Ninguna';
     var fVal = D.fechaValidacion(r);
     var segundo = val ? { t: 'Validado', estado: 'done' } : { t: porSub ? 'Por subsanar' : 'Validar', estado: 'on' };
     var m = {
       caso: val ? 'medida' : 'gestion', id: r.id, nombre: D.nombreCompleto(r), menor: menor, reservado: false, doc: doc, docDigitos: r.numId,
-      sub: doc + (edad != null ? ' · ' + edad + ' años' : '') + (r.ciudad ? ' · ' + r.ciudad : ''),
+      sub: doc + (edad != null ? ' · ' + edad + ' años' : '') + (r.ciudad ? ' · ' + GI.titulo(r.ciudad) : ''),
       badges: [{ t: res, tono: TONO_RES[res] || 'neu' }, { t: r.estadoRegistro, tono: TONO_REG[r.estadoRegistro] || 'neu' }],
       estado: estado,
       etapas: [{ t: 'Recibido', estado: 'done' }, segundo, { t: res === 'Cumplida' ? 'Cumplida' : 'Activa', estado: res === 'Activa' ? 'on' : res === 'Cumplida' ? 'done' : 'next' }],
@@ -214,11 +210,10 @@
       etapasNota: 'Recibido el ' + U.fmt(r.fechaRegistro) + (r.profesional ? ' por ' + r.profesional : '') + '. Para validar o devolver, abre el expediente.',
       resumen: resumen, interna: [{ k: 'Radicado de entrada', v: esc(r.radEntrada) }, { k: 'Profesional', v: esc(r.profesional) }, { k: 'Solicitud de origen', v: enlHtml || '—' }, { k: 'Otras restricciones', v: otras }],
       movimientos: hist,
-      mas: (val ? ['Representante', 'Radicados GESDOC'] : r.rep ? ['Representante', 'Datos de contacto'] : ['Datos de contacto']).concat(menor ? [] : ['Señales de perfil (5)'], [val ? 'Historial completo' : 'Historial de estados (' + hist.length + ')']),
       persona: { t: 'Infractor', kv: personaKv(r, r) }, rep: r.rep ? { t: 'Representante legal o tutor', kv: personaKv(r.rep, r) } : null,
       secciones: [
         { t: 'Hechos y conducta', kv: [['Fecha de los hechos', U.fmt(r.fechaHechos)], ['Competición', esc(r.competicion + (r.otraCompeticion ? ' · ' + r.otraCompeticion : ''))],
-          ['Evento deportivo', esc(r.local + ' vs. ' + r.visitante)], ['Ciudad de los hechos', esc(r.ciudadHechos)],
+          ['Evento deportivo', esc(GI.titulo(r.local + ' vs. ' + r.visitante))], ['Ciudad de los hechos', esc(GI.titulo(r.ciudadHechos))],
           ['Origen de la obligación', lista(r.origen.map(function (i) { return C.origen[i]; })), true],
           ['Agravantes', r.agravantes.length ? lista(r.agravantes.map(function (i) { return C.agravantes[i]; })) : 'Ninguno', true], ['Descripción', esc(r.descripcion), true]] },
         { t: 'Sanción', kv: [['Acto administrativo', esc(r.numActo) + ' · ' + U.fmt(r.fechaActo)], ['Constancia de ejecutoria', U.fmt(r.fechaEjecutoria)], ['Tiempo de sanción', r.meses + ' meses'], ['Fin de vigencia', U.fmt(fin)], ['Valor de la sanción', dinero(r.valor) || '—']] },
@@ -244,17 +239,17 @@
     if (s.menor) avisos.push({ tono: 'warn', html: '<strong>Reserva reforzada.</strong> La persona es menor de edad: no se muestra su nombre, su foto ni su huella.' });
     var nombre = s.menor ? 'Menor de edad · ' + s.iniciales : s.nombre, digs = String(s.doc || '').replace(/\D/g, '');
     var hist = (s.hist || []).slice().reverse().map(function (x) { return { t: x.texto, por: x.quien, fecha: x.fecha }; });
-    var sinEv = /^sin /i.test(s.evid || '');
+    var sinEv = /^sin /i.test(s.evid || ''), ev = GI.titulo(s.evento || '').split(' · ');
     return {
       caso: 'solicitud', id: s.id, meta: s.id + ' · ' + String(s.fecha).replace(/ \d{4} ·/, ' ·'), nombre: nombre, menor: !!s.menor, reservado: !!s.menor, doc: s.doc, docDigitos: digs,
       sub: s.doc + ' · reportado por ' + s.origen, badges: [{ t: (PASOS.concat([['archivado', 'Archivado']]).filter(function (x) { return x[0] === s.estado; })[0] || [0, s.estado])[1], tono: TONO_SOL[s.estado] || 'neu' }],
       estado: estado, etapas: etapas, avisos: avisos,
-      resumenTitulo: 'Qué reporta', resumenColumnas: 1, resumen: [{ k: 'Evento', v: esc(s.evento) }, { k: 'Conducta', v: esc((s.conductas || []).join('; ')) }, { k: 'Autoridad competente', v: esc(s.autoridad) }],
+      resumenTitulo: 'Qué reporta', resumenColumnas: 1, resumen: [{ k: 'Evento', v: esc(ev[0]) }].concat(ev[1] ? [{ k: 'Fecha', v: esc(ev[1]) }] : [], ev[2] ? [{ k: 'Lugar', v: esc(ev.slice(2).join(' · ')) }] : [], [{ k: 'Conducta', v: esc((s.conductas || []).join('; ')) }, { k: 'Autoridad competente', v: esc(s.autoridad) }]),
       relato: s.descripcion, chips: sinEv ? [] : [s.evid],
       siguiente: opts.siguiente || '', acciones: opts.acciones || '', onPintar: opts.onPintar,
       seccionesAntes: [{ t: 'Reporte', kv: [['Reportado por', esc(s.origen)], ['Tipo de entidad', esc(s.tipo)], ['Fecha del reporte', esc(s.fecha)], ['Número', esc(s.id)]] }],
       persona: { t: 'Persona', kv: [['Persona', s.menor ? 'Menor de edad · ' + esc(s.iniciales) : esc(s.nombre)], ['Documento', esc(s.doc)], ['Reportado por', esc(s.origen) + ' · ' + esc(s.tipo)]] },
-      secciones: [{ t: 'Evento y conducta', kv: [['Evento', esc(s.evento), true], ['Fecha de los hechos', esc(s.hechos)], ['Autoridad competente', esc(s.autoridad)], ['Conductas', esc((s.conductas || []).join('; ')), true]] },
+      secciones: [{ t: 'Evento y conducta', kv: [['Evento', esc(GI.titulo(s.evento)), true], ['Fecha de los hechos', esc(s.hechos)], ['Autoridad competente', esc(s.autoridad)], ['Conductas', esc((s.conductas || []).join('; ')), true]] },
         { t: 'Relato', html: '<p>' + esc(s.descripcion) + '</p>' }, { t: 'Evidencia', html: '<p>' + esc(s.evid) + '</p>' }],
       estadosNota: aviso(avisos[0]) + (avisos[1] ? aviso(avisos[1]) : ''),
       relacionados: [{ k: 'Medida enlazada', v: s.medida ? '<a href="' + BASE + '/' + esc(s.medida) + '">' + esc(s.medida) + '</a>' : 'Aún sin medida: se enlaza al pasar a trámite' }],

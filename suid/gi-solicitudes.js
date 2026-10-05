@@ -2,7 +2,7 @@
 (function (w, d) {
   'use strict';
   var GI = w.GI, U = GI.util, D = GI.derive, UI = w.GIUI, esc = SUID.esc;
-  var KEY = 'suid.gs.v4';
+  var KEY = 'suid.gs.v5';
   var ESTADOS = [['enviado', 'Enviado'], ['recibido', 'Recibido'], ['tramite', 'En trámite'], ['derivo', 'Derivó en medida'], ['archivado', 'Archivado']];
   var BADGE = { enviado: 'informative', recibido: 'neutral', tramite: 'caution', derivo: 'negative', archivado: 'neutral' };
   var MOTIVOS = ['La autoridad no abrió procedimiento', 'No se pudo identificar a la persona', 'Duplicado de otra solicitud', 'Falta de evidencia', 'Otro'];
@@ -71,10 +71,10 @@
         evento: 'Nacional vs. Pereira · 10 ago 2026 · Estadio Atanasio Girardot', hechos: '10 ago 2026', autoridad: 'Inspección de Policía 14 de Medellín', conductas: ['Armas u objetos peligrosos (art. 97, 1)'], evid: '2 fotos',
         descripcion: 'En la requisa de la Puerta 6 · Sur se le encontró un arma cortopunzante.',
         hist: [h('11 ago 2026', 'Enviado por la entidad', 'Atlético Nacional · Jefe de logística', 'azul'), h('11 ago 2026', 'Recibido por el IVC', 'Jaime Pardo Ruiz'), h('19 ago 2026', 'La autoridad abrió procedimiento · oficio 2026-E-032410', 'Jaime Pardo Ruiz', 'amarillo')] },
-      { id: 'R-2025-0288', estado: 'derivo', medida: 'INF-2026-0005', tipo: 'Club de fútbol', origen: 'Atlético Nacional', iso: '2025-10-20', fecha: '20 oct 2025', nombre: 'Julián Andrés Posada', doc: 'CC 71.894.4471',
+      { id: 'R-2025-0288', estado: 'derivo', medida: 'INF-2025-0046', tipo: 'Club de fútbol', origen: 'Atlético Nacional', iso: '2025-10-20', fecha: '20 oct 2025', nombre: 'Julián Andrés Posada', doc: 'CC 71.894.4471',
         evento: 'Nacional vs. Medellín · 19 oct 2025 · Estadio Atanasio Girardot', hechos: '19 oct 2025', autoridad: 'Inspección de Policía 14 de Medellín', conductas: ['Agresión física (art. 98, a)'], evid: '2 fotos · 1 video',
         descripcion: 'Agredió a otro aficionado en la tribuna Oriental Baja durante el segundo tiempo.',
-        hist: [h('20 oct 2025', 'Enviado por la entidad', 'Atlético Nacional · Jefe de logística', 'azul'), h('21 oct 2025', 'Recibido por el IVC', 'Carolina Vélez Ortiz'), h('28 oct 2025', 'La autoridad abrió procedimiento', 'Carolina Vélez Ortiz', 'amarillo'), h('4 dic 2025', 'Derivó en la medida INF-2026-0005', 'Carolina Vélez Ortiz', 'rojo')] },
+        hist: [h('20 oct 2025', 'Enviado por la entidad', 'Atlético Nacional · Jefe de logística', 'azul'), h('21 oct 2025', 'Recibido por el IVC', 'Carolina Vélez Ortiz'), h('28 oct 2025', 'La autoridad abrió procedimiento', 'Carolina Vélez Ortiz', 'amarillo'), h('4 dic 2025', 'Derivó en la medida INF-2025-0046', 'Carolina Vélez Ortiz', 'rojo')] },
       { id: 'R-2026-0379', estado: 'archivado', motivoArchivo: 'La autoridad no abrió procedimiento', notaArchivo: 'Oficio de la Inspección de Policía 9 de Bogotá, radicado 2026-E-029904.', tipo: 'Club de fútbol', origen: 'Millonarios', iso: '2026-07-27', fecha: '27 jul 2026 · 14:52', nombre: 'Óscar Iván Rincón Pulido', doc: 'CC 80.556.214',
         evento: 'Millonarios vs. Nacional · 26 jul 2026 · Estadio El Campín', hechos: '26 jul 2026', autoridad: 'Inspección de Policía 9 de Bogotá', conductas: ['Agresión física (art. 98, a)'], evid: 'Sin evidencia adjunta',
         descripcion: 'Riña en la tribuna Norte; el informe no identifica quién inició la agresión.',
@@ -106,7 +106,7 @@
   };
   GI.origenTag = function (t) { return '<span class="naowee-badge naowee-badge--' + (TIPOS[t] || 'neutral') + ' naowee-badge--quiet gs-tag">' + esc(t) + '</span>'; };
   function origen(r) { return '<span class="gs-ori">' + GI.origenAvatar(r.origen) + '<span class="gs-ori__t"><strong>' + esc(r.origen) + '</strong>' + GI.origenTag(r.tipo) + '</span></span>'; }
-  function evento(r) { var p = r.evento.split(' · '); return esc(p[0]) + ' <span class="gs-evf">· ' + esc(p[1] || r.hechos) + '</span>'; }
+  function evento(r) { var p = GI.titulo(r.evento).split(' · '); return esc(p[0]) + ' <span class="gs-evf">· ' + esc(p[1] || r.hechos) + '</span>'; }
   function persona(r) { return r.menor ? '<strong>Menor de edad</strong><small>' + esc(r.iniciales) + ' · ' + esc(r.doc) + '</small>' : '<strong>' + esc(r.nombre) + '</strong><small>' + esc(r.doc) + '</small>'; }
 
   function pickOrigen(host, orig, onPick) {
@@ -130,6 +130,7 @@
       '<div class="gt-wrap"><table class="gt-table"><thead><tr><th>Origen</th><th>Radicado</th><th>Persona</th><th>Evento y conducta</th><th>Estado</th></tr></thead><tbody id="gsBody"></tbody></table></div>' +
       '<nav id="gsPag"></nav></section></div>';
 
+    GI.stickyHead(d.querySelector('.gs-card .gt-table'));
     function paint() {
       var rows = load(), cnt = { '': rows.length };
       ESTADOS.forEach(function (e) { cnt[e[0]] = rows.filter(function (r) { return r.estado === e[0]; }).length; });

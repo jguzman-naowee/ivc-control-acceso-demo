@@ -39,4 +39,4 @@
 
 /* Encabezado pegado bajo la barra (DC-144), como Gestión; -28px = padding del scroller. */
 .gs-card .gt-wrap { overflow-x: clip; }
-.gs-card .gt-table thead th { position: sticky; top: -28px; z-index: 3; box-shadow: 0 3px 6px -3px rgba(20, 20, 40, .22); }
+.gs-card .gt-table thead th { position: sticky; top: -28px; z-index: 3; }

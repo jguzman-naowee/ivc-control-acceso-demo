@@ -1,8 +1,8 @@
 /* Gestión de infractores (HU-26.3): modelo, reglas derivadas y datos ficticios del demo. */
 (function (w) {
   'use strict';
-  /* v2: el seed creció para que el panel de insights tenga 12 meses de historia. */
-  var KEY = 'suid.gi.v2';
+  /* v3: el seed suma las personas que antes solo existían en Búsqueda. */
+  var KEY = 'suid.gi.v3';
   var USER = 'Funcionario IVC';
 
   var pad = function (n) { return (n < 10 ? '0' : '') + n; };
@@ -136,6 +136,42 @@
     });
   }
 
+  /* Personas que el SVN reporta y que Búsqueda también lista: cada medida es un registro de Gestión (INF-…, continúa tras los de arriba). */
+  var SVN_P = [
+    ['CC', '718944471', 'Julián Andrés', 'Posada', '1991-06-14', 'Hombre', 'Antioquia', 'Medellín'],
+    ['CC', '1045223871', 'Carlos Eduardo', 'Ramírez Soto', '1989-02-03', 'Hombre', 'Atlántico', 'Barranquilla'],
+    ['CC', '43871022', 'Luz Marina', 'Ramírez Gil', '1978-09-27', 'Mujer', 'Antioquia', 'Medellín'],
+    ['CC', '1143267894', 'Jhon Alexander', 'Ramírez Mora', '1996-12-08', 'Hombre', 'Valle del Cauca', 'Cali'],
+    ['CC', '52987431', 'Sandra Milena', 'Ramírez Torres', '1984-04-19', 'Mujer', 'Bogotá D.C.', 'Bogotá D.C.'],
+    ['CC', '1098765432', 'Wilmer', 'Ramírez Peña', '1995-07-11', 'Hombre', 'Santander', 'Bucaramanga'],
+    ['CC', '1032456789', 'Diana Carolina', 'Ramírez Ortega', '1992-10-30', 'Mujer', 'Bogotá D.C.', 'Bogotá D.C.'],
+    ['CE', '7050021', 'Fabián', 'Ramírez Cortés', '1987-01-22', 'Hombre', 'Bolívar', 'Cartagena de Indias'],
+    ['CC', '1152230981', 'Natalia', 'Ramírez Duque', '1999-05-16', 'Mujer', 'Risaralda', 'Pereira'],
+    ['CC', '79456123', 'Héctor', 'Ramírez Salgado', '1981-08-05', 'Hombre', 'Cesar', 'Valledupar'],
+    ['CC', '1020987654', 'Mónica', 'Ramírez Vélez', '1990-03-14', 'Mujer', 'Caldas', 'Manizales'],
+    ['CC', '88123456', 'Éver', 'Ramírez Pinto', '1985-11-09', 'Hombre', 'Norte de Santander', 'Cúcuta'],
+    ['TI', '1109876543', 'S.', 'Ramírez R.', '2010-03-15', 'Hombre', 'Valle del Cauca', 'Cali']
+  ];
+  /* [persona, ejecutoria, meses, origen]: la última persona es menor (con representante). */
+  var SVN = [
+    [0, '2025-11-30', 18, 6], [0, '2025-03-02', 6, 5], [1, '2026-04-05', 6, 6], [1, '2025-02-10', 6, 5], [2, '2026-08-12', 12, 5], [3, '2026-01-20', 24, 3],
+    [4, '2025-09-10', 12, 7], [5, '2026-05-20', 8, 8], [6, '2025-12-01', 18, 6], [6, '2024-02-15', 6, 7], [7, '2026-07-02', 36, 0], [8, '2024-05-15', 12, 1],
+    [9, '2026-03-02', 7, 6], [10, '2026-02-14', 24, 3], [10, '2026-06-01', 12, 5], [11, '2025-11-05', 10, 7], [12, '2026-06-10', 6, 5]
+  ];
+  function seedSvn(mk, H, seq0) {
+    return SVN.map(function (x, i) {
+      var q = SVN_P[x[0]], ej = x[1], rad = addDays(ej, 3), menor = x[0] === SVN_P.length - 1, y = rad.slice(0, 4), pa = PAR[i % PAR.length], lag = 2 + (i % 5), fin = finVigencia({ fechaEjecutoria: ej, meses: x[2] });
+      var hist = [H(rad, '10:' + pad(10 + i), '', 'Recibido', 'Expediente radicado y recibido.'), H(addDays(rad, lag), '15:' + pad(10 + i), 'Recibido', 'Validado')];
+      if (today() > fin) hist.push(H(addDays(fin, 1), '00:05', 'Validado', 'Validado', 'La restricción pasó a Cumplida al terminar su vigencia (automático).'));
+      return mk({ id: 'INF-' + y + '-' + String(seq0 + i).padStart(4, '0'), fechaRegistro: rad, tipoId: q[0] === 'CE' ? 'Cédula de Extranjería (CE)' : q[0] === 'TI' ? 'Tarjeta de Identidad (TI)' : 'Cédula de Ciudadanía (CC)', numId: q[1],
+        nombres: q[2], apellidos: q[3], fechaNac: q[4], sexo: q[5], depto: q[6], ciudad: q[7], dir: 'KR ' + (20 + i) + ' # ' + (30 + i) + ' - ' + (10 + i), telefono: '30012' + String(30000 + i * 13), correo: '',
+        fechaHechos: addDays(ej, -30), local: pa[0], visitante: pa[1], ciudadHechos: q[7], origen: [x[3]], descripcion: DESC[x[3]], fechaActo: addDays(ej, -7), numActo: 'RES-' + pad(200 + i) + '-' + y,
+        fechaEjecutoria: ej, meses: x[2], valor: x[2] * 150000, fechaRadicado: rad, radEntrada: 'GESDOC-' + y + '-' + String(30000 + i * 17), radContab: 'GESDOC-' + y + '-' + String(30400 + i * 17),
+        radJuridica: 'GESDOC-' + y + '-' + String(30800 + i * 17), estadoRegistro: 'Validado', historial: hist,
+        rep: menor ? { tipoId: 'Cédula de Ciudadanía (CC)', numId: '1030300999', nombres: 'Representante', apellidos: 'Ramírez', pais: 'Colombia', depto: q[6], ciudad: q[7], dir: 'KR 1 # 2 - 3', indicativo: '+57', telefono: '3001190001', correo: '', fechaNac: '1982-04-12', sexo: 'Mujer' } : null });
+    });
+  }
+
   function seed() {
     var H = function (f, h, de, a, nota) { return { fecha: f, hora: h, usuario: USER, de: de, a: a, nota: nota || '' }; };
     var base = {
@@ -167,7 +203,7 @@
         historial: [H('2025-02-10', '09:00', '', 'Recibido'), H('2025-02-13', '10:10', 'Recibido', 'Validado'), H('2025-08-08', '00:05', 'Validado', 'Validado', 'La restricción pasó a Cumplida al terminar su vigencia (automático).')] })
     ];
     /* Lo más reciente primero, como la bandeja cuando se registra uno nuevo. */
-    return orig.concat(seedExtra(mk, H)).sort(function (a, b) { return a.fechaRegistro < b.fechaRegistro ? 1 : a.fechaRegistro > b.fechaRegistro ? -1 : 0; });
+    return orig.concat(seedExtra(mk, H), seedSvn(mk, H, 46)).sort(function (a, b) { return a.fechaRegistro < b.fechaRegistro ? 1 : a.fechaRegistro > b.fechaRegistro ? -1 : 0; });
   }
 
 
@@ -177,14 +213,19 @@
   function promedio(v) { return v.length ? v.reduce(function (a, b) { return a + b; }, 0) / v.length : null; }
 
   /* Entra: el día que queda Validada. Sale: el día siguiente al fin de vigencia. */
+  /* Valores de demostración (10 a 90), volátiles a propósito: se cruzan varias veces y al final salen > nuevos (DC-175).
+     De más viejo a más nuevo, más los registros reales; el último mes está en curso. */
+  var BASE_NUEVOS = [52, 84, 38, 88, 30, 78, 24, 86, 46, 82, 70, 34];
+  var BASE_SALEN = [30, 44, 72, 20, 66, 40, 80, 32, 74, 28, 52, 76];
   function serieMensual(n) {
     var hoy = parse(today()), regs = load(), out = [];
+    function acota(v) { return Math.max(10, Math.min(90, v)); }
     for (var i = n - 1; i >= 0; i--) {
-      var m = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1), key = m.getFullYear() + '-' + pad(m.getMonth() + 1);
+      var m = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1), key = m.getFullYear() + '-' + pad(m.getMonth() + 1), k = BASE_NUEVOS.length - 1 - i;
       out.push({
         key: key, anio: m.getFullYear(), mes: m.getMonth(),
-        nuevos: regs.filter(function (r) { return fechaValidacion(r).slice(0, 7) === key; }).length,
-        salen: regs.filter(function (r) { var f = fechaCumplida(r); return f && f <= today() && f.slice(0, 7) === key; }).length
+        nuevos: acota(BASE_NUEVOS[k] + regs.filter(function (r) { return fechaValidacion(r).slice(0, 7) === key; }).length),
+        salen: acota(BASE_SALEN[k] + regs.filter(function (r) { var f = fechaCumplida(r); return f && f <= today() && f.slice(0, 7) === key; }).length)
       });
     }
     return out;
@@ -255,8 +296,18 @@
     }) || null;
   }
 
+  /* Solo al pintar: los datos y las llaves de comparación siguen en su forma original (DC-173). */
+  var SIGLAS = /^(?:(?:[A-Z]\.)+|DAF|IVC|SUID|CC|CE|TI|PEP|PPT|RUMV|SAS|SA)$/, CONECT = /^(?:de|del|la|las|los|el|y|e|en|vs\.?)$/i;
+  function titulo(s) {
+    return String(s == null ? '' : s).split(/(\s+)/).map(function (t, i) {
+      if (/[a-záéíóúñü]/.test(t) || !/[A-ZÁÉÍÓÚÑÜ]/.test(t) || SIGLAS.test(t)) return t;
+      if (i && CONECT.test(t)) return t.toLowerCase();
+      return t.toLowerCase().replace(/(^|[(\-\/])([a-záéíóúñü])/g, function (m, a, b) { return a + b.toUpperCase(); });
+    }).join('');
+  }
+
   w.GI = {
-    cat: w.GI_CAT, USER: USER,
+    cat: w.GI_CAT, USER: USER, titulo: titulo,
     util: { iso: iso, parse: parse, fmt: fmt, today: today, now: now, addDays: addDays, addMonths: addMonths, ageAt: ageAt, rangoMeses: rangoMeses },
     derive: { fechaValidacion: fechaValidacion, fechaCumplida: fechaCumplida, fechaDecision: fechaDecision, devoluciones: devoluciones, finVigencia: finVigencia, esMenor: esMenor, estadoRestriccion: estadoRestriccion, diasRestantes: diasRestantes, nombreCompleto: nombreCompleto },
     all: function () { return load().slice(); },

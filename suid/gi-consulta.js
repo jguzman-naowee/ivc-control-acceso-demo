@@ -7,26 +7,6 @@
   var MOTIVOS = ['Verificar una medida vigente antes de permitir el ingreso', 'Requerimiento de una autoridad', 'Trámite de un recurso o una solicitud de la persona', 'Auditoría interna'];
   var CASOS = [{ t: 'Ramírez', q: 'Ramírez' }, { t: '71.894.4471', q: '71.894.4471' }, { t: 'Menor', q: '1020200003' }];
   var CORTA = ['Armas u objetos peligrosos', 'Estupefacientes', 'Violencia contra la fuerza pública', 'Invasión del terreno de juego', 'No atender a logística', 'Bebidas alcohólicas', 'Agresión física', 'Agresión verbal', 'Daño a infraestructura'];
-  var ART = { fisica: ['Art. 98', 6], verbal: ['Art. 98', 7], alcohol: ['Art. 97', 5], armas: ['Art. 97', 0], drogas: ['Art. 97', 1], campo: ['Art. 97', 3], danio: ['Art. 98', 8] };
-
-  /* Personas del SVN que no están en la base del IVC de la demo, para que la consulta sea coherente con ese prototipo.
-     [id, resolución, conducta, ejecutoria, meses]; los menores van solo con iniciales. */
-  function M(id, res, c, ejec, meses) { return { id: id, acto: 'Resolución ' + res, c: c, ejec: ejec, meses: meses }; }
-  var EXTRA = [
-    { tipo: 'CC', numId: '718944471', nombre: 'Julián Andrés Posada', ciudad: 'Medellín', medidas: [M('MC-2025-0831', '0457 de 2025', 'fisica', '2025-11-30', 18), M('MC-2025-0214', '0098 de 2025', 'alcohol', '2025-03-02', 6)] },
-    { tipo: 'CC', numId: '1045223871', nombre: 'Carlos Eduardo Ramírez Soto', ciudad: 'Barranquilla', medidas: [M('MC-2026-0412', '0612 de 2026', 'fisica', '2026-04-05', 6), M('MC-2025-0377', '0301 de 2025', 'alcohol', '2025-02-10', 6)] },
-    { tipo: 'CC', numId: '43871022', nombre: 'Luz Marina Ramírez Gil', ciudad: 'Medellín', medidas: [M('MC-2026-0733', '0733 de 2026', 'alcohol', '2026-08-12', 12)] },
-    { tipo: 'CC', numId: '1143267894', nombre: 'Jhon Alexander Ramírez Mora', ciudad: 'Cali', medidas: [M('MC-2026-0188', '0211 de 2026', 'campo', '2026-01-20', 24)] },
-    { tipo: 'CC', numId: '52987431', nombre: 'Sandra Milena Ramírez Torres', ciudad: 'Bogotá D.C.', medidas: [M('MC-2025-0902', '0510 de 2025', 'verbal', '2025-09-10', 12)] },
-    { tipo: 'CC', numId: '1098765432', nombre: 'Wilmer Ramírez Peña', ciudad: 'Bucaramanga', medidas: [M('MC-2026-0540', '0388 de 2026', 'danio', '2026-05-20', 8)] },
-    { tipo: 'CC', numId: '1032456789', nombre: 'Diana Carolina Ramírez Ortega', ciudad: 'Bogotá D.C.', medidas: [M('MC-2025-1104', '0642 de 2025', 'fisica', '2025-12-01', 18), M('MC-2024-0291', '0177 de 2024', 'verbal', '2024-02-15', 6)] },
-    { tipo: 'CE', numId: '7050021', nombre: 'Fabián Ramírez Cortés', ciudad: 'Cartagena de Indias', medidas: [M('MC-2026-0661', '0455 de 2026', 'armas', '2026-07-02', 36)] },
-    { tipo: 'CC', numId: '1152230981', nombre: 'Natalia Ramírez Duque', ciudad: 'Pereira', medidas: [M('MC-2024-0119', '0093 de 2024', 'drogas', '2024-05-15', 12)] },
-    { tipo: 'CC', numId: '79456123', nombre: 'Héctor Ramírez Salgado', ciudad: 'Valledupar', medidas: [M('MC-2026-0245', '0266 de 2026', 'fisica', '2026-03-02', 7)] },
-    { tipo: 'CC', numId: '1020987654', nombre: 'Mónica Ramírez Vélez', ciudad: 'Manizales', medidas: [M('MC-2026-0150', '0172 de 2026', 'campo', '2026-02-14', 24), M('MC-2026-0498', '0359 de 2026', 'alcohol', '2026-06-01', 12)] },
-    { tipo: 'CC', numId: '88123456', nombre: 'Éver Ramírez Pinto', ciudad: 'Cúcuta', medidas: [M('MC-2025-0988', '0577 de 2025', 'verbal', '2025-11-05', 10)] },
-    { tipo: 'TI', numId: '1109876543', nombre: 'S. Ramírez R.', ciudad: 'Cali', menor: true, medidas: [M('MC-2026-0467', '0371 de 2026', 'alcohol', '2026-06-10', 6)] }
-  ];
 
   function abrev(t) { var m = /\(([^)]+)\)/.exec(t || ''); return m ? m[1] : (t || ''); }
   function dias(n) { return GI.fmtDias ? GI.fmtDias(n) : n + ' días'; }
@@ -37,26 +17,17 @@
   function miles(v) { return /^[\d.\s]*$/.test(v) ? digitos(v).replace(/\B(?=(\d{3})+(?!\d))/g, '.') : v; }
   function plural(n, a, b) { return n + ' ' + (n === 1 ? a : b); }
 
-  function medidaDe(m, e) {
-    var fin = U.addMonths(U.addDays(m.ejec, 1), +m.meses), hoy = U.today(), a = ART[m.c];
-    return { id: m.id, acto: m.acto, art: a[0], corta: CORTA[a[1]], full: C.origen[a[1]].replace(/^(\d+\.|[a-c]\)) /, ''), mas: 0, autoridad: 'Inspección de Policía de ' + e.ciudad,
-      ini: U.addDays(m.ejec, 1), fin: fin, meses: +m.meses, reg: m.ejec, estado: hoy > fin ? 'Cumplida' : 'Vigente', dias: Math.round((U.parse(fin) - U.parse(hoy)) / 86400000), href: '', enTramite: false };
-  }
-
   /* Agrupa los registros de la base por persona (tipo + número de documento). */
   function personas() {
     var map = {}, out = [];
     GI.all().forEach(function (r) {
       var key = abrev(r.tipoId) + ':' + r.numId, p = map[key];
-      if (!p) { p = map[key] = { tipo: abrev(r.tipoId), numId: r.numId, texto: GI.fmtDoc(r.tipoId, r.numId), nombre: D.nombreCompleto(r), ciudad: r.ciudad || '', menor: false, medidas: [] }; out.push(p); }
+      if (!p) { p = map[key] = { tipo: abrev(r.tipoId), numId: r.numId, texto: GI.fmtDoc(r.tipoId, r.numId), nombre: D.nombreCompleto(r), ciudad: r.ciudad || '', menor: false, nombres: r.nombres || '', apellidos: r.apellidos || '', medidas: [] }; out.push(p); }
       if (D.esMenor(r)) p.menor = true;
       var res = D.estadoRestriccion(r), fin = D.finVigencia(r), i0 = r.origen[0];
       p.medidas.push({ id: r.id, acto: r.numActo, art: (/Art\. \d+/.exec(C.origen[i0]) || [''])[0], corta: CORTA[i0] || '', full: r.origen.map(function (i) { return C.origen[i].replace(/^(\d+\.|[a-c]\) )/, ''); }).join('\n'),
-        mas: r.origen.length - 1, autoridad: 'Inspección de Policía de ' + (r.ciudadHechos || r.ciudad), ini: r.fechaEjecutoria ? U.addDays(r.fechaEjecutoria, 1) : '', fin: fin, meses: +r.meses || 0, dias: D.diasRestantes(r), href: BASE + '/' + r.id, reg: r.fechaRegistro,
+        autoridad: 'Inspección de Policía de ' + (r.ciudadHechos || r.ciudad), ini: r.fechaEjecutoria ? U.addDays(r.fechaEjecutoria, 1) : '', fin: fin, meses: +r.meses || 0, dias: D.diasRestantes(r), href: BASE + '/' + r.id, reg: r.fechaRegistro,
         estado: res === 'Activa' ? 'Vigente' : res === 'Cumplida' ? 'Cumplida' : 'En validación', enTramite: res === 'Inactiva' });
-    });
-    EXTRA.forEach(function (e) {
-      out.push({ tipo: e.tipo, numId: e.numId, texto: GI.fmtDoc(e.tipo, e.numId), nombre: e.nombre, ciudad: e.ciudad, menor: !!e.menor, medidas: e.medidas.map(function (m) { return medidaDe(m, e); }) });
     });
     out.forEach(function (p) { p.res = resumen(p); });
     return out;
@@ -84,6 +55,9 @@
   function tag(t) { return '<span class="naowee-badge naowee-badge--neutral naowee-badge--quiet">' + esc(t) + '</span>'; }
   function vigencia(r) { return r.estado === 'Vigente' ? dias(r.dias) : r.estado === 'Cumplida' ? 'Terminó el ' + U.fmt(r.fin) : 'Aún sin efecto'; }
   function enmascarar(p) { return p.tipo + ' ••••' + String(p.numId).slice(-4); }
+  function cerrado(p) { return p.menor && !st.abiertos[keyOf(p)]; }
+  /* Título de tarjeta en dos líneas fijas: apellidos arriba, nombres abajo. */
+  function lineas(p) { var c = cerrado(p); return '<span>' + esc(c ? 'Persona' : p.apellidos) + '</span><span>' + esc(c ? 'menor de edad' : p.nombres) + '</span>'; }
   function quien(p) { return p.menor && !st.abiertos[keyOf(p)] ? 'Persona menor de edad' : p.nombre; }
 
   /* Filtros de apoyo bajo el buscador: acotan Recientes y la búsqueda por nombre; un documento completo los ignora. */
@@ -106,33 +80,32 @@
 
   /* Modelo del expediente (caso medida): lo que el componente compacto pinta; el menor sin abrir llega reservado. */
   function modeloMedida(p, bloq) {
-    var r = p.res, mm = r.m, key = keyOf(p), ab = st.abiertos[key], reg = mm.href ? GI.get(mm.id) : null, vig = r.estado === 'Vigente', cum = r.estado === 'Cumplida', pct = null;
+    var r = p.res, mm = r.m, key = keyOf(p), ab = st.abiertos[key], reg = GI.get(mm.id), vig = r.estado === 'Vigente', cum = r.estado === 'Cumplida', pct = null;
     if (vig && mm.ini && mm.fin) { var tot = (U.parse(mm.fin) - U.parse(mm.ini)) / 86400000; pct = tot > 0 ? Math.max(0, Math.min(100, Math.round(100 - mm.dias * 100 / tot))) : 100; }
-    var ev = reg && reg.local ? esc(reg.local + ' vs. ' + reg.visitante) : '';
+    var ev = reg && reg.local ? esc(GI.titulo(reg.local + ' vs. ' + reg.visitante)) : '';
     var m = { caso: 'medida', id: mm.id, nombre: quien(p), menor: p.menor, reservado: bloq, doc: p.tipo + ' ' + p.texto, docDigitos: String(p.numId),
       sub: p.tipo + ' ' + p.texto + (p.ciudad && !bloq ? ' · ' + p.ciudad : '') + (bloq ? '' : ' · ' + plural(p.medidas.length, 'medida', 'medidas')), badges: bloq ? [{ t: 'Menor de edad', tono: 'neu' }] : [], /* abierto: el componente ya rotula al menor */
       estado: { tono: vig ? 'neg' : cum ? 'ok' : 'cau', titulo: vig ? 'Vigente · bloquea en todo el país' : r.estado, progreso: vig && !bloq ? pct : undefined, desde: vig && !bloq && mm.ini ? 'Desde ' + U.fmt(mm.ini) + (mm.meses ? ' · ' + mm.meses + ' meses' : '') : undefined,
         lineas: bloq ? [] : [vig ? 'Hasta el <b>' + U.fmt(r.fin) + '</b> · <b>' + esc(dias(r.dias).toLowerCase()) + '</b>' : cum ? 'Terminó el <b>' + U.fmt(r.fin) + '</b>' : '<b>Aún sin efecto</b>'] },
-      resumenTitulo: '', resumen: [], movimientos: [], mas: [], acciones: '' };
+      resumenTitulo: '', resumen: [], movimientos: [], acciones: '' };
     if (bloq) {
       m.acciones = '<button type="button" class="naowee-btn naowee-btn--loud" data-open>Abrir con motivo</button>';
       m.aviso = { tono: 'warn', html: '<strong>Menor de edad · reserva reforzada.</strong> El nombre y el detalle de la medida solo se abren con un motivo, y la apertura queda auditada.' };
       return m;
     }
-    m.resumen = [{ k: 'Conducta', v: tag(mm.art || '—') + ' ' + esc(mm.corta || 'Sin conducta registrada') }, { k: 'Acto', v: esc(mm.acto || '—') },
-      ev ? { k: 'Evento', v: ev } : { k: 'Autoridad', v: esc(mm.autoridad) }, { k: 'Sanción', v: mm.meses ? mm.meses + ' meses' : '—' }];
+    m.resumen = [{ k: 'Conducta', v: tag(mm.art || '—') + ' ' + esc(mm.corta || 'Sin conducta registrada') }, { k: 'Acto', v: esc(mm.acto || '—') }]
+      .concat(ev ? [{ k: 'Evento', v: ev }, { k: 'Fecha', v: U.fmt(reg.fechaHechos) }].concat(reg.ciudadHechos ? [{ k: 'Lugar', v: esc(GI.titulo(reg.ciudadHechos)) }] : []) : [{ k: 'Autoridad', v: esc(mm.autoridad) }], [{ k: 'Tiempo', v: mm.meses ? mm.meses + ' meses' : '—' }]);
     if (reg) m.movimientos = (reg.historial || []).slice().reverse().map(function (x) {
       return { t: x.de === x.a ? x.a : (x.de ? x.de + ' → ' : '') + x.a, por: x.usuario || 'Sistema', nota: x.nota || '', fecha: U.fmt(x.fecha) + ' ' + x.hora };
     });
     m.persona = { t: 'Persona', kv: [{ k: 'Documento', v: esc(m.doc) }, { k: 'Ciudad', v: esc(p.ciudad || '—') }] };
     m.secciones = [{ t: 'Medida ' + mm.id, kv: m.resumen }];
-    m.acciones = '<a class="naowee-btn naowee-btn--loud" href="' + (hrefExpediente(p) || BASE.replace('infractores', 'consulta') + '/' + encodeURIComponent(key)) + '">Ampliar expediente</a>';
+    m.acciones = '<a class="naowee-btn naowee-btn--loud" href="' + mm.href + '">Ampliar expediente</a>';
     if (p.menor && ab) m.aviso = { tono: 'warn', html: '<strong>Menor de edad · datos abiertos con motivo.</strong> Apertura auditada · ' + esc(ab.motivo) + ' · ' + esc(SUID.user.name) + ' · ' + U.fmt(U.now().fecha) + ' ' + U.now().hora };
     return m;
   }
 
   /* Expediente de la persona en el panel derecho (DC-060): sobre la lista y el buscador, que no se reemplazan. Cerrar = la X del panel. */
-  function hrefExpediente(p) { var m = p.res.m && p.res.m.href ? p.res.m : p.medidas.filter(function (x) { return x.href; })[0]; return m ? m.href : ''; }
   function esqueleto() {
     function b(w2, h) { return '<span class="sk-b" style="display:block;width:' + w2 + ';height:' + h + 'px;margin-top:12px"></span>'; }
     return '<div class="sk" role="status" aria-live="polite"><span class="sk-sr">Consultando…</span>' + b('64%', 20) + b('100%', 80) + b('100%', 120) + b('100%', 120) + '</div>';
@@ -184,7 +157,7 @@
       todos.slice(ini, ini + PAG_REC).map(function (p) {
         var r = p.res, ag = agregada(p);
         return '<article class="gc-persona" tabindex="0" data-id="' + esc(keyOf(p)) + '" data-k="sel"><div class="gc-persona__foto">' + w.GIBio.foto(p.numId, { menor: p.menor, sin: r.estado === 'En validación' || !p.menor && +String(p.numId).slice(-1) % 4 === 0 }) + '</div>' + estadoBadge(r.estado) +
-          '<strong>' + esc(quien(p)) + '</strong><small>' + docPersona(p) + '</small>' +
+          '<strong' + (cerrado(p) ? '' : ' title="' + esc(p.nombre) + '"') + '>' + lineas(p) + '</strong><small>' + docPersona(p) + '</small>' +
           '<span class="gc-persona__add">' + (ag ? 'Agregado el ' + U.fmt(ag) : 'Sin fecha de registro') + '</span></article>';
       }).join('') + '</div><nav data-pag></nav></section>';
   }
@@ -194,16 +167,13 @@
     return '<div class="gc-empty' + (cls ? ' ' + cls : '') + '"' + (cls ? ' role="alert"' : '') + '><strong>' + titulo + '</strong>' + texto + (extra || '') + '</div>';
   }
 
-  /* Persona sin registro en Gestión: «Ampliar expediente» abre aquí su vista interna. */
-  function interno(view, ctx, key) {
-    var p = personas().filter(function (x) { return keyOf(x) === key; })[0], L = BASE.replace('infractores', 'consulta');
-    if (!p) { location.hash = L; return; }
-    ctx.crumbs = [{ label: 'Inicio', href: '#/' }, { label: 'Control de acceso' }, { label: 'Búsqueda', href: L }, { label: quien(p) }];
-    view.innerHTML = '<div class="page-inner gi-page"><a class="gi-back" href="' + L + '">' + UI.svg('back') + ' Volver</a>' +
-      '<header class="gi-head"><div class="page-title-block"><h1 class="page-title">' + esc(quien(p)) + '</h1><p class="page-subtitle">' + docPersona(p) + '</p></div></header>' +
-      GI.expediente.interno(modeloMedida(p, p.menor && !st.abiertos[key])) + '</div>';
-  }
-  SUID.views['control-acceso/consulta'] = function (view, ctx) { return ctx.rest && ctx.rest[0] ? interno(view, ctx, decodeURIComponent(ctx.rest[0])) : open(view, ctx); };
+  /* El expediente vive solo en Gestión: una ruta con parámetro lleva a la ficha de esa persona o, si no existe, a la bandeja. */
+  SUID.views['control-acceso/consulta'] = function (view, ctx) {
+    var a = ctx.rest && ctx.rest[0];
+    if (!a) return open(view, ctx);
+    var k = decodeURIComponent(a), p = personas().filter(function (x) { return keyOf(x) === k; })[0];
+    location.hash = p ? p.res.m.href : GI.get(k) ? BASE + '/' + k : BASE.replace('infractores', 'consulta');
+  };
   var RESET = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 4 3 9 8 9"/></svg>';
   function opts(arr, todas) { return [{ v: '', n: todas, av: '', tag: '' }].concat(arr.map(function (x) { return { v: x, n: x, av: '', tag: '' }; })); }
   function open(view, ctx) {
