@@ -92,13 +92,14 @@
         lec: dc > 0 ? 'Sube ' + dc + ' puntos: puede pedir una campaña con los clubes.' : dc < 0 ? 'Baja ' + Math.abs(dc) + ' puntos frente al periodo anterior.' : 'Se mantiene igual que antes.' });
     }
     /* Dato + descripción corta a la vista; la explicación larga va en el tooltip del ⓘ (DC-259). */
-    return '<article class="gi-panel gi-panel--ins" aria-labelledby="giInsT"><header class="gi-panel__head"><h2 class="gi-panel__title" id="giInsT">Insights</h2>' +
-      '<p class="gi-panel__sub">Calculados con los registros de hoy.</p></header><ul class="gi-insights">' +
+    return '<article class="gi-panel gi-panel--ins" aria-labelledby="giInsT"><header class="gi-panel__head"><h2 class="gi-panel__title" id="giInsT">Indicadores al día de hoy</h2></header><ul class="gi-insights">' +
       L.map(function (x, i) {
-        return '<li class="gi-insight gi-insight--' + x.tono + '"><div class="gi-insight__fig"><strong>' + x.cifra + '</strong><span>' + esc(x.sub) + '</span></div>' +
-          '<span class="gi-insight__tag"><i aria-hidden="true">' + x.tag[0] + '</i>' + esc(x.tag[1]) + '</span>' +
-          '<h3 class="gi-insight__t">' + esc(x.corta) + '</h3>' +
-          '<button type="button" class="gt-info" aria-label="Qué significa: ' + esc(x.t) + '" aria-describedby="gtIns' + i + '" aria-expanded="false">' + INFO_ICO + '</button>' +
+        /* Etiqueta → cifra → estado, cada uno en su renglón: el badge ya no compite con el label por el ancho. */
+        var sub = x.sub.trim();
+        return '<li class="gi-insight"><div class="gi-insight__head"><h3 class="gi-insight__t">' + esc(x.corta) + '</h3>' +
+          '<button type="button" class="gt-info" aria-label="Qué significa: ' + esc(x.t) + '" aria-describedby="gtIns' + i + '" aria-expanded="false">' + INFO_ICO + '</button></div>' +
+          '<div class="gi-insight__row"><p class="gi-insight__fig"><strong>' + x.cifra + '</strong>' + (sub ? '<span>' + esc(sub) + '</span>' : '') + '</p>' +
+          '<p class="gi-insight__st"><span class="naowee-badge naowee-badge--' + x.tono + ' naowee-badge--quiet"><i aria-hidden="true">' + x.tag[0] + '</i>' + esc(x.tag[1]) + '</span></p></div>' +
           '<div class="gt-tip" role="tooltip" id="gtIns' + i + '" hidden><strong>' + esc(x.t) + '</strong><p>' + esc(x.ctx) + '</p><p>' + esc(x.lec) + '</p></div></li>';
       }).join('') + '</ul></article>';
   }
@@ -148,7 +149,7 @@
       : '<polygon class="' + cls + '" points="' + cx + ',' + (cy - r - 1) + ' ' + (cx + r + 1) + ',' + cy + ' ' + cx + ',' + (cy + r + 1) + ' ' + (cx - r - 1) + ',' + cy + '"/>';
   }
   function legSw(sh, cls, dash) {
-    return '<svg class="gt-legsw" width="34" height="14" viewBox="0 0 34 14" aria-hidden="true"><line class="' + cls + '" x1="1" y1="7" x2="33" y2="7"' + (dash ? ' stroke-dasharray="6 4"' : '') + '/>' + mk(sh, 17, 7, 4, 'gt-mk ' + cls) + '</svg>';
+    return '<svg class="gt-legsw" width="28" height="14" viewBox="0 0 28 14" aria-hidden="true"><line class="' + cls + '" x1="1" y1="7" x2="27" y2="7"' + (dash ? ' stroke-dasharray="6 4"' : '') + '/>' + mk(sh, 14, 7, 4, 'gt-mk ' + cls) + '</svg>';
   }
 
   function netoHtml(neto, n, nu, sa) {
@@ -161,12 +162,11 @@
     var neto = nu - sa, paso = mx <= 4 ? 1 : mx <= 8 ? 2 : 5, top = Math.ceil(mx / paso) * paso || paso;
     var resumen = 'Infractores mes a mes, de ' + MES[S[0].mes] + ' ' + S[0].anio + ' a ' + MES[S[n - 1].mes] + ' ' + S[n - 1].anio + ' (' + n + ' meses): ' + nu + ' nuevos con medida vigente y ' + sa + ' salidas por cumplimiento; neto ' + signo(neto) + '.';
     chartS = { neto: neto, nu: nu, sa: sa, n: n, S: S, top: top, paso: paso, resumen: resumen };
-    return '<figure class="gi-panel gi-chart gt-chart"><header class="gi-panel__head gi-chart__head"><div><h2 class="gi-panel__title" id="giChT">Infractores mes a mes</h2>' +
-      '<p class="gi-panel__sub">Entran con medida vigente y salen al cumplirla.</p></div>' +
+    return '<figure class="gi-panel gi-chart gt-chart"><header class="gi-panel__head gi-chart__head"><h2 class="gi-panel__title" id="giChT">Infractores mes a mes</h2>' +
       '<div class="gi-seg" role="group" aria-label="Periodo de la gráfica">' + [6, 12].map(function (k) { return '<button type="button" class="gi-seg__b" data-n="' + k + '" aria-pressed="' + (k === n) + '">' + k + ' meses</button>'; }).join('') + '</div></header>' +
       '<div class="gt-plotwrap" tabindex="0" role="group" aria-label="Gráfica de líneas por mes. Con las flechas izquierda y derecha ves el dato de cada mes."><div class="gt-plot"></div></div>' +
-      /* Leyenda y neto comparten la franja inferior de la tarjeta (DC-281). */
-      '<div class="gt-foot"><ul class="gi-legend gt-legend"><li>' + legSw('c', 'gt-s-in') + 'Nuevos</li><li>' + legSw('d', 'gt-s-out', 1) + 'Salen por cumplimiento</li></ul>' +
+      /* DC-007: leyenda y neto, en una sola fila. Clase propia: `.gt-foot` es el pie de la tabla (gi-tabla.css). */
+      '<div class="gi-chart__foot"><ul class="gi-legend gt-legend"><li>' + legSw('c', 'gt-s-in') + 'Nuevos</li><li>' + legSw('d', 'gt-s-out', 1) + 'Salen por cumplimiento</li></ul>' +
       '<div class="gi-chart__neto" role="status" aria-live="polite">' + (silent ? '' : netoHtml(neto, n, nu, sa)) + '</div></div>' +
       '<div class="sr-only"><table><caption>Infractores mes a mes: nuevos con medida vigente y salidas por cumplimiento</caption><thead><tr><th scope="col">Mes</th><th scope="col">Nuevos</th><th scope="col">Salen por cumplimiento</th><th scope="col">Neto</th></tr></thead><tbody>' +
       S.map(function (m) { return '<tr><th scope="row">' + MES[m.mes] + ' ' + m.anio + '</th><td>' + m.nuevos + '</td><td>' + m.salen + '</td><td>' + signo(m.nuevos - m.salen) + '</td></tr>'; }).join('') +
@@ -176,8 +176,10 @@
   function drawChart(cc) {
     var plot = cc.querySelector('.gt-plot'), wrap = cc.querySelector('.gt-plotwrap'), C0 = chartS;
     if (!plot || !C0) return;
-    var W = Math.floor(plot.clientWidth), H = w.innerWidth > 1180 ? 218 : 230;
+    var W = Math.floor(plot.clientWidth), H = 230;
     if (W < 120) return;
+    /* En escritorio la tarjeta tiene alto fijo: la gráfica ocupa lo que queda entre el encabezado y el pie. */
+    if (w.innerWidth > 1180) { plot.innerHTML = ''; H = Math.max(200, Math.min(320, Math.floor(wrap.clientHeight))); }
     var S = C0.S, n = C0.n, top = C0.top, pl = 34, pr = 14, pt = 14, pb = 30, iw = W - pl - pr, ih = H - pt - pb, step = iw / n;
     function X(i) { return pl + (i + .5) * step; }
     function Y(v) { return pt + ih - v / top * ih; }
@@ -186,14 +188,23 @@
     var xl = S.map(function (m, i) {
       return '<text class="gt-xtxt" x="' + X(i) + '" y="' + (H - pb + 20) + '" text-anchor="middle">' + MES[m.mes] + '</text>';
     }).join('');
+    /* Curva monótona: suaviza sin pasarse de los valores (nunca baja de 0 ni sube del máximo entre puntos). */
+    function curva(k) {
+      var P = S.map(function (m, i) { return [X(i), Y(m[k])]; }), dl = [], t = [], d0 = '';
+      for (var i = 0; i < P.length - 1; i++) dl.push((P[i + 1][1] - P[i][1]) / step);
+      for (i = 0; i < P.length; i++) t.push(i === 0 ? dl[0] : i === P.length - 1 ? dl[i - 1] : dl[i - 1] * dl[i] <= 0 ? 0 : 2 * dl[i - 1] * dl[i] / (dl[i - 1] + dl[i]));
+      d0 = 'M' + P[0][0].toFixed(1) + ',' + P[0][1].toFixed(1);
+      for (i = 0; i < P.length - 1; i++) d0 += ' C' + (P[i][0] + step / 3).toFixed(1) + ',' + (P[i][1] + t[i] * step / 3).toFixed(1) + ' ' + (P[i + 1][0] - step / 3).toFixed(1) + ',' + (P[i + 1][1] - t[i + 1] * step / 3).toFixed(1) + ' ' + P[i + 1][0].toFixed(1) + ',' + P[i + 1][1].toFixed(1);
+      return d0;
+    }
     function pts(k) { return S.map(function (m, i) { return X(i).toFixed(1) + ',' + Y(m[k]).toFixed(1); }).join(' '); }
     var pin = S.map(function (m, i) { return mk('c', X(i).toFixed(1), Y(m.nuevos).toFixed(1), 4.5, 'gt-mk gt-s-in'); }).join('');
     var pout = S.map(function (m, i) { return mk('d', X(i).toFixed(1), Y(m.salen).toFixed(1), 4.5, 'gt-mk gt-s-out'); }).join('');
     var hit = S.map(function (m, i) { return '<rect class="gt-hit" x="' + (pl + i * step).toFixed(1) + '" y="0" width="' + step.toFixed(1) + '" height="' + (H - pb) + '" fill="transparent"/>'; }).join('');
     plot.innerHTML = '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(C0.resumen) + '">' +
       g + y + xl + '<line class="gt-guide" y1="' + pt + '" y2="' + (H - pb) + '" hidden/>' +
-      '<polyline class="gt-line gt-s-out" stroke-dasharray="7 5" fill="none" points="' + pts('salen') + '"/>' +
-      '<polyline class="gt-line gt-s-in" fill="none" points="' + pts('nuevos') + '"/>' + pout + pin +
+      '<path class="gt-line gt-s-out" stroke-dasharray="7 5" fill="none" d="' + curva('salen') + '"/>' +
+      '<path class="gt-line gt-s-in" fill="none" d="' + curva('nuevos') + '"/>' + pout + pin +
       '<g class="gt-ring" hidden><circle class="gt-ring-in" r="8"/><circle class="gt-ring-out" r="8"/></g>' + hit + '</svg>' +
       '<div class="gt-tipc" role="status" aria-live="polite" hidden></div>';
     var guide = plot.querySelector('.gt-guide'), ring = plot.querySelector('.gt-ring'), tip = plot.querySelector('.gt-tipc'), act = -1;
@@ -234,9 +245,9 @@
   }
 
   /* Conducta: artículo en tag + descripción corta en una sola línea; el texto completo va en title (DC-254). */
-  var CORTA = ['Ingreso o posesión de armas u objetos peligrosos', 'Ingreso o posesión de estupefacientes', 'Violencia contra la fuerza pública', 'Invasión del terreno de juego', 'No atender las recomendaciones de logística', 'Ingreso o consumo de bebidas alcohólicas', 'Agresión física', 'Agresión verbal', 'Daño a infraestructura', 'Derecho de admisión'];
+  var CORTA = GI.expediente.CORTA, artDe = GI.expediente.artDe;
   function conductaHtml(r) {
-    var art = function (i) { return (/Art\. (\d+)/.exec(C.origen[i]) || [0, 'Admisión'])[0]; };
+    var art = artDe;
     var full = r.origen.map(function (i) { return C.origen[i].replace(/^(\d+\.|[a-d]\)) /, ''); }).join('\n');
     var i0 = r.origen[0], mas = r.origen.length - 1;
     return '<span class="gt-cond" title="' + esc(full) + '"><span class="naowee-badge naowee-badge--neutral naowee-badge--quiet gt-cond__tag">' + esc(art(i0)) + '</span>' +
@@ -246,7 +257,7 @@
   /* DC-296: los filtros usan el selector gráfico de Solicitudes (GI.selectGrafico) con punto de color y conteo. */
   var TONO = { Recibido: 'informative', Validado: 'positive', 'Por Subsanar': 'caution', Activa: 'negative', Cumplida: 'positive' };
   function filtrosHtml() {
-    return '<div class="gs-pick gi-fsel gi-fsel--reg" id="giRegH"></div><div class="gs-pick gi-fsel gi-fsel--res" id="giResH"></div>';
+    return '<div id="giRegH"></div><div id="giResH"></div>';
   }
   function filtrosInit(onReg, onRes) {
     var all = GI.all(), cr = {}, cs = {};
@@ -256,54 +267,91 @@
       var n = function (k) { return '<span class="gi-fsel__n">' + k + '</span>'; };
       return [{ v: '', n: todos, av: '', tag: n(all.length) }].concat(list.map(function (e) { return { v: e, n: e, av: dot(e), tag: n(c[e] || 0) }; }));
     }
-    GI.selectGrafico({ host: d.getElementById('giRegH'), id: 'giReg', label: 'Estado del registro', value: filt.reg, onPick: onReg, items: items(ESTADOS_REG, cr, 'Todos') });
-    GI.selectGrafico({ host: d.getElementById('giResH'), id: 'giRes', label: 'Estado de la restricción', value: filt.res, onPick: onRes, items: items(['Activa', 'Inactiva', 'Cumplida'], cs, 'Todas') });
+    GI.selectGrafico({ host: d.getElementById('giRegH'), id: 'giReg', label: 'Estado del registro', prefijo: 'Registro', value: filt.reg, onPick: onReg, items: items(ESTADOS_REG, cr, 'Todos') });
+    GI.selectGrafico({ host: d.getElementById('giResH'), id: 'giRes', label: 'Estado de la restricción', prefijo: 'Restricción', value: filt.res, onPick: onRes, items: items(['Activa', 'Inactiva', 'Cumplida'], cs, 'Todas') });
   }
 
   function viewList(view, ctx) {
     ctx.crumbs = [{ label: 'Inicio', href: '#/' }, { label: 'Control de acceso' }, { label: 'Gestión' }];
     var all = GI.all();
-
-    view.innerHTML = '<div class="page-inner gi-page">' +
-      '<header class="gi-head"><div class="page-title-block"><h1 class="page-title">Gestión de infractores</h1>' +
-      '<p class="page-subtitle">Registra, valida y consulta las sanciones en firme de la Ley 1453 de 2011.</p></div>' +
-      '<div class="gi-head__actions"><a class="naowee-btn naowee-btn--mute" href="' + BASE + '/carga-masiva">' + svg('upload') + ' Carga masiva</a>' +
-      '<a class="naowee-btn naowee-btn--loud" href="' + BASE + '/nuevo">' + svg('plus') + ' Registrar infractor</a></div></header>' +
-      '<section class="gi-panel-row" aria-label="Panorama de infractores">' + insightsHtml() + '<div id="giChartCard">' + chartHtml() + '</div></section>' +
-      '<section class="naowee-table-card"><div class="gi-tbar"><div class="gi-tbar__title"><h2 class="naowee-table-card__title">Registros de infractores</h2><p class="naowee-table-card__subtitle" id="giSub"></p></div>' +
-        '<div class="gi-search">' + svg('search') + '<input type="text" id="giQ" aria-label="Buscar por documento, nombre o acto" title="Buscar por documento, nombre o acto" placeholder="Buscar" value="' + esc(filt.q) + '"></div>' +
-        filtrosHtml() + '</div>' +
-        '<div class="gi-table-wrap"><table class="gi-table"><thead><tr><th>Registro</th><th>Infractor</th><th>Origen de la obligación</th><th>Acto administrativo</th><th>Fin de vigencia</th><th>Registro</th><th>Restricción</th><th></th></tr></thead><tbody id="giBody"></tbody></table></div>' +
-        '<div class="gi-foot" id="giFoot"></div></section></div>';
-
-    function paint() {
+    function filtrar() {
       var q = filt.q.trim().toLowerCase();
-      var rows = all.filter(function (r) {
+      return all.filter(function (r) {
         if (filt.reg && r.estadoRegistro !== filt.reg) return false;
         if (filt.res && D.estadoRestriccion(r) !== filt.res) return false;
         if (!q) return true;
         var h = [r.numId, D.nombreCompleto(r), r.numActo, r.id].join(' ').toLowerCase();
         return h.indexOf(q) >= 0 || h.indexOf(q.replace(/\./g, '')) >= 0; /* acepta el documento con puntos */
       });
-      d.getElementById('giSub').textContent = rows.length + ' de ' + all.length + ' registros';
-      d.getElementById('giFoot').innerHTML = 'Mostrando ' + rows.length + ' de ' + all.length + ' <button type="button" class="gi-reset" id="giReset">Restablecer datos de la demo</button>';
-      d.getElementById('giReset').addEventListener('click', function () { GI.reset(); toast('Datos de la demo restablecidos.'); SUID.render(); });
-      d.getElementById('giBody').innerHTML = rows.length ? rows.map(function (r) {
+    }
+
+    /* Segunda tabla: expedientes de solicitudes; la fila abre su vista interna en Solicitudes. */
+    function solHtml() {
+      var ls = w.GS && w.GS.lista ? w.GS.lista() : [];
+      return '<div id="giPanS" role="tabpanel" aria-labelledby="giTabS" hidden>' + '<section class="gt-card" aria-label="Expedientes por tramitar"><div class="gt-wrap"><table class="gt-table"><thead><tr><th>Radicado</th><th>Origen</th><th>Persona</th><th>Estado</th><th>Medida</th><th></th></tr></thead><tbody id="giBodyS">' +
+        ls.map(function (x) {
+          return '<tr tabindex="0" data-id="' + esc(x.id) + '"><td><span class="gi-mono">' + esc(x.id) + '</span><small>' + esc(x.fecha) + '</small></td><td>' + esc(x.origen) + '</td>' +
+            '<td><strong>' + esc(x.nombre) + '</strong>' + (x.menor ? ' <span class="naowee-badge naowee-badge--neutral naowee-badge--quiet naowee-badge--small">Menor</span>' : '') + '<small>' + esc(x.menor ? '' : x.doc) + '</small></td>' +
+            '<td>' + esc(x.estado) + '</td><td>' + esc(x.medida || '—') + '</td><td class="gt-actions">' + (x.estado === 'En trámite' ? '<button type="button" class="naowee-btn naowee-btn--loud naowee-btn--small" data-tramitar="' + esc(x.id) + '" aria-label="Tramitar ' + esc(x.id) + '">Tramitar</button>' : '') + '</td></tr>';
+        }).join('') + '</tbody></table></div></section></div>';
+    }
+
+    view.innerHTML = '<div class="page-inner gi-page">' +
+      '<header class="gi-head"><div class="page-title-block"><h1 class="page-title">Gestión de infractores</h1>' +
+      '<p class="page-subtitle">Registra, valida y consulta las sanciones en firme de la Ley 1453 de 2011.</p></div>' +
+      '<div class="gi-head__actions"><a class="naowee-btn naowee-btn--loud" href="' + BASE + '/nuevo">' + svg('plus') + ' Registrar infractores</a></div></header>' +
+      '<section class="gi-panel-row" aria-label="Panorama de infractores">' + insightsHtml() + '<div id="giChartCard">' + chartHtml() + '</div></section>' +
+      '<div class="gi-tabs" role="tablist" aria-label="Vista de la gestión"><button type="button" role="tab" class="gi-tab" id="giTabR" aria-selected="true" aria-controls="giPanR" data-tab="reg">Registros de infractores <span class="gt-count" id="giTabRN">' + filtrar().length + '</span></button>' +
+      '<button type="button" role="tab" class="gi-tab" id="giTabS" aria-selected="false" aria-controls="giPanS" tabindex="-1" data-tab="sol">Expedientes por tramitar <span class="gt-count" id="giTabSN">' + (w.GS && w.GS.lista ? w.GS.lista().length : 0) + '</span></button></div>' +
+      '<div id="giPanR" role="tabpanel" aria-labelledby="giTabR">' +
+      '<section class="gt-card" id="giCard" aria-label="Registros de infractores">' +
+        '<div class="gt-toolbar"><div class="gt-search">' + svg('search') + '<input type="text" id="giQ" aria-label="Buscar por documento, nombre o acto" title="Buscar por documento, nombre o acto" placeholder="Buscar" value="' + esc(filt.q) + '"></div>' +
+        filtrosHtml() + '</div>' +
+        '<div class="gt-wrap"><table class="gt-table gi-reg"><thead><tr><th>Registro</th><th>Infractor</th><th>Origen de la obligación</th><th>Acto administrativo</th><th>Fin de vigencia</th><th>Registro</th><th>Restricción</th><th></th></tr></thead><tbody id="giBody"></tbody></table></div>' +
+        '<nav id="giPag"></nav></section></div>' + solHtml() + '</div>';
+
+    /* En una solicitud en trámite, Tramitar abre el alta con sus datos precargados. */
+    d.getElementById('giBodyS').addEventListener('click', function (e) {
+      var b = e.target.closest('[data-tramitar]'); if (!b) return; e.stopPropagation();
+      var x = ((w.GS && w.GS.lista()) || []).filter(function (r) { return r.id === b.getAttribute('data-tramitar'); })[0], m = x && /^(\S+)\s+(.*)$/.exec(x.doc || '');
+      try { sessionStorage.setItem('suid.gi.prefill', JSON.stringify({ doc: m && !x.menor ? m[2] : '', tipo: m ? m[1] : '', solicitud: x.id })); } catch (er) { /* sin almacenamiento: el alta abre vacía */ }
+      location.hash = BASE + '/nuevo';
+    }, true);
+
+    /* Los filtros repintan toda la vista (pag vuelve a 1); la búsqueda lo hace en su handler. */
+    var pag = 1;
+    function paint() {
+      var rows = filtrar(), T = GI.TABLA_PAG;
+      var tn = d.getElementById('giTabRN'); if (tn) tn.textContent = rows.length;
+      pag = GI.pager(d.getElementById('giPag'), { total: rows.length, page: pag, size: T, label: 'Paginación de registros', onPage: function (p) { pag = p; paint(); } });
+      d.getElementById('giBody').innerHTML = rows.length ? rows.slice((pag - 1) * T, pag * T).map(function (r) {
         var menor = D.esMenor(r);
         var dias = D.diasRestantes(r);
         var res = D.estadoRestriccion(r);
-        return '<tr data-id="' + r.id + '"><td><span class="gi-mono">' + r.id + '</span><small>' + U.fmt(r.fechaRegistro) + '</small></td>' +
+        return '<tr tabindex="0" data-id="' + r.id + '"><td><span class="gi-mono">' + r.id + '</span><small>' + U.fmt(r.fechaRegistro) + '</small></td>' +
           '<td><strong>' + esc(D.nombreCompleto(r)) + '</strong>' + (menor ? ' <span class="naowee-badge naowee-badge--neutral naowee-badge--quiet naowee-badge--small">Menor</span>' : '') +
           '<small>' + esc(r.tipoId.replace(/^.*\(|\)$/g, '')) + ' ' + esc(GI.fmtDoc(r.tipoId, r.numId)) + '</small></td>' +
           '<td>' + conductaHtml(r) + '</td>' +
           '<td>' + esc(r.numActo) + '<small>Ejecutoria ' + U.fmt(r.fechaEjecutoria) + '</small></td>' +
           '<td>' + U.fmt(D.finVigencia(r)) + ((res === 'Activa' || res === 'Cumplida') && dias != null ? '<small>' + GI.fmtDias(dias) + '</small>' : '') + '</td>' +
           '<td>' + badgeReg(r.estadoRegistro) + '</td><td>' + badgeRes(res) + '</td>' +
-          '<td class="gi-actions"><a class="naowee-btn naowee-btn--quiet naowee-btn--small" href="' + BASE + '/' + r.id + '">Ver ficha</a></td></tr>';
-      }).join('') : '<tr><td colspan="8" class="gi-empty">Ningún registro coincide con los filtros.</td></tr>';
+          '<td class="gt-actions"><button type="button" class="naowee-btn naowee-btn--quiet naowee-btn--small" data-abrir aria-label="Ver expediente de ' + esc(D.nombreCompleto(r)) + ', ' + r.id + '">Ver expediente</button></td></tr>';
+      }).join('') : '<tr><td colspan="8" class="gt-empty">Ningún registro coincide con los filtros.</td></tr>';
+      /* Si el registro abierto salió del resultado al filtrar, el panel se cierra; si no, su fila sigue marcada. */
+      var abierto = GI.panel.id();
+      if (abierto && !rows.some(function (r) { return r.id === abierto; })) GI.panel.cerrar('api'); else GI.panel.sincronizar();
     }
     paint();
-    d.getElementById('giQ').addEventListener('input', function (e) { filt.q = e.target.value; paint(); });
+    GI.filasClicables(d.getElementById('giBodyS'), function (id) { location.hash = '#/control-acceso/solicitudes/' + encodeURIComponent(id); });
+    [].forEach.call(view.querySelectorAll('.gi-tab'), function (t) {
+      t.addEventListener('click', function () {
+        var sol = t.getAttribute('data-tab') === 'sol';
+        d.getElementById('giPanR').hidden = sol; d.getElementById('giPanS').hidden = !sol;
+        [].forEach.call(view.querySelectorAll('.gi-tab'), function (o) { o.setAttribute('aria-selected', o === t ? 'true' : 'false'); o.tabIndex = o === t ? 0 : -1; });
+        if (sol) GI.panel.cerrar('api');
+      });
+    });
+    d.getElementById('giQ').addEventListener('input', function (e) { filt.q = e.target.value; pag = 1; paint(); });
     filtrosInit(function (v) { filt.reg = v; viewList(view, ctx); d.getElementById('giReg').focus(); },
       function (v) { filt.res = v; viewList(view, ctx); d.getElementById('giRes').focus(); });
     var cc = d.getElementById('giChartCard');
@@ -316,7 +364,18 @@
       var f = cc.querySelector('[data-n="' + chartN + '"]'); if (f) f.focus();
     });
     initChart(cc); initTips(view);
-    d.getElementById('giBody').addEventListener('click', function (e) { var tr = e.target.closest('tr[data-id]'); if (tr && !e.target.closest('a')) location.hash = BASE.slice(1) + '/' + tr.getAttribute('data-id'); });
+    var tb = d.getElementById('giBody');
+    GI.filasClicables(tb, abrirPanel);
+    /* filasClicables ignora los botones: el de «Ver expediente» de cada fila abre el mismo panel. */
+    tb.addEventListener('click', function (e) { var b = e.target.closest('[data-abrir]'); if (b) abrirPanel(b.closest('tr').getAttribute('data-id'), b); });
+  }
+
+  /* ───────── panel derecho de la bandeja ───────── */
+  /* El mismo expediente que Búsqueda y Solicitudes, en su versión compacta; «Ver expediente» abre la ficha. */
+  function abrirPanel(id, origen) {
+    var r = GI.get(id), X = GI.expediente; if (!r) return;
+    var o = X.compacto(X.deRegistro(r)); o.origen = origen;
+    GI.panel.abrir(o);
   }
 
   function svg(n) {
@@ -334,60 +393,19 @@
     var r = GI.get(id);
     if (!r) { location.hash = BASE; return; }
     ctx.crumbs = [{ label: 'Inicio', href: '#/' }, { label: 'Control de acceso' }, { label: 'Gestión', href: BASE }, { label: r.id }];
-    var res = D.estadoRestriccion(r), menor = D.esMenor(r), fin = D.finVigencia(r), dias = D.diasRestantes(r);
-    var enlazadas = w.GS ? w.GS.porMedida(r.id) : [];
-    var misma = GI.all().filter(function (x) { return x.numId === r.numId && x.tipoId === r.tipoId && x.id !== r.id; });
-
-    function kv(rows) {
-      return '<dl class="gi-kv">' + rows.map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + (x[1] === '' || x[1] == null ? '—' : x[1]) + '</dd></div>'; }).join('') + '</dl>';
-    }
-    function persona(p, titulo) {
-      return '<section class="gi-card"><h3 class="gi-card__title">' + titulo + '</h3>' + (titulo === 'Infractor' ? '<div class="gi-bio">' + w.GIBio.par(p.numId) + '</div>' : '') + kv([
-        ['Documento', esc(p.tipoId) + ' · ' + esc(GI.fmtDoc(p.tipoId, p.numId))], ['Nombre completo', esc((p.nombres + ' ' + p.apellidos).trim())],
-        ['Residencia', esc([p.ciudad, p.depto, p.pais].filter(Boolean).join(', '))], ['Dirección', esc(p.dir)],
-        ['Teléfono', p.telefono ? esc(p.indicativo + ' ' + p.telefono) : ''], ['Correo', esc(p.correo)],
-        ['Fecha de nacimiento', U.fmt(p.fechaNac)], ['Edad', U.ageAt(p.fechaNac, r.fechaHechos) != null ? U.ageAt(p.fechaNac, r.fechaHechos) + ' años (a la fecha de los hechos)' : ''], ['Sexo', esc(p.sexo)]
-      ]) + '</section>';
-    }
+    var menor = D.esMenor(r), X = GI.expediente;
     var acciones = '';
     if (r.estadoRegistro === 'Recibido' || r.estadoRegistro === 'Por Subsanar') {
       acciones = '<button class="naowee-btn naowee-btn--mute" id="aSub">' + svg('undo') + ' Devolver por subsanar</button>' +
         '<button class="naowee-btn naowee-btn--loud" id="aVal">' + svg('check') + ' Validar registro</button>';
     }
-    var banner = '';
-    if (r.estadoRegistro !== 'Validado') banner = '<div class="gi-banner gi-banner--warn"><strong>La restricción está inactiva.</strong> Pasa a Activa en cuanto el registro quede Validado.' + (r.estadoRegistro === 'Por Subsanar' && r.observaciones ? '<br>Motivo de la devolución: ' + esc(r.observaciones) : '') + '</div>';
-    else if (res === 'Cumplida') banner = '<div class="gi-banner gi-banner--ok"><strong>Restricción cumplida.</strong> Terminó su vigencia el ' + U.fmt(fin) + '. El expediente se conserva con su soporte e historial.</div>';
-    else banner = '<div class="gi-banner gi-banner--danger"><strong>Restricción activa.</strong> Prohibición de ingreso vigente hasta el ' + U.fmt(fin) + (dias != null ? ' (' + GI.fmtDias(dias).toLowerCase() + ').' : '.') + '</div>';
-
+    /* El cuerpo es el expediente interno (mismo componente que el panel); aquí solo van el encabezado y las acciones. */
     view.innerHTML = '<div class="page-inner gi-page">' +
       '<a class="gi-back" href="' + BASE + '">' + svg('back') + ' Volver a la bandeja</a>' +
       '<header class="gi-head"><div class="page-title-block"><h1 class="page-title">' + esc(D.nombreCompleto(r)) + (menor ? ' <span class="naowee-badge naowee-badge--neutral naowee-badge--quiet">Menor de edad</span>' : '') + '</h1>' +
       '<p class="page-subtitle"><span class="gi-mono">' + r.id + '</span> · ' + esc(r.tipoId) + ' ' + esc(GI.fmtDoc(r.tipoId, r.numId)) + '</p></div>' +
       '<div class="gi-head__actions"><a class="naowee-btn naowee-btn--quiet" href="' + BASE + '/' + r.id + '/editar">' + svg('pencil') + ' Editar</a>' + acciones + '</div></header>' +
-      '<div class="gi-states"><div><span>Estado del registro</span>' + badgeReg(r.estadoRegistro) + '</div><div><span>Estado de la restricción</span>' + badgeRes(res) + '</div>' +
-      '<div><span>Fin de vigencia</span><strong>' + U.fmt(fin) + '</strong></div><div><span>Sanción</span><strong>' + r.meses + ' meses' + (r.valor ? ' · $' + Number(r.valor).toLocaleString('es-CO') : '') + '</strong></div></div>' +
-      banner +
-      (enlazadas.length ? '<div class="gi-banner gi-banner--info">Esta medida salió de <strong>' + enlazadas.length + '</strong> solicitud(es) de control: ' + enlazadas.map(function (x) { return '<a href="#/control-acceso/solicitudes">' + x.id + '</a>'; }).join(', ') + '.</div>' : '') +
-      (misma.length ? '<div class="gi-banner gi-banner--info">Esta persona tiene <strong>' + misma.length + '</strong> restricción(es) más: ' + misma.map(function (x) { return '<a href="' + BASE + '/' + x.id + '">' + x.id + '</a>'; }).join(', ') + '.</div>' : '') +
-      '<div class="gi-grid">' +
-        '<div class="gi-col">' + persona(r, 'Infractor') + (r.rep ? persona(r.rep, 'Representante legal o tutor') : '') +
-          '<section class="gi-card"><h3 class="gi-card__title">Hechos y conducta</h3>' + kv([
-            ['Fecha de los hechos', U.fmt(r.fechaHechos)], ['Competición', esc(r.competicion + (r.otraCompeticion ? ' · ' + r.otraCompeticion : ''))],
-            ['Evento deportivo', esc(r.local + ' vs. ' + r.visitante)], ['Ciudad de los hechos', esc(r.ciudadHechos)],
-            ['Origen de la obligación', '<ul class="gi-list">' + r.origen.map(function (i) { return '<li>' + esc(C.origen[i]) + '</li>'; }).join('') + '</ul>'],
-            ['Agravantes', r.agravantes.length ? '<ul class="gi-list">' + r.agravantes.map(function (i) { return '<li>' + esc(C.agravantes[i]) + '</li>'; }).join('') + '</ul>' : 'Ninguno'],
-            ['Descripción', esc(r.descripcion)]]) + '</section>' +
-          '<section class="gi-card"><h3 class="gi-card__title">Sanción</h3>' + kv([
-            ['Acto administrativo', esc(r.numActo) + ' · ' + U.fmt(r.fechaActo)], ['Constancia de ejecutoria', U.fmt(r.fechaEjecutoria)],
-            ['Tiempo de sanción', r.meses + ' meses'], ['Fin de vigencia', U.fmt(fin)], ['Valor de la sanción', r.valor ? '$' + Number(r.valor).toLocaleString('es-CO') : '—']]) + '</section>' +
-          '<section class="gi-card"><h3 class="gi-card__title">Gestión interna</h3>' + kv([
-            ['Fecha de radicado de entrada', U.fmt(r.fechaRadicado)], ['Radicado de entrada en Mindeporte', esc(r.radEntrada)], ['Respuesta al radicado', esc(r.respuesta)],
-            ['Radicado contabilidad', esc(r.radContab)], ['Radicado jurídica', esc(r.radJuridica)], ['Profesional responsable', esc(r.profesional)], ['Observaciones', esc(r.observaciones)]]) + '</section></div>' +
-        '<aside class="gi-col gi-col--side"><section class="gi-card"><h3 class="gi-card__title">Historial</h3><ol class="gi-timeline">' +
-          r.historial.slice().reverse().map(function (h) {
-            return '<li><span class="gi-timeline__dot"></span><div><strong>' + (h.de === h.a ? esc(h.a) : (h.de ? esc(h.de) + ' → ' : '') + esc(h.a)) + '</strong>' +
-              '<small>' + U.fmt(h.fecha) + ' ' + esc(h.hora) + ' · ' + esc(h.usuario || 'Sistema') + '</small>' + (h.nota ? '<p>' + esc(h.nota) + '</p>' : '') + '</div></li>';
-          }).join('') + '</ol></section></aside></div></div>';
+      X.interno(X.deRegistro(r)) + '</div>';
 
     var aVal = d.getElementById('aVal'), aSub = d.getElementById('aSub');
     if (aVal) aVal.addEventListener('click', function () {

@@ -76,21 +76,52 @@
 .gf-total { display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
 .gf-total__pct { display: flex; align-items: baseline; gap: 6px; font-size: 14px; color: var(--text-secondary); font-weight: 600; }
 .gf-total__pct strong { font-size: 24px; font-weight: 800; color: var(--text-primary); }
-.gf-total small, .gi-step small { display: block; font-size: 14px; font-weight: 500; line-height: 1.3; color: var(--text-secondary); }
+.gf-total small { display: block; font-size: 14px; font-weight: 500; line-height: 1.3; color: var(--text-secondary); }
 .gf-bar { height: 10px; box-sizing: border-box; border: 1px solid var(--border-strong); border-radius: 999px; background: #eceef7; overflow: hidden; }
 .gf-bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .25s; }
 .gf-bar.is-full > i { background: var(--green); }
 .gi-step { align-items: flex-start; min-height: 44px; }
 .gi-step > div { flex: 1; min-width: 0; }
 .gi-step b { display: block; font-size: 14px; font-weight: 600; line-height: 1.3; color: var(--text-primary); }
-.gi-step small { margin: 2px 0 6px; }
 .gi-step > span { flex-shrink: 0; }
+/* DC-021: el conteo es un badge a la derecha de la barra, en su misma fila */
+.gf-srow { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.gf-srow .gf-bar { flex: 1 1 auto; min-width: 0; }
+.gf-badge { display: inline-block; flex: 0 0 auto; padding: 2px 8px; border: 1px solid var(--border-strong); border-radius: 999px; background: #fff; color: var(--text-primary); font-size: 13px; font-weight: 700; font-style: normal; line-height: 1.4; white-space: nowrap; }
+.gi-step.is-done .gf-badge { border-color: var(--green-border); background: var(--green-bg); color: #14551a; }
 .gi-step .gf-bar { height: 8px; }
 .gf-ck { display: none; flex: 0 0 16px; margin-top: 4px; color: var(--green); }
 .gi-step.is-done .gf-ck { display: block; }
 .gi-step.is-done > span { background: var(--green); color: #fff; }
 .gi-step.is-on { box-shadow: inset 3px 0 0 var(--accent); }
-.gf-barpct, #gfBarPct { color: var(--text-primary); }
+/* Un bloque a la vez: [hidden] queda para «no aplica» (representante), .gf-off para «no es el actual» */
+.gi-form .gi-sec.gf-off { display: none; }
+.gi-form .gi-layout.is-start { grid-template-columns: minmax(0, 1fr); }
+.gi-form .gi-layout.is-start .gi-steps { display: none; }
+.gi-step.is-locked { cursor: default; }
+.gi-step.is-locked:hover { background: transparent; color: var(--text-secondary); }
+.gi-step.has-err > span { background: var(--red); color: #fff; }
+.gi-step.has-err .gf-badge { border-color: var(--red); color: #8a1a10; }
+.gi-form .gf-kicker { margin: 0 0 2px; font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+.gf-kicker:empty { display: none; }
+.gf-sec__txt h2:focus { outline: none; }
+
+/* DC-020: primer estado del alta */
+.gi-form .gf-start { width: 100%; max-width: none; margin: 0; padding: 24px 28px; }
+.gf-start .gi-sec__head { align-items: center; border-bottom: 0; padding-bottom: 0; margin-bottom: 6px; }
+.gf-start h2 { font-size: 22px; }
+.gf-start__cta { margin-left: auto; flex-shrink: 0; }
+@media (max-width: 800px) { .gf-start__cta { flex: 1 0 100%; margin-left: 0; } }
+.gi-form .gf-start__lead { margin: 0 0 14px; font-size: 15px; line-height: 1.5; color: var(--text-secondary); }
+.gf-start__lead b { color: var(--text-primary); }
+.gf-start__list { margin: 0; padding: 0; list-style: none; }
+.gf-start__list li { display: flex; align-items: center; gap: 12px; padding: 8px 16px; }
+.gf-start__list li + li { border-top: 1px solid var(--border); }
+.gf-start__list li > div { flex: 1; min-width: 0; }
+.gf-start__list b { display: block; font-size: 15px; color: var(--text-primary); }
+.gf-start__list li > div > span { display: block; font-size: 14px; color: var(--text-secondary); }
+.gf-start__go { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+.gi-form .gf-start__alt { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin: 0; font-size: 14px; color: var(--text-secondary); }
 
 @media (max-width: 1000px) {
   .gi-steps { display: flex; position: static; flex-direction: row; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
@@ -105,8 +136,24 @@
   .gf-sec__st { flex-basis: 100%; margin-left: 42px; }
   .gf-pais .gi-in, .gf-mesesin { flex: 1 1 100%; width: 100%; }
 }
-@media (max-width: 600px) { .gf-hintlong { display: none; } }
+@media (max-width: 600px) {
+  .gf-hintlong { display: none; }
+  .gi-form .gi-bar__inner > div { flex: 1 1 auto; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+  .gi-form .gi-bar .naowee-btn { padding-left: 12px; padding-right: 12px; }
+}
 .gi-form .naowee-badge { font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .gf-bar > i, .gf-sw__trk, .gf-sw__trk i { transition: none; } }
 .gi-form .gi-f > .gi-lbl { flex-wrap: wrap; row-gap: 4px; }
 .gf-vig__k .gi-n, .gf-ro .gi-n { margin-right: 8px; }
+
+/* DC-117: la lista de bloques gana aire vertical y no lleva padding lateral. */
+.gf-start__list li { padding: 16px 0; }
+/* DC-119: divisor vertical tras Cancelar. */
+.gi-form .gf-cancel { margin-right: 6px; padding-right: 18px; border-right: 1px solid var(--border-dark); border-radius: 0; }
+/* DC-120/121/122: campos separados por divisores (también verticales) y etiquetas de 16 px con aire debajo. */
+.gi-form .gi-grid12 { gap: 0; overflow: hidden; }
+.gi-form .gi-grid12 > .gi-f, .gi-form .gi-grid12 > .gi-sub { margin: -1px 0 0 -1px; padding: 16px 20px; border: 0; border-top: 1px solid var(--border); border-left: 1px solid var(--border); }
+.gi-form .gi-grid12 > .gi-sub { padding: 0; }
+.gi-form .gi-sub__t { margin: 0; padding: 16px 20px 0; font-size: 14px; }
+.gi-form .gi-lbl { font-size: 16px; }
+.gi-form .gi-f { gap: 10px; }

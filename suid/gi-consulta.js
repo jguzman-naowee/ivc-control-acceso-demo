@@ -2,10 +2,10 @@
 (function (w, d) {
   'use strict';
   var GI = w.GI, U = GI.util, D = GI.derive, C = GI.cat, UI = w.GIUI, esc = SUID.esc;
-  var BASE = UI.BASE, PAGINA = 5;
-  var st = { q: '', cq: '', abiertos: {}, page: 1, sel: '' }; /* q: lo escrito; cq: lo consultado; abiertos: menores abiertos con motivo; sel: persona elegida */
+  var BASE = UI.BASE, PAGINA = 5, PAG_REC = 15;
+  var st = { q: '', cq: '', abiertos: {}, page: 1, sel: '', rec: 1, f: { est: '', tipo: '', ciu: '' } }; /* q: lo escrito; cq: lo consultado; abiertos: menores abiertos con motivo; sel: persona elegida */
   var MOTIVOS = ['Verificar una medida vigente antes de permitir el ingreso', 'Requerimiento de una autoridad', 'Trámite de un recurso o una solicitud de la persona', 'Auditoría interna'];
-  var CASOS = [{ t: 'Ramírez', q: 'Ramírez' }, { t: '71.894.4471', q: '71.894.4471' }, { t: 'Documento de un menor', q: '1020200003' }];
+  var CASOS = [{ t: 'Ramírez', q: 'Ramírez' }, { t: '71.894.4471', q: '71.894.4471' }, { t: 'Menor', q: '1020200003' }];
   var CORTA = ['Armas u objetos peligrosos', 'Estupefacientes', 'Violencia contra la fuerza pública', 'Invasión del terreno de juego', 'No atender a logística', 'Bebidas alcohólicas', 'Agresión física', 'Agresión verbal', 'Daño a infraestructura'];
   var ART = { fisica: ['Art. 98', 6], verbal: ['Art. 98', 7], alcohol: ['Art. 97', 5], armas: ['Art. 97', 0], drogas: ['Art. 97', 1], campo: ['Art. 97', 3], danio: ['Art. 98', 8] };
 
@@ -33,12 +33,14 @@
   function digitos(s) { return String(s || '').replace(/\D/g, ''); }
   function sinTildes(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
   function keyOf(p) { return p.tipo + ':' + p.numId; }
+  /* Miles con punto, acumulando desde la derecha; solo si lo escrito es un número (un nombre no se toca). */
+  function miles(v) { return /^[\d.\s]*$/.test(v) ? digitos(v).replace(/\B(?=(\d{3})+(?!\d))/g, '.') : v; }
   function plural(n, a, b) { return n + ' ' + (n === 1 ? a : b); }
 
   function medidaDe(m, e) {
     var fin = U.addMonths(U.addDays(m.ejec, 1), +m.meses), hoy = U.today(), a = ART[m.c];
     return { id: m.id, acto: m.acto, art: a[0], corta: CORTA[a[1]], full: C.origen[a[1]].replace(/^(\d+\.|[a-c]\)) /, ''), mas: 0, autoridad: 'Inspección de Policía de ' + e.ciudad,
-      ini: U.addDays(m.ejec, 1), fin: fin, estado: hoy > fin ? 'Cumplida' : 'Vigente', dias: Math.round((U.parse(fin) - U.parse(hoy)) / 86400000), href: '', enTramite: false };
+      ini: U.addDays(m.ejec, 1), fin: fin, meses: +m.meses, reg: m.ejec, estado: hoy > fin ? 'Cumplida' : 'Vigente', dias: Math.round((U.parse(fin) - U.parse(hoy)) / 86400000), href: '', enTramite: false };
   }
 
   /* Agrupa los registros de la base por persona (tipo + número de documento). */
@@ -46,15 +48,15 @@
     var map = {}, out = [];
     GI.all().forEach(function (r) {
       var key = abrev(r.tipoId) + ':' + r.numId, p = map[key];
-      if (!p) { p = map[key] = { tipo: abrev(r.tipoId), numId: r.numId, texto: GI.fmtDoc(r.tipoId, r.numId), nombre: D.nombreCompleto(r), menor: false, medidas: [] }; out.push(p); }
+      if (!p) { p = map[key] = { tipo: abrev(r.tipoId), numId: r.numId, texto: GI.fmtDoc(r.tipoId, r.numId), nombre: D.nombreCompleto(r), ciudad: r.ciudad || '', menor: false, medidas: [] }; out.push(p); }
       if (D.esMenor(r)) p.menor = true;
       var res = D.estadoRestriccion(r), fin = D.finVigencia(r), i0 = r.origen[0];
       p.medidas.push({ id: r.id, acto: r.numActo, art: (/Art\. \d+/.exec(C.origen[i0]) || [''])[0], corta: CORTA[i0] || '', full: r.origen.map(function (i) { return C.origen[i].replace(/^(\d+\.|[a-c]\) )/, ''); }).join('\n'),
-        mas: r.origen.length - 1, autoridad: 'Inspección de Policía de ' + (r.ciudadHechos || r.ciudad), ini: r.fechaEjecutoria ? U.addDays(r.fechaEjecutoria, 1) : '', fin: fin, dias: D.diasRestantes(r), href: BASE + '/' + r.id,
+        mas: r.origen.length - 1, autoridad: 'Inspección de Policía de ' + (r.ciudadHechos || r.ciudad), ini: r.fechaEjecutoria ? U.addDays(r.fechaEjecutoria, 1) : '', fin: fin, meses: +r.meses || 0, dias: D.diasRestantes(r), href: BASE + '/' + r.id, reg: r.fechaRegistro,
         estado: res === 'Activa' ? 'Vigente' : res === 'Cumplida' ? 'Cumplida' : 'En validación', enTramite: res === 'Inactiva' });
     });
     EXTRA.forEach(function (e) {
-      out.push({ tipo: e.tipo, numId: e.numId, texto: GI.fmtDoc(e.tipo, e.numId), nombre: e.nombre, menor: !!e.menor, medidas: e.medidas.map(function (m) { return medidaDe(m, e); }) });
+      out.push({ tipo: e.tipo, numId: e.numId, texto: GI.fmtDoc(e.tipo, e.numId), nombre: e.nombre, ciudad: e.ciudad, menor: !!e.menor, medidas: e.medidas.map(function (m) { return medidaDe(m, e); }) });
     });
     out.forEach(function (p) { p.res = resumen(p); });
     return out;
@@ -84,6 +86,8 @@
   function enmascarar(p) { return p.tipo + ' ••••' + String(p.numId).slice(-4); }
   function quien(p) { return p.menor && !st.abiertos[keyOf(p)] ? 'Persona menor de edad' : p.nombre; }
 
+  /* Filtros de apoyo bajo el buscador: acotan Recientes y la búsqueda por nombre; un documento completo los ignora. */
+  function filtra(p) { return (!st.f.est || p.res.estado === st.f.est) && (!st.f.tipo || p.tipo === st.f.tipo) && (!st.f.ciu || p.ciudad === st.f.ciu); }
   function buscar(q) {
     var t = q.trim();
     if (!t) return { modo: 'vacio', res: [] };
@@ -97,130 +101,160 @@
     var nt = sinTildes(t).split(/\s+/).filter(Boolean);
     if (sinTildes(t).replace(/\s/g, '').length < 3) return { modo: 'corto', res: [] };
     var hit = todas.filter(function (p) { var n = sinTildes(p.nombre); return nt.every(function (x) { return n.indexOf(x) >= 0; }); });
-    return { modo: 'nombre', res: hit.filter(function (p) { return !p.menor; }).sort(porUrgencia), ocultos: hit.filter(function (p) { return p.menor; }).length };
+    return { modo: 'nombre', res: hit.filter(function (p) { return !p.menor; }).filter(filtra).sort(porUrgencia), ocultos: hit.filter(function (p) { return p.menor; }).length };
   }
 
-  /* Medida compacta: una grilla de seis datos con etiqueta, sin huecos. */
-  function celda(l, v) { return '<div class="gc-med__c"><span class="gc-med__l">' + l + '</span><span class="gc-med__v">' + v + '</span></div>'; }
-  function medidasHtml(p) {
-    return '<div class="gc-meds">' + p.medidas.slice().sort(function (a, b) { return a.fin < b.fin ? 1 : -1; }).map(function (m) {
-      var vig = m.fin ? (m.estado === 'Cumplida' ? 'Terminó el ' + U.fmt(m.fin) : 'Hasta el ' + U.fmt(m.fin) + (m.estado === 'Vigente' ? '<br><strong>' + esc(dias(m.dias)) + '</strong>' : '')) : '—';
-      return '<div class="gc-med">' +
-        celda('Radicado', '<span class="gc-med__id">' + esc(m.id) + '</span>' + (m.href ? '<a href="' + m.href + '">Ver expediente</a>' : '')) +
-        celda('Resolución', esc(m.acto || '—')) +
-        celda('Artículo', '<span class="gc-med__art" title="' + esc(m.full) + '">' + tag(m.art || '—') + (m.mas > 0 ? tag('+' + m.mas) : '') + '<span>' + esc(m.corta || 'Sin conducta registrada') + '</span></span>') +
-        celda('Estado', estadoBadge(m.estado)) +
-        celda('Vigencia', vig) +
-        celda('Autoridad', esc(m.autoridad)) + '</div>';
-    }).join('') + '</div>';
-  }
-
-  function detalleHtml(p, i, volver) {
-    var r = p.res, key = keyOf(p), back = volver ? '<button type="button" class="gc-back" data-back>' + UI.svg('back') + ' Volver a los resultados</button>' : '';
-    if (p.menor && !st.abiertos[key]) {
-      return back + '<article class="gc-person"><div class="gc-person__head"><div class="gc-person__who">' + w.GIBio.reservada() + '<div><h2 class="gc-person__name" tabindex="-1">Persona menor de edad</h2>' +
-        '<p class="gc-person__doc">' + esc(p.tipo) + ' ' + esc(p.texto) + ' · datos reservados</p></div></div>' +
-        '<div class="gc-state">' + estadoBadge(r.estado) + '</div></div>' +
-        '<div class="gc-lock"><p><strong>Reserva reforzada.</strong> El nombre y el detalle de la medida solo se abren con un motivo, y la apertura queda auditada.</p>' +
-        '<button type="button" class="naowee-btn naowee-btn--loud gc-btn" data-open="' + i + '">Abrir con motivo</button></div></article>';
+  /* Modelo del expediente (caso medida): lo que el componente compacto pinta; el menor sin abrir llega reservado. */
+  function modeloMedida(p, bloq) {
+    var r = p.res, mm = r.m, key = keyOf(p), ab = st.abiertos[key], reg = mm.href ? GI.get(mm.id) : null, vig = r.estado === 'Vigente', cum = r.estado === 'Cumplida', pct = null;
+    if (vig && mm.ini && mm.fin) { var tot = (U.parse(mm.fin) - U.parse(mm.ini)) / 86400000; pct = tot > 0 ? Math.max(0, Math.min(100, Math.round(100 - mm.dias * 100 / tot))) : 100; }
+    var ev = reg && reg.local ? esc(reg.local + ' vs. ' + reg.visitante) : '';
+    var m = { caso: 'medida', id: mm.id, nombre: quien(p), menor: p.menor, reservado: bloq, doc: p.tipo + ' ' + p.texto, docDigitos: String(p.numId),
+      sub: p.tipo + ' ' + p.texto + (p.ciudad && !bloq ? ' · ' + p.ciudad : '') + (bloq ? '' : ' · ' + plural(p.medidas.length, 'medida', 'medidas')), badges: bloq ? [{ t: 'Menor de edad', tono: 'neu' }] : [], /* abierto: el componente ya rotula al menor */
+      estado: { tono: vig ? 'neg' : cum ? 'ok' : 'cau', titulo: vig ? 'Vigente · bloquea en todo el país' : r.estado, progreso: vig && !bloq ? pct : undefined, desde: vig && !bloq && mm.ini ? 'Desde ' + U.fmt(mm.ini) + (mm.meses ? ' · ' + mm.meses + ' meses' : '') : undefined,
+        lineas: bloq ? [] : [vig ? 'Hasta el <b>' + U.fmt(r.fin) + '</b> · <b>' + esc(dias(r.dias).toLowerCase()) + '</b>' : cum ? 'Terminó el <b>' + U.fmt(r.fin) + '</b>' : '<b>Aún sin efecto</b>'] },
+      resumenTitulo: '', resumen: [], movimientos: [], mas: [], acciones: '' };
+    if (bloq) {
+      m.acciones = '<button type="button" class="naowee-btn naowee-btn--loud" data-open>Abrir con motivo</button>';
+      m.aviso = { tono: 'warn', html: '<strong>Menor de edad · reserva reforzada.</strong> El nombre y el detalle de la medida solo se abren con un motivo, y la apertura queda auditada.' };
+      return m;
     }
-    var aud = p.menor ? '<div class="gc-audit">Apertura auditada · ' + esc(st.abiertos[key].motivo) + ' · ' + esc(SUID.user.name) + ' · ' + U.fmt(U.now().fecha) + ' ' + U.now().hora + '</div>' : '';
-    return back + '<article class="gc-person"><div class="gc-person__head"><div class="gc-person__who">' + w.GIBio.par(p.numId) + '<div><h2 class="gc-person__name" tabindex="-1">' + esc(p.nombre) + (p.menor ? ' ' + badge('neutral', 'Menor de edad') : '') + '</h2>' +
-      '<p class="gc-person__doc">' + esc(p.tipo) + ' ' + esc(p.texto) + ' · ' + plural(p.medidas.length, 'medida', 'medidas') + '</p></div></div>' +
-      '<div class="gc-state">' + estadoBadge(r.estado) + '<small>' + (r.estado === 'Vigente' ? 'Vigente hasta el ' + U.fmt(r.fin) + ' · ' + dias(r.dias) : r.estado === 'Cumplida' ? 'Terminó el ' + U.fmt(r.fin) : 'Aún sin efecto') + '</small></div></div>' +
-      medidasHtml(p) + aud + '</article>';
+    m.resumen = [{ k: 'Conducta', v: tag(mm.art || '—') + ' ' + esc(mm.corta || 'Sin conducta registrada') }, { k: 'Acto', v: esc(mm.acto || '—') },
+      ev ? { k: 'Evento', v: ev } : { k: 'Autoridad', v: esc(mm.autoridad) }, { k: 'Sanción', v: mm.meses ? mm.meses + ' meses' : '—' }];
+    if (reg) m.movimientos = (reg.historial || []).slice().reverse().map(function (x) {
+      return { t: x.de === x.a ? x.a : (x.de ? x.de + ' → ' : '') + x.a, por: x.usuario || 'Sistema', nota: x.nota || '', fecha: U.fmt(x.fecha) + ' ' + x.hora };
+    });
+    m.persona = { t: 'Persona', kv: [{ k: 'Documento', v: esc(m.doc) }, { k: 'Ciudad', v: esc(p.ciudad || '—') }] };
+    m.secciones = [{ t: 'Medida ' + mm.id, kv: m.resumen }];
+    m.acciones = '<a class="naowee-btn naowee-btn--loud" href="' + (hrefExpediente(p) || BASE.replace('infractores', 'consulta') + '/' + encodeURIComponent(key)) + '">Ampliar expediente</a>';
+    if (p.menor && ab) m.aviso = { tono: 'warn', html: '<strong>Menor de edad · datos abiertos con motivo.</strong> Apertura auditada · ' + esc(ab.motivo) + ' · ' + esc(SUID.user.name) + ' · ' + U.fmt(U.now().fecha) + ' ' + U.now().hora };
+    return m;
   }
 
-  /* Lista de personas: resumen en una fila; el detalle se abre al elegir. */
+  /* Expediente de la persona en el panel derecho (DC-060): sobre la lista y el buscador, que no se reemplazan. Cerrar = la X del panel. */
+  function hrefExpediente(p) { var m = p.res.m && p.res.m.href ? p.res.m : p.medidas.filter(function (x) { return x.href; })[0]; return m ? m.href : ''; }
+  function esqueleto() {
+    function b(w2, h) { return '<span class="sk-b" style="display:block;width:' + w2 + ';height:' + h + 'px;margin-top:12px"></span>'; }
+    return '<div class="sk" role="status" aria-live="polite"><span class="sk-sr">Consultando…</span>' + b('64%', 20) + b('100%', 80) + b('100%', 120) + b('100%', 120) + '</div>';
+  }
+  function panelPersona(p, origen, cargando) {
+    var key = keyOf(p), bloq = p.menor && !st.abiertos[key], o, c;
+    if (cargando) o = { tag: p.menor ? badge('neutral', 'Menor de edad') : '', titulo: bloq ? 'Persona menor de edad' : quien(p), sub: p.tipo + ' ' + p.texto, cuerpo: esqueleto(), acciones: '', nota: '' };
+    else { c = modeloMedida(p, bloq); o = GI.expediente.compacto(c); }
+    var propio = o.onPintar;
+    o.id = key; o.origen = origen;
+    o.onPintar = function (el) {
+      if (propio) propio(el);
+      var ab = el.querySelector('[data-open]'); if (ab) ab.addEventListener('click', function () { pedir(p); });
+    };
+    o.onCerrar = function (m) { if (m !== 'api') { st.sel = ''; clearTimeout(tp); } }; /* 'api' = repintado propio, no cierre del usuario */
+    GI.panel.abrir(o);
+  }
+  var tp = 0, pedir = null; /* tp: temporizador del loader del panel; pedir: modal de motivo (vive dentro de open) */
+
+  /* Tabla de personas: encabezado con total, filas clicables y paginador (GI.pager se arma en paint). */
+  var pgCfg = null;
+  function tabla(cabs, filas) {
+    return '<div class="gt-wrap"><table class="gt-table"><thead><tr>' + cabs.map(function (c) { return '<th>' + c + '</th>'; }).join('') + '</tr></thead><tbody>' + filas + '</tbody></table></div>';
+  }
+  function docPersona(p) { return esc(p.menor && !st.abiertos[keyOf(p)] ? enmascarar(p) : p.tipo + ' ' + p.texto); }
   function filaPersona(p, k) {
     var r = p.res;
-    return '<li><button type="button" class="gc-row" data-sel="' + esc(k) + '"><span class="gc-row__who"><strong>' + esc(p.nombre) + '</strong><small>' + esc(p.tipo) + ' ' + esc(p.texto) + '</small></span>' +
-      '<span class="gc-row__n">' + plural(p.medidas.length, 'medida', 'medidas') + '</span>' +
-      '<span class="gc-row__st">' + estadoBadge(r.estado) + '<small>' + esc(r.estado === 'Vigente' ? dias(r.dias) + ' · hasta ' + U.fmt(r.fin) : vigencia(r)) + '</small></span>' +
-      '<span class="gc-row__go" aria-hidden="true">' + SUID.icons.chevR + '</span></button></li>';
+    return '<tr tabindex="0" data-id="' + esc(k) + '" data-k="sel"><td><strong>' + esc(quien(p)) + '</strong><small>' + docPersona(p) + '</small></td>' +
+      '<td>' + plural(p.medidas.length, 'medida', 'medidas') + '</td>' +
+      '<td>' + estadoBadge(r.estado) + '<small>' + esc(r.estado === 'Vigente' ? dias(r.dias) + ' · hasta ' + U.fmt(r.fin) : vigencia(r)) + '</small></td></tr>';
   }
   function listaHtml(b) {
-    var n = b.res.length, pags = Math.ceil(n / PAGINA), pg = Math.min(Math.max(st.page, 1), pags), ini = (pg - 1) * PAGINA, fin = Math.min(ini + PAGINA, n);
-    st.page = pg;
-    return '<p class="gc-count" tabindex="-1">' + plural(n, 'persona encontrada', 'personas encontradas') + ' · de mayor a menor urgencia' + (b.ocultos ? ' · ' + b.ocultos + (b.ocultos === 1 ? ' menor no se lista' : ' menores no se listan') + ' por nombre' : '') + '</p>' +
-      '<ul class="gc-people">' + b.res.slice(ini, fin).map(function (p) { return filaPersona(p, keyOf(p)); }).join('') + '</ul>' +
-      (pags > 1 ? '<nav class="gc-pager" aria-label="Paginación de resultados"><span class="gc-pager__t">' + (ini + 1) + '–' + fin + ' de ' + n + '</span>' +
-        '<button type="button" class="naowee-btn naowee-btn--mute gc-btn" data-pg="-1"' + (pg === 1 ? ' disabled' : '') + '>Anterior</button>' +
-        '<button type="button" class="naowee-btn naowee-btn--mute gc-btn" data-pg="1"' + (pg === pags ? ' disabled' : '') + '>Siguiente</button></nav>' : '');
+    var n = b.res.length, pg = Math.min(Math.max(st.page, 1), Math.ceil(n / PAGINA)), ini = (pg - 1) * PAGINA;
+    st.page = pg; pgCfg = { k: 'res', total: n, page: pg, size: PAGINA, label: 'Paginación de resultados' };
+    return GI.tablaHead({ id: 'gcRes', titulo: 'Resultados', total: n, fuera: true }) + '<section class="gt-card gc-lista" aria-labelledby="gcResT">' +
+      '<p class="gc-count" tabindex="-1">' + plural(n, 'persona encontrada', 'personas encontradas') + ' · de mayor a menor urgencia' + (b.ocultos ? ' · ' + b.ocultos + (b.ocultos === 1 ? ' menor no se lista' : ' menores no se listan') + ' por nombre' : '') + '</p>' +
+      tabla(['Persona', 'Medidas', 'Estado'], b.res.slice(ini, ini + PAGINA).map(function (p) { return filaPersona(p, keyOf(p)); }).join('')) +
+      '<nav data-pag></nav></section>';
   }
 
-  /* Recientes: llena el alto libre con las personas más urgentes; lo que no cabe se oculta en fit(). */
+  /* Recientes: las 30 personas más urgentes, en rejilla de 15 por página (3 filas de 5). */
+  function agregada(p) { return p.medidas.map(function (m) { return m.reg || ''; }).sort().pop(); }
   function recientesHtml() {
-    var ps = personas().sort(porUrgencia).slice(0, 14);
-    return '<section class="gc-recent" aria-labelledby="gcRecT"><header class="gc-recent__head"><h2 id="gcRecT">Recientes</h2><span id="gcRecN"></span></header>' +
-      '<ul class="gc-recent__list" id="gcRecL">' + ps.map(function (p) {
-        var r = p.res, m = r.m;
-        return '<li><button type="button" class="gc-rec" data-doc="' + esc(p.numId) + '"><span class="gc-row__who"><strong>' + esc(quien(p)) + '</strong><small>' + esc(p.menor && !st.abiertos[keyOf(p)] ? enmascarar(p) : p.tipo + ' ' + p.texto) + '</small></span>' +
-          '<span class="gc-rec__cond">' + tag(m.art || '—') + '<span>' + esc(m.corta) + '</span><small>' + esc(m.id) + '</small></span>' +
-          '<span class="gc-row__st">' + estadoBadge(r.estado) + '<small>' + esc(vigencia(r)) + '</small></span>' +
-          '<span class="gc-row__go" aria-hidden="true">' + SUID.icons.chevR + '</span></button></li>';
-      }).join('') + '</ul></section>';
+    var todos = personas().filter(filtra).sort(porUrgencia).slice(0, 30), pg = Math.min(Math.max(st.rec, 1), Math.max(1, Math.ceil(todos.length / PAG_REC))), ini = (pg - 1) * PAG_REC;
+    st.rec = pg; pgCfg = { k: 'rec', total: todos.length, page: pg, size: PAG_REC, label: 'Paginación de recientes' };
+    return '<div class="gc-headrow">' + GI.tablaHead({ id: 'gcRec', titulo: 'Recientes', total: todos.length, fuera: true }) +
+      '<a class="naowee-btn naowee-btn--mute gc-btn" href="' + BASE + '">Ver todos</a></div>' +
+      '<section class="gt-card gc-lista" aria-labelledby="gcRecT">' + (todos.length ? '' : '<p class="gc-count">Ninguna persona coincide con los filtros.</p>') + '<div class="gc-grid">' +
+      todos.slice(ini, ini + PAG_REC).map(function (p) {
+        var r = p.res, ag = agregada(p);
+        return '<article class="gc-persona" tabindex="0" data-id="' + esc(keyOf(p)) + '" data-k="sel"><div class="gc-persona__foto">' + w.GIBio.foto(p.numId, { menor: p.menor, sin: r.estado === 'En validación' || !p.menor && +String(p.numId).slice(-1) % 4 === 0 }) + '</div>' + estadoBadge(r.estado) +
+          '<strong>' + esc(quien(p)) + '</strong><small>' + docPersona(p) + '</small>' +
+          '<span class="gc-persona__add">' + (ag ? 'Agregado el ' + U.fmt(ag) : 'Sin fecha de registro') + '</span></article>';
+      }).join('') + '</div><nav data-pag></nav></section>';
   }
-  function fit() {
-    var l = d.getElementById('gcRecL'), n = d.getElementById('gcRecN');
-    if (!l) return;
-    var items = [].slice.call(l.children), vis = 0;
-    items.forEach(function (li) { li.hidden = false; });
-    if (w.innerWidth <= 700) { items.forEach(function (li, i) { li.hidden = i >= 6; }); if (n) n.textContent = 'Por urgencia · 6 de ' + items.length; return; } /* en móvil la página corre */
-    var tope = l.getBoundingClientRect().bottom;
-    items.forEach(function (li) { if (li.getBoundingClientRect().bottom <= tope + 1) vis++; else li.hidden = true; });
-    if (n) n.textContent = 'Por urgencia · ' + vis + ' de ' + items.length;
-  }
-
-  /* Recorrido de la consulta (DC-300): 5 sistemas, 1,5 s en total; nunca lleva nombres, para no revelar a un menor. */
-  function recorrido(b) {
-    var n = b.res.length, doc = b.modo === 'doc', hay = n > 0, de = doc ? 'Documento' : 'Nombre';
-    var tram = b.res.some(function (p) { return p.medidas.some(function (m) { return m.enTramite; }); });
-    var actos = b.res.some(function (p) { return p.medidas.some(function (m) { return m.estado !== 'En validación'; }); });
-    function ok(v) { return v ? 'ok' : 'vacio'; }
-    if (b.modo === 'error') {
-      var f = [['Base de infractores del IVC', 'IVC', 'No se pudo leer la base de medidas', 350], ['Registraduría · ANI', 'ANI', 'Validando la identidad…', 300], ['Reportes de entidades deportivas', 'ENT', 'Revisando solicitudes pendientes…', 250],
-        ['Autoridades de policía', 'POL', 'Buscando actos y medidas notificadas…', 350], ['Decisión', 'SUID', 'Armando el resultado…', 250]];
-      return { pasos: f.map(function (x, i) { return { n: x[0], sigla: x[1], texto: x[2], baja: 'Documento', sube: i ? '' : 'Error', ms: x[3], r: i ? 'vacio' : 'falla' }; }) };
-    }
-    return { pasos: [
-      { n: 'Base de infractores del IVC', sigla: 'IVC', texto: doc ? 'Buscando el documento en la base de medidas…' : 'Buscando el nombre en la base de medidas…', baja: de, sube: hay ? plural(n, 'registro', 'registros') : 'Sin registros', ms: 350, r: ok(hay) },
-      { n: 'Registraduría · ANI', sigla: 'ANI', texto: 'Validando la identidad…', baja: de, sube: hay ? 'Identidad válida' : 'Sin coincidencia', ms: 300, r: ok(hay) },
-      { n: 'Reportes de entidades deportivas', sigla: 'ENT', texto: 'Revisando solicitudes pendientes…', baja: de, sube: tram ? 'Solicitud en trámite' : 'Sin pendientes', ms: 250, r: ok(tram) },
-      { n: 'Autoridades de policía', sigla: 'POL', texto: 'Buscando actos y medidas notificadas…', baja: de, sube: actos ? 'Medidas notificadas' : 'Sin notificaciones', ms: 350, r: ok(actos) },
-      { n: 'Decisión', sigla: 'SUID', texto: 'Armando el resultado…', baja: 'Historial', sube: hay ? 'Resultado listo' : 'No hay medidas', ms: 250, r: ok(hay) }
-    ] };
-  }
-
   var INFO = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.6" r=".6" fill="currentColor"/></svg>';
 
   function vacio(titulo, texto, extra, cls) {
     return '<div class="gc-empty' + (cls ? ' ' + cls : '') + '"' + (cls ? ' role="alert"' : '') + '><strong>' + titulo + '</strong>' + texto + (extra || '') + '</div>';
   }
 
-  var onResize = null;
+  /* Persona sin registro en Gestión: «Ampliar expediente» abre aquí su vista interna. */
+  function interno(view, ctx, key) {
+    var p = personas().filter(function (x) { return keyOf(x) === key; })[0], L = BASE.replace('infractores', 'consulta');
+    if (!p) { location.hash = L; return; }
+    ctx.crumbs = [{ label: 'Inicio', href: '#/' }, { label: 'Control de acceso' }, { label: 'Búsqueda', href: L }, { label: quien(p) }];
+    view.innerHTML = '<div class="page-inner gi-page"><a class="gi-back" href="' + L + '">' + UI.svg('back') + ' Volver</a>' +
+      '<header class="gi-head"><div class="page-title-block"><h1 class="page-title">' + esc(quien(p)) + '</h1><p class="page-subtitle">' + docPersona(p) + '</p></div></header>' +
+      GI.expediente.interno(modeloMedida(p, p.menor && !st.abiertos[key])) + '</div>';
+  }
+  SUID.views['control-acceso/consulta'] = function (view, ctx) { return ctx.rest && ctx.rest[0] ? interno(view, ctx, decodeURIComponent(ctx.rest[0])) : open(view, ctx); };
+  var RESET = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 4 3 9 8 9"/></svg>';
+  function opts(arr, todas) { return [{ v: '', n: todas, av: '', tag: '' }].concat(arr.map(function (x) { return { v: x, n: x, av: '', tag: '' }; })); }
   function open(view, ctx) {
     st.q = st.cq;
     ctx.crumbs = [{ label: 'Inicio', href: '#/' }, { label: 'Control de acceso' }, { label: 'Búsqueda' }];
     view.innerHTML = '<div class="page-inner gi-page gc-page">' +
       '<header class="gi-head"><div class="page-title-block"><h1 class="page-title">Consulta de infractores</h1>' +
-      '<p class="page-subtitle">Verifica si una persona tiene una medida vigente y hasta cuándo.</p></div></header>' +
-      '<section class="gc-card"><form class="gc-form" id="gcForm" role="search">' +
-      '<div class="gc-field">' + UI.svg('search') + '<input id="gcQ" type="search" autocomplete="off" aria-label="Documento completo o nombre" placeholder="Documento o nombre" value="' + esc(st.cq) + '">' +
+      '<p class="page-subtitle">Verifica si una persona tiene una medida vigente y hasta cuándo.</p></div>' +
+      '<button type="button" class="gt-info gc-info" id="gcInfo" aria-label="Cómo buscar" aria-describedby="gcTip" aria-expanded="false">' + INFO + '</button></header>' +
+      '<div class="gc-veil" id="gcVeil" aria-hidden="true"></div><section class="gc-card"><div class="gc-card__hd">' + UI.svg('search').replace('<svg', '<svg width="40" height="40"') + '<div class="gc-card__tx"><h2 class="gc-card__t">Búsqueda de infractores</h2>' +
+      '<p class="gc-card__s">Escribe el documento completo (mínimo 6 dígitos) o al menos tres letras del nombre.</p></div></div><form class="gc-form" id="gcForm" role="search">' +
+      '<div class="gc-field">' + UI.svg('search') + '<input id="gcQ" type="search" autocomplete="off" aria-label="Documento completo o nombre" placeholder="Documento o nombre" value="' + esc(miles(st.cq)) + '">' +
       '<div class="gc-try"><div class="gc-try__list" id="gcTryList" role="group" aria-label="Casos de ejemplo" hidden>' +
       CASOS.map(function (c) { return '<button type="button" class="gc-case" data-q="' + esc(c.q) + '"><span>' + esc(c.t) + '</span></button>'; }).join('') + '</div>' +
       '<button type="button" class="gc-try__btn" id="gcTryBtn" aria-expanded="false" aria-controls="gcTryList" aria-label="Probar con un caso de ejemplo" title="Casos de ejemplo">' +
       '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div></div>' +
-      '<button type="button" class="gt-info gc-info" id="gcInfo" aria-label="Cómo buscar" aria-describedby="gcTip" aria-expanded="false">' + INFO + '</button>' +
-      '<button type="submit" class="naowee-btn naowee-btn--loud gc-btn gc-btn--q" id="gcGo">Consultar</button></form>' +
+      '<div class="gc-fh" id="gcFEst"></div><div class="gc-fh" id="gcFTipo"></div><div class="gc-fh" id="gcFCiu"></div>' +
+      '<button type="submit" class="naowee-btn naowee-btn--loud gc-btn gc-btn--q" id="gcGo">Consultar</button>' +
+      '<button type="button" class="gs-reset gc-reset" id="gcFReset" aria-label="Reiniciar filtros" title="Reiniciar filtros">' + RESET + '</button></form>' +
       '<div class="gt-tip" role="tooltip" id="gcTip" hidden><strong>Cómo buscar</strong><p>Por documento, escríbelo completo (mínimo 6 dígitos).</p><p>Por nombre, escribe al menos tres letras.</p>' +
       '<p>Los menores de edad no aparecen al buscar por nombre: solo se consultan por documento completo y con un motivo.</p></div>' +
       '</section>' +
             '<div id="gcOut" class="gc-out" aria-live="polite"></div></div>';
     var inp = d.getElementById('gcQ'), out = d.getElementById('gcOut'), form = d.getElementById('gcForm'), go = d.getElementById('gcGo'), tbtn = d.getElementById('gcTryBtn'), tlist = d.getElementById('gcTryList');
 
+    var veil = d.getElementById('gcVeil'), vcard = veil.nextElementSibling, vsc = view.closest('.main-scroll');
+    function velo() {
+      if (!d.getElementById('gcVeil')) return vsc && vsc.removeEventListener('scroll', velo), w.removeEventListener('resize', velo);
+      var sr = vsc.getBoundingClientRect(), cr = vcard.getBoundingClientRect(), pr = veil.parentNode.getBoundingClientRect();
+      veil.style.setProperty('--gc-vx', (sr.left - pr.left) + 'px');
+      veil.style.setProperty('--gc-vw', vsc.clientWidth + 'px');
+      veil.style.setProperty('--gc-vh', (cr.bottom - sr.top) + 'px');
+      veil.classList.toggle('is-stuck', vsc.scrollTop > 0 && cr.top - sr.top <= 17);
+    }
+    if (vsc) { vsc.addEventListener('scroll', velo, { passive: true }); w.addEventListener('resize', velo); velo(); }
+
+    var pend = Object.assign({}, st.f); /* los filtros se aplican al pulsar Consultar */
+    function filtros() {
+      var all = personas(), ciu = all.map(function (p) { return p.ciudad; }).filter(function (x, i, a) { return x && a.indexOf(x) === i; }).sort(function (a, b) { return a.localeCompare(b, 'es'); }),
+        tipos = all.map(function (p) { return p.tipo; }).filter(function (x, i, a) { return x && a.indexOf(x) === i; }).sort();
+      function pick(host, id, label, pre, k, items) {
+        GI.selectGrafico({ host: d.getElementById(host), id: id, label: label, prefijo: pre, value: pend[k], items: items, onPick: function (v) { pend[k] = v; } });
+      }
+      pick('gcFEst', 'gcSEst', 'Filtrar por estado de la medida', 'Estado', 'est', opts(['Vigente', 'Cumplida', 'En validación'], 'Todos'));
+      pick('gcFTipo', 'gcSTipo', 'Filtrar por tipo de documento', 'Tipo', 'tipo', opts(tipos, 'Todos'));
+      pick('gcFCiu', 'gcSCiu', 'Filtrar por ciudad', 'Ciudad', 'ciu', opts(ciu, 'Todas'));
+    }
+    d.getElementById('gcFReset').addEventListener('click', function () { pend = { est: '', tipo: '', ciu: '' }; st.f = Object.assign({}, pend); st.rec = 1; st.page = 1; filtros(); paint(false); });
     function paint(enfoque) {
-      var b, html = '', det = null, vol = false;
+      var b, html = '', det = null;
+      pgCfg = null;
       try { b = buscar(st.cq); } catch (e) { b = { modo: 'error', res: [] }; }
       if (b.modo === 'vacio') html = recientesHtml();
       else if (b.modo === 'error') html = vacio('No pudimos completar la consulta', 'Hubo un problema al leer la información. Intenta de nuevo.', '<button type="button" class="naowee-btn naowee-btn--loud gc-btn" data-retry>Reintentar</button>', 'gc-empty--error');
@@ -229,45 +263,45 @@
       else if (!b.res.length) html = vacio('Sin medidas registradas', (b.modo === 'doc' ? 'No hay medidas para ese documento.' : 'No hay coincidencias por nombre.') +
         (b.ocultos ? ' Hay ' + b.ocultos + (b.ocultos === 1 ? ' registro reservado' : ' registros reservados') + ' de menores: consúltalos por documento completo.' : ''));
       else {
-        if (b.res.length === 1) det = b.res[0];
-        else if (st.sel) { det = b.res.filter(function (p) { return keyOf(p) === st.sel; })[0] || null; vol = !!det; if (!det) st.sel = ''; }
-        html = det ? detalleHtml(det, 0, vol) : listaHtml(b);
-        if (det && b.ocultos) html += '<p class="gc-count">Hay ' + b.ocultos + (b.ocultos === 1 ? ' registro reservado' : ' registros reservados') + ' de menores: consúltalos por documento completo.</p>';
+        html = listaHtml(b);
+        if (b.ocultos) html += '<p class="gc-count">Hay ' + b.ocultos + (b.ocultos === 1 ? ' registro reservado' : ' registros reservados') + ' de menores: consúltalos por documento completo.</p>';
       }
+      if (st.sel) det = personas().filter(function (p) { return keyOf(p) === st.sel; })[0] || null;
       out.innerHTML = html;
-      view.firstChild.classList.toggle('gc-page--fill', b.modo === 'vacio'); /* en Recientes la página mide el alto libre */
-      var cual = enfoque && (det ? '.gc-person__name' : '.gc-count');
-      if (cual) { var el = out.querySelector(cual); if (el) el.focus(); }
-      var ab = out.querySelector('[data-open]');
-      if (ab) ab.addEventListener('click', function () { pedirMotivo(det); });
+      if (pgCfg) { var c = pgCfg; c.onPage = function (p) { if (c.k === 'rec') st.rec = p; else st.page = p; paint(false); var k = out.querySelector('.gt-pag [aria-current]'); if (k) k.focus(); }; ligaPag(); }
+      if (det) { clearTimeout(tp); panelPersona(det); GI.panel.sincronizar(); }
+      else { st.sel = ''; if (GI.panel.abierto()) GI.panel.cerrar('api'); }
+      var el = enfoque && !det && out.querySelector('.gc-count'); if (el) el.focus();
       var rt = out.querySelector('[data-retry]');
       if (rt) rt.addEventListener('click', function () { paint(true); });
-      if (b.modo === 'vacio') fit();
     }
 
-    out.addEventListener('click', function (e) {
-      var t = e.target.closest('[data-sel],[data-pg],[data-back],[data-doc]');
-      if (!t) return;
-      if (t.hasAttribute('data-sel')) { st.sel = t.getAttribute('data-sel'); cargar('persona', function () { paint(true); }); }
-      else if (t.hasAttribute('data-pg')) { st.page += +t.getAttribute('data-pg'); paint(true); }
-      else if (t.hasAttribute('data-back')) { st.sel = ''; paint(true); }
-      else if (t.hasAttribute('data-doc')) { var p = personas().filter(function (x) { return x.numId === t.getAttribute('data-doc'); })[0]; consultar(GI.fmtDoc(p.tipo, p.numId), true); }
+    filtros();
+    /* El paginador se vuelve a armar tras repintar o restaurar el HTML guardado (los eventos no sobreviven a innerHTML). */
+    function ligaPag() { var nav = out.querySelector('[data-pag]'); if (nav && pgCfg) GI.pager(nav, pgCfg); }
+    /* Elegir una fila abre el panel derecho con su loader de 1 s; la lista y el buscador quedan debajo (DC-061). */
+    GI.filasClicables(out, function (id, tr) {
+      var p = personas().filter(function (x) { return keyOf(x) === id; })[0]; if (!p) return;
+      clearTimeout(tp); st.sel = id; panelPersona(p, tr, true); GI.panel.sincronizar();
+      tp = setTimeout(function () { if (st.sel === id && out.isConnected) { panelPersona(p); GI.panel.sincronizar(); } }, ESPERA);
     });
 
     /* La consulta tarda 1 s fijo: el loader ocupa el lugar de los resultados (tabla o ficha). Sin datos válidos responde al instante. */
-    var ESPERA = 1000, tm = 0, salvado = '';
+    var ESPERA = 1000, tm = 0, salvado = '', prev = null;
+    /* Estado previo a la consulta: si se cancela al escribir, el HTML restaurado y el estado vuelven juntos. */
+    function snap() { if (!tm) prev = { cq: st.cq, page: st.page, sel: st.sel }; }
     function ocupado(si) {
       form.setAttribute('aria-busy', String(si)); form.classList.toggle('is-busy', si);
       go.textContent = si ? 'Consultando…' : 'Consultar';
     }
     function detener() {
       if (!tm) return;
-      clearTimeout(tm); tm = 0; ocupado(false); out.removeAttribute('aria-busy'); out.innerHTML = salvado;
+      clearTimeout(tm); tm = 0; ocupado(false); out.removeAttribute('aria-busy'); out.innerHTML = salvado; ligaPag();
     }
     function cargar(forma, fin) {
       clearTimeout(tm);
       if (!tm) salvado = out.innerHTML;
-      ocupado(true); out.setAttribute('aria-busy', 'true'); view.firstChild.classList.remove('gc-page--fill');
+      ocupado(true); out.setAttribute('aria-busy', 'true');
       out.innerHTML = SUID.load.fragmento(forma);
       tm = setTimeout(function () {
         tm = 0; if (!out.isConnected) return;
@@ -275,11 +309,13 @@
       }, ESPERA);
     }
     function consultar(q, enfoque) {
-      inp.value = st.q = st.cq = q; st.page = 1; st.sel = '';
+      snap();
+      clearTimeout(tp); if (GI.panel.abierto()) GI.panel.cerrar('api');
+      inp.value = miles(q); st.q = st.cq = q; st.page = 1; st.sel = '';
       var b; try { b = buscar(q); } catch (e) { b = { modo: 'error', res: [] }; }
-      if (b.modo === 'vacio' || b.modo === 'corto' || b.modo === 'invalido') { detener(); paint(enfoque); return; }
+      if (b.modo === 'corto' || b.modo === 'invalido') { detener(); paint(enfoque); return; }
       if (out.contains(d.activeElement)) inp.focus({ preventScroll: true }); /* el reciente pulsado desaparece mientras se consulta */
-      cargar(b.res.length === 1 ? 'persona' : 'resultados', function () { paint(enfoque); });
+      cargar('resultados', function () { if (b.res.length === 1) st.sel = keyOf(b.res[0]); paint(enfoque); });
     }
 
     /* Tooltip de «Cómo buscar» (DC-298): mismo patrón del ⓘ de los insights; hover/foco lo muestran, el clic lo fija y Esc lo cierra. */
@@ -307,18 +343,26 @@
     w.addEventListener('resize', infoOff);
 
     function pedirMotivo(p) {
+      var mot = '';
       var m = UI.modal({ title: 'Abrir datos de un menor', sub: p.tipo + ' ' + p.texto,
         body: '<p class="gi-p">Estos datos tienen reserva reforzada. Indica para qué los necesitas; la apertura queda registrada con tu usuario, la fecha y la hora.</p>' +
-          '<label class="gi-lbl gi-lbl--req">Motivo<select class="gi-in" id="gcMot"><option value="">Selecciona un motivo</option>' + MOTIVOS.map(function (x) { return '<option>' + esc(x) + '</option>'; }).join('') + '</select></label>' +
-          '<p class="gi-err" id="gcErr" hidden>Selecciona un motivo para continuar.</p>',
+          '<div class="gs-field"><span class="gs-field__l gs-field__l--req" id="gcMotL">Motivo (puedes elegir varios)</span>' +
+          '<div class="gc-mchips" id="gcMot" role="group" aria-labelledby="gcMotL">' + MOTIVOS.map(function (x) { return '<button type="button" class="gc-mchip" aria-pressed="false">' + esc(x) + '</button>'; }).join('') + '</div></div>' +
+          '<p class="gi-err" id="gcErr" hidden>Selecciona al menos un motivo para continuar.</p>',
         footer: '<button class="naowee-btn naowee-btn--mute" data-x>Cancelar</button><button class="naowee-btn naowee-btn--loud" id="gcOk">Abrir datos</button>' });
+      m.el.querySelector('#gcMot').addEventListener('click', function (e) {
+        var b = e.target.closest('.gc-mchip'); if (!b) return;
+        b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true'));
+        mot = [].map.call(m.el.querySelectorAll('.gc-mchip[aria-pressed="true"]'), function (x) { return x.textContent; }).join(' · ');
+        if (mot) m.el.querySelector('#gcErr').hidden = true;
+      });
       m.el.querySelector('#gcOk').addEventListener('click', function () {
-        var v = m.el.querySelector('#gcMot').value;
-        if (!v) { m.el.querySelector('#gcErr').hidden = false; return; }
-        st.abiertos[keyOf(p)] = { motivo: v };
+        if (!mot) { m.el.querySelector('#gcErr').hidden = false; return; }
+        st.abiertos[keyOf(p)] = { motivo: mot };
         m.close(); UI.toast('Apertura registrada en la auditoría.'); paint(true);
       });
     }
+    pedir = pedirMotivo;
 
     /* Casos de ejemplo: «+» dentro del input; al abrir salen a su izquierda como badges negros. */
     function ejemplos(abrir) {
@@ -337,17 +381,20 @@
       if (!tlist.hidden && !e.target.closest('.gc-try')) ejemplos(false);
     });
 
-    d.getElementById('gcForm').addEventListener('submit', function (e) { e.preventDefault(); ejemplos(false); consultar(inp.value, true); });
+    d.getElementById('gcForm').addEventListener('submit', function (e) { e.preventDefault(); st.f = Object.assign({}, pend); st.rec = 1; st.page = 1; ejemplos(false); consultar(inp.value, true); });
     /* Escribir no consulta: cancela la que corre y, con el campo vacío, vuelve a Recientes. */
     inp.addEventListener('input', function () {
-      st.q = inp.value; detener();
+      var pos = inp.selectionStart, antes = digitos(inp.value.slice(0, pos == null ? 0 : pos)).length, f = miles(inp.value);
+      if (f !== inp.value) {
+        inp.value = f;
+        if (pos != null && d.activeElement === inp) { var k = 0, n = 0; while (k < f.length && n < antes) { if (/\d/.test(f[k])) n++; k++; } inp.setSelectionRange(k, k); }
+      }
+      st.q = inp.value;
+      if (tm && prev) { st.cq = prev.cq; st.page = prev.page; st.sel = prev.sel; }
+      detener();
       if (!st.q.trim() && st.cq) { st.cq = ''; st.page = 1; st.sel = ''; paint(false); }
     });
-    if (onResize) w.removeEventListener('resize', onResize);
-    onResize = function () { if (d.getElementById('gcRecL')) fit(); };
-    w.addEventListener('resize', onResize);
     paint(false);
   }
 
-  SUID.views['control-acceso/consulta'] = open;
 })(window, document);

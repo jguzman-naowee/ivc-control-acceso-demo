@@ -12,29 +12,27 @@
 .gi-panel-row > #giChartCard { display: flex; min-width: 0; }
 .gi-panel { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); padding: 20px; margin: 0; min-width: 0; width: 100%; box-sizing: border-box; }
 .gi-panel__head { margin-bottom: 8px; }
-.gi-panel__title { margin: 0; font-size: 18px; font-weight: 700; color: var(--text-primary); }
-.gi-panel__sub { margin: 4px 0 0; font-size: 14px; color: var(--text-secondary); }
+.gi-panel__title { margin: 0; font-size: 18px; font-weight: 600; color: var(--text-primary); }
 .sr-only, .sr-only * { font-size: 14px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
 .gi-panel--ins { display: flex; flex-direction: column; padding: 16px 20px; }
 .gi-panel--ins .gi-panel__head { margin-bottom: 4px; }
-.gi-insights { list-style: none; margin: 0; padding: 0; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; grid-auto-rows: minmax(84px, 1fr); }
-.gi-insight { position: relative; display: flex; flex-direction: column; justify-content: center; gap: 2px; min-height: 84px; padding: 10px 52px 10px 14px; background: var(--bg-soft); border-radius: var(--radius-md); }
-.gi-insight__fig { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
-.gi-insight__fig strong { font-size: 28px; line-height: 1.1; font-weight: 800; letter-spacing: -.5px; color: var(--text-primary); }
-.gi-insight__fig span { font-size: 14px; color: var(--text-secondary); line-height: 1.2; }
-/* DC-297: color semántico con los tokens de feedback del DS: fondo suave, filete superior y cifra oscura; el tag repite el sentido con glifo y palabra. */
-.gi-insight { border-top: 3px solid var(--t-bd, var(--border-dark)); background: color-mix(in srgb, var(--t-bg, var(--bg-soft)) 55%, #fff); }
-.gi-insight--negative { --t-bg: var(--naowee-color-feedback-fill-negative-quiet, #ffe3df); --t-fg: var(--naowee-color-feedback-text-negative-quiet-on-fill, #8a1c12); --t-bd: var(--naowee-color-feedback-border-negative-loud, #d92d20); }
-.gi-insight--caution { --t-bg: var(--naowee-color-feedback-fill-caution-quiet, #fff0d9); --t-fg: var(--naowee-color-feedback-text-caution-quiet-on-fill, #7a3a00); --t-bd: var(--naowee-color-feedback-border-caution-loud, #f08a00); }
-.gi-insight--positive { --t-bg: var(--naowee-color-feedback-fill-positive-quiet, #e6f4e7); --t-fg: var(--naowee-color-feedback-text-positive-quiet-on-fill, #14591a); --t-bd: var(--naowee-color-feedback-border-positive-loud, #1f8923); }
-.gi-insight--informative { --t-bg: var(--naowee-color-feedback-fill-informative-quiet, #cef4ff); --t-fg: var(--naowee-color-feedback-text-informative-quiet-on-fill, #00305c); --t-bd: var(--naowee-color-feedback-fill-informative-loud, #006aff); }
-.gi-insight__fig strong { color: var(--t-fg, var(--text-primary)); }
-.gi-insight__tag { display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; font-size: 12px; line-height: 1.2; font-weight: 700; color: var(--t-fg); }
-.gi-insight__tag i { font-style: normal; font-size: 12px; }
-.gi-insight__t { margin: 0; font-size: 14px; line-height: 1.3; font-weight: 600; color: var(--text-primary); }
-.gi-insight .gt-info { position: absolute; top: 0; right: 0; }
+.gi-insights { list-style: none; margin: 0; padding: 0; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); grid-auto-rows: minmax(96px, 1fr); }
+/* Tarjeta blanca y cifra neutra: el tono lo lleva solo el badge, con glifo y palabra (DC-297, DC-005). */
+.gi-insight { display: flex; flex-direction: column; justify-content: space-between; gap: var(--space-1); min-width: 0; padding: 10px 6px 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.gi-insight__head { display: flex; align-items: center; gap: var(--space-1); min-height: 24px; }
+.gi-insight__t { margin: 0; flex: 1; min-width: 0; font-size: 13px; line-height: 1.3; font-weight: 600; color: var(--text-secondary); }
+.gi-insight__fig { margin: 0; display: flex; align-items: baseline; gap: 6px; padding-right: 8px; font-variant-numeric: tabular-nums; }
+.gi-insight__fig strong { font-size: var(--text-2xl); line-height: 1; font-weight: 700; letter-spacing: -.5px; color: var(--text-primary); }
+.gi-insight__fig span { font-size: var(--text-base); line-height: 1.2; color: var(--text-secondary); white-space: nowrap; }
+.gi-insight__st { margin: 0; display: flex; }
+.gi-insight__st .naowee-badge { gap: 4px; white-space: nowrap; }
+.gi-insight__st i { font-style: normal; font-size: 12px; }
+/* ⓘ de 28 px a la vista; el ::before devuelve el área táctil de 44 px sin robarle ancho al label. */
+.gi-insight .gt-info { position: relative; flex: none; width: 28px; height: 28px; margin: -2px 0; }
+.gi-insight .gt-info::before { content: ""; position: absolute; inset: -8px; }
+.gi-insight .gt-info svg { width: 18px; height: 18px; }
 
 /* Botón ⓘ (área de 44 px) y su tooltip; el tooltip va fixed para no recortarse con el scroll de la lista. */
 .gt-info { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: none; color: var(--text-secondary); cursor: pointer; padding: 0; }
@@ -67,49 +65,11 @@
 @media (max-width: 1180px) { .gi-panel-row { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 600px) { .gi-insights { grid-template-columns: 1fr; } .gi-chips { padding: 12px 16px 0; } }
 
-.gi-toolbar { display: flex; gap: 10px; align-items: center; padding: 14px 20px; border-top: 1px solid var(--border); flex-wrap: wrap; }
-.gi-toolbar__spacer { flex: 1; }
-.gi-search { position: relative; flex: 1 1 200px; min-width: 200px; }
-.gi-search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); margin: 0; }
-.gi-search input { width: 100%; height: 44px; border: 1px solid var(--border-dark); border-radius: 999px; padding: 0 16px 0 42px; font: inherit; font-size: 14px; color: var(--text-primary); background: #fff; }
-.gi-search input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
-.gi-select { height: 44px; flex: none; min-width: 190px; border: 1px solid var(--border-dark); border-radius: 8px; padding: 0 8px; font: inherit; font-size: 14px; background: #fff; color: var(--text-primary); }
-
-.gi-table-wrap { overflow-x: auto; }
-.gi-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-.gi-table thead th { text-align: left; background: #f5f6fa; color: var(--text-secondary); font-size: 14px; font-weight: 700; padding: 12px 14px; white-space: nowrap; }
-.gi-table tbody td { padding: 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
-.gi-table tbody tr[data-id] { cursor: pointer; }
-.gi-table tbody tr[data-id]:hover { background: #fafbff; }
-.gi-table small { display: block; color: var(--text-secondary); font-size: 14px; line-height: 1.35; margin-top: 2px; }
-.gi-empty { text-align: center; color: var(--text-secondary); padding: 36px !important; }
-.gi-foot { padding: 14px 20px; color: var(--text-secondary); font-size: 14px; }
-.gi-actions { text-align: right; white-space: nowrap; }
-
 /* Ficha */
-.gi-states { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 20px; }
-.gi-states > div { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
-.gi-states span { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--text-secondary); }
-.gi-states strong { font-size: 18px; }
 .gi-good { color: var(--green); } .gi-bad { color: var(--red); }
-@media (max-width: 800px) { .gi-states { grid-template-columns: repeat(2, 1fr); } }
 .gi-banner { border-radius: var(--radius-md); padding: 12px 16px; font-size: 14px; line-height: 1.5; border: 1px solid; }
 .gi-banner ul { margin: 6px 0 0 18px; padding: 0; }
 .gi-banner--danger { background: var(--red-bg); border-color: var(--red-border); color: #8a1a10; }
-.gi-banner--warn { background: var(--orange-bg); border-color: var(--orange-border); color: #7a3a00; }
-.gi-banner--ok { background: var(--green-bg); border-color: var(--green-border); color: #14551a; }
-.gi-banner--info { background: var(--blue-bg); border-color: var(--blue-border); color: #144a85; }
-.gi-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; align-items: start; }
-@media (max-width: 1000px) { .gi-grid { grid-template-columns: 1fr; } }
-.gi-col { display: flex; flex-direction: column; gap: 16px; }
-.gi-col--side { position: sticky; top: 8px; }
-.gi-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-card); }
-.gi-card__title { margin: 0 0 14px; font-size: 16px; font-weight: 700; }
-.gi-kv { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 24px; margin: 0; }
-.gi-kv dt { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; color: var(--text-secondary); margin-bottom: 3px; }
-.gi-kv dd { margin: 0; font-size: 14px; color: var(--text-primary); word-break: break-word; }
-@media (max-width: 700px) { .gi-kv { grid-template-columns: 1fr; } }
-.gi-list { margin: 0; padding-left: 18px; } .gi-list li { margin-bottom: 4px; }
 .gi-timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; }
 .gi-timeline li { display: flex; gap: 12px; position: relative; }
 .gi-timeline li:not(:last-child)::after { content: ''; position: absolute; left: 5px; top: 16px; bottom: -16px; width: 2px; background: var(--border); }
@@ -183,14 +143,7 @@ label.gi-lbl { flex-direction: column; gap: 6px; } .gi-f > label.gi-lbl { flex-d
 .gi-toast--warn { background: #b45f06; } .gi-toast.is-in { opacity: 1; transform: none; }
 
 .gi-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-width: 210px; }
-.gi-table td:first-child, .gi-table th:first-child { white-space: nowrap; }
-.gi-table td:nth-child(2) { min-width: 190px; }
-.naowee-table-card__head { border-bottom: 0; }
-.gi-toolbar { border-top: 0; }
 
-.gi-reset { background: none; border: 0; color: var(--text-secondary); font: inherit; font-size: 14px; text-decoration: underline; cursor: pointer; margin-left: 12px; min-height: 44px; }
-.gi-table tbody td, .gi-table thead th { padding-left: 10px; padding-right: 10px; }
-.gi-table td:nth-child(2) { min-width: 170px; }
 
 /* DC-254/255: tags a 12 px en la bandeja; la conducta lleva artículo en tag y descripción corta en una línea. */
 .gi-page .naowee-badge, .gt-cond__tag { font-size: 12px; line-height: 1.3; }
@@ -199,7 +152,7 @@ label.gi-lbl { flex-direction: column; gap: 6px; } .gi-f > label.gi-lbl { flex-d
 .gt-cond__tag { flex: none; }
 .gt-cond__txt { min-width: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.35; }
 
-/* DC-260: gráfica de líneas. Nuevos = continua azul con círculos; Salen = punteada verde con rombos. */
+/* DC-260: gráfica de líneas. Nuevos = continua roja con círculos; Salen = punteada verde con rombos. */
 .gt-chart .gi-chart__head { margin-bottom: 8px; }
 .gt-legend { margin: 0 0 4px; }
 .gt-legsw { flex: none; overflow: visible; }
@@ -208,68 +161,91 @@ label.gi-lbl { flex-direction: column; gap: 6px; } .gi-f > label.gi-lbl { flex-d
 .gt-plot { position: relative; width: 100%; touch-action: pan-y; }
 .gt-plot svg { display: block; }
 .gt-plot svg [hidden] { display: none; }
-.gt-s-in { stroke: var(--azul); } .gt-s-out { stroke: var(--green); }
+.gt-s-in { stroke: var(--red); } .gt-s-out { stroke: var(--green); }
 .gt-line { fill: none; stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
 .gt-legsw line { stroke-width: 2.5; }
-.gt-mk.gt-s-in { fill: var(--azul); stroke: #fff; stroke-width: 1.5; }
+.gt-mk.gt-s-in { fill: var(--red); stroke: #fff; stroke-width: 1.5; }
 .gt-mk.gt-s-out { fill: var(--green); stroke: #fff; stroke-width: 1.5; }
 .gt-legsw .gt-mk { stroke-width: 1.5; }
 .gt-grid { stroke: var(--border); stroke-width: 1; }
 .gt-guide { stroke: var(--border-strong); stroke-width: 1; stroke-dasharray: 3 3; }
-.gt-ring circle { fill: none; stroke-width: 2; } .gt-ring-in { stroke: var(--azul); } .gt-ring-out { stroke: var(--green); }
+.gt-ring circle { fill: none; stroke-width: 2; } .gt-ring-in { stroke: var(--red); } .gt-ring-out { stroke: var(--green); }
 .gt-ytxt, .gt-xtxt { font-size: 14px; fill: var(--text-secondary); font-family: inherit; }
 .gt-xtxt { fill: var(--text-primary); }
 .gt-hit { cursor: crosshair; }
 .gt-tipc { position: absolute; z-index: 5; display: flex; flex-direction: column; gap: 2px; background: #fff; border: 1px solid var(--border-dark); border-radius: var(--radius-md); box-shadow: var(--shadow-md); padding: 8px 12px; font-size: 14px; line-height: 1.4; color: var(--text-primary); white-space: nowrap; pointer-events: none; }
 .gt-tipc[hidden] { display: none; }
 .gt-tipc__r { display: flex; align-items: center; gap: 6px; } .gt-tipc__n { color: var(--text-secondary); }
-.gi-table td:nth-child(5) small { white-space: nowrap; }
+/* DC-025: el buscador llena el ancho libre de la barra (gi-tabla.css lo limita a 420 px). */
+#giCard .gt-search { flex: 1 1 220px; max-width: none; }
+/* Tabla de Gestión (.gt-table.gi-reg): 8 columnas, así que el aire lateral baja a 10 px para no desbordar; los bordes alinean con la tarjeta. */
+.gt-table.gi-reg thead th, .gt-table.gi-reg tbody td { padding-left: 10px; padding-right: 10px; }
+.gt-table.gi-reg th:first-child, .gt-table.gi-reg td:first-child { padding-left: 20px; }
+.gt-table.gi-reg th:last-child, .gt-table.gi-reg td:last-child { padding-right: 20px; }
+.gi-reg td:first-child, .gi-reg th:first-child { white-space: nowrap; }
+.gi-reg td:nth-child(2) { min-width: 170px; }
+.gi-reg td:nth-child(5) small { white-space: nowrap; }
 
-/* DC-282: título + conteo, chips, buscador y filtros en una sola línea; en angosto envuelven. */
-.gi-tbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 16px; }
-.gi-tbar__title { flex: none; display: flex; flex-direction: column; justify-content: center; }
-.gi-tbar .naowee-table-card__title { font-size: 15px; line-height: 1.25; margin: 0; white-space: nowrap; }
-.gi-tbar .naowee-table-card__subtitle { font-size: 14px; line-height: 1.3; margin: 0; white-space: nowrap; }
-@media (min-width: 1280px) { .gi-tbar { flex-wrap: nowrap; } }
-@media (max-width: 1279px) { .gi-search { flex-basis: 240px; } }
+/* DC-007: leyenda y neto en una sola fila, como dos tarjetas; el texto del neto se acorta según el ancho de la tarjeta. */
+.gi-chart { container-type: inline-size; }
+.gi-chart__foot { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin-top: 0; }
+.gi-chart__foot .gt-legend { margin: 0; flex: none; align-items: center; gap: 4px 12px; background: var(--bg-soft); border-radius: var(--radius-md); padding: 6px 10px; min-height: 36px; }
+.gi-chart__foot .gt-legend li { gap: 6px; }
+.gi-chart__foot .gi-chart__neto { margin: 0; flex: 1 1 auto; gap: 6px; padding: 6px 8px; }
+.gi-chart__foot .gi-chart__neto span { white-space: nowrap; }
+.gi-chart__foot .gt-n-c { display: none; }
+@container (max-width: 680px) { .gi-chart__foot .gt-n-l { display: none; } .gi-chart__foot .gt-n-c { display: inline; } }
+/* Solo en angosto bajan de fila: la leyenda ocupa el ancho y el neto queda debajo. */
+@container (max-width: 540px) { .gi-chart__foot .gt-legend { flex: 1 1 100%; } .gi-chart__foot .gi-chart__neto { min-width: 0; } .gi-chart__foot .gi-chart__neto span { white-space: normal; } }
 
-/* DC-281: leyenda y neto comparten una sola franja al pie; envuelven en angosto. */
-.gt-foot { display: flex; flex-wrap: wrap; align-items: stretch; justify-content: space-between; gap: 6px 18px; margin-top: 8px; }
-.gt-foot .gt-legend { margin: 0; flex: none; align-items: center; }
-.gt-foot .gi-chart__neto { margin: 0; flex: 1 1 auto; min-width: max-content; gap: 10px; padding: 6px 12px; }
-/* DC-287: el texto del neto va en una sola línea; si no cabe junto a la leyenda, la tarjeta baja de fila. */
-.gt-foot .gi-chart__neto span { white-space: nowrap; }
-.gt-foot .gt-n-c { display: none; }
-/* En pantallas angostas el texto corto mantiene una sola línea sin desbordar la franja. */
-@media (max-width: 600px) { .gt-foot .gt-n-l { display: none; } .gt-foot .gt-n-c { display: inline; } .gt-foot .gi-chart__neto { min-width: 0; } .gt-foot .gt-legend { flex: 1 1 100%; flex-wrap: wrap; gap: 4px 16px; } }
-.gi-page > .naowee-table-card { gap: 0; }
-/* components.css fuerza 12 px en móvil; el conteo se queda en 14 px. */
-.gi-tbar .naowee-table-card__subtitle { font-size: 14px !important; }
-
-/* DC-285: leyenda y neto como dos tarjetas con el mismo look de las del panel de la izquierda. */
-.gt-foot .gt-legend { background: var(--bg-soft); border-radius: var(--radius-md); padding: 6px 14px; min-height: 36px; align-items: center; }
 /* DC-284: el tag del artículo va invertido: fondo azul oscuro y texto blanco (contraste > 12:1). */
 .gi-page .gt-cond__tag.naowee-badge { background: var(--azul); color: #fff; }
 
-/* DC-288: buscador y selects de la barra de la bandeja más compactos (36 px) y parejos entre sí. */
-.gi-tbar .gi-search { flex: 1 1 160px; min-width: 160px; }
-.gi-tbar .gi-search svg { left: 12px; width: 16px; height: 16px; }
-.gi-tbar .gi-search input { height: 36px; padding: 0 12px 0 34px; }
-.gi-tbar .gi-select { height: 36px; min-width: 150px; padding: 0 6px; }
-
-/* DC-296: filtros con el selector gráfico de Solicitudes, compactos (36 px) y en una sola línea. */
-.gi-tbar .gi-fsel { flex: none; }
-.gi-tbar .gi-fsel .gs-pick__btn { min-height: 36px; height: 36px; padding: 0 12px; gap: 8px; border-radius: 8px; }
-.gi-tbar .gi-fsel--reg .gs-pick__btn::before { content: 'Registro'; color: var(--text-secondary); }
-.gi-tbar .gi-fsel--res .gs-pick__btn::before { content: 'Restricción'; color: var(--text-secondary); }
-.gi-fsel .gs-opt__t { display: inline-flex; flex-direction: row; align-items: center; gap: 8px; }
-.gi-fsel .gs-opt__t strong { font-weight: 600; }
+/* DC-296: conteo y punto de color de las opciones de los filtros de estado. */
 .gi-fsel__n { font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--bg-soft); color: var(--text-primary); }
-.gi-fsel .gs-pick__list { min-width: 240px; }
-.gi-fsel .gs-pick__list li { justify-content: flex-start; } .gi-fsel .gs-pick__list li .gs-opt__t { flex: 1; justify-content: space-between; }
 .gi-dot { width: 12px; height: 12px; border-radius: 50%; flex: none; display: inline-block; }
 .gi-dot--negative { background: var(--naowee-color-feedback-fill-negative-loud, #d92d20); }
 .gi-dot--caution { background: var(--naowee-color-feedback-fill-caution-loud, #f08a00); }
 .gi-dot--positive { background: var(--naowee-color-feedback-fill-positive-loud, #1f8923); }
 .gi-dot--informative { background: var(--naowee-color-feedback-fill-informative-loud, #006aff); }
 .gi-dot--neutral { background: var(--text-muted); }
+
+/* Franja «Por tramitar desde solicitudes» (DC-064). */
+.gi-tram { margin-top: 16px; padding: 12px 16px; background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); }
+.gi-tram__h { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.gi-tram__t { margin: 0; font-size: 16px; line-height: 1.3; font-weight: 700; color: var(--text-primary); }
+.gi-tram__all { font-size: 14px; font-weight: 600; color: var(--accent); }
+.gi-tram__l { margin: 8px 0 0; padding: 0; list-style: none; }
+.gi-tram__l li { display: grid; grid-template-columns: 120px minmax(0, 1.6fr) minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--border); font-size: 14px; }
+.gi-tram__p { display: flex; flex-direction: column; min-width: 0; }
+.gi-tram__p small { color: var(--text-secondary); font-size: 13px; }
+.gi-tram__o { color: var(--text-secondary); overflow-wrap: anywhere; }
+@media (max-width: 700px) { .gi-tram__l li { grid-template-columns: minmax(0, 1fr) auto; } .gi-tram__o { grid-column: 1; } }
+
+/* Pestañas de Gestión: registros y expedientes de solicitudes (DC-075). */
+.gi-tabs { display: flex; gap: 4px; margin-top: 16px; border-bottom: 1px solid var(--border); }
+.gi-tab { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border: 0; border-bottom: 2px solid transparent; background: none; font: inherit; font-size: 18px; font-weight: 600; color: var(--text-secondary); cursor: pointer; }
+.gi-tab:hover { color: var(--text-primary); }
+.gi-tab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+.gi-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* DC-109/111: indicadores sin tarjetas, solo divisores internos (como un tres en raya); el estado va a la derecha, en línea con la cifra. */
+.gi-insights { gap: 0; }
+.gi-insight { padding: 12px 20px; background: transparent; border: 0; border-radius: 0; }
+.gi-insight:nth-child(odd) { padding-left: 0; border-right: 1px solid var(--border); }
+.gi-insight:nth-child(even) { padding-right: 0; }
+.gi-insight:nth-child(n+3) { border-top: 1px solid var(--border); }
+.gi-insight__row { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
+.gi-insight__row .gi-insight__fig { padding-right: 0; }
+.gi-insight__row .gi-insight__st { flex: none; }
+
+/* DC-124: indicadores con 16 px entre elementos. */
+.gi-insight { padding: 12px 16px; }
+.gi-insight:nth-child(odd) { padding-left: 0; }
+.gi-insight:nth-child(even) { padding-right: 0; }
+/* DC-134: renglones a 8 px dentro de la celda; el alto sobrante de la fila queda fuera, no entre ellos. */
+.gi-insights { grid-auto-rows: 1fr; }
+.gi-insight { justify-content: center; gap: 8px; }
+/* DC-126: encabezado de Gestión pegado bajo la barra superior, con sombra al desplazarse. */
+.gt-wrap:has(.gi-reg) { overflow-x: clip; }
+.gt-table.gi-reg thead th { position: sticky; top: -28px; z-index: 3; box-shadow: 0 3px 6px -3px rgba(20, 20, 40, .22); }

@@ -2,10 +2,12 @@
 (function (w, d) {
   'use strict';
   var GI = w.GI, U = GI.util, D = GI.derive, C = GI.cat, UI = w.GIUI, esc = SUID.esc;
-  var st, editId, view, ctxRef, io;
-  var lastDep = {}, auto = {}, touched = {}, evs = [], pcache = {};
+  var st, editId, view, ctxRef;
+  var lastDep = {}, auto = {}, touched = {}, evs = [], pcache = {}, cur = 'start', visited = {};
   var SECS = ['ctrl', 'inf', 'rep', 'hec', 'san', 'int'];
   var TITLES = { ctrl: 'Control del registro', inf: 'Infractor', rep: 'Representante o tutor', hec: 'Hechos y conducta', san: 'Sobre la sanción', int: 'Gestión interna' };
+  var HINTS = { ctrl: 'La fecha de registro la genera el sistema.', inf: 'Identificación, residencia y contacto.', rep: 'Solo si el infractor es menor de edad.', hec: 'Fecha, evento deportivo y conductas.', san: 'Acto administrativo, ejecutoria y meses de sanción.', int: 'Radicado y profesional responsable.' };
+  var NEXT = '<svg class="gi-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
   /* Ayuda en lenguaje natural bajo los campos que se pre-llenan; se ocultan al editarlos. */
   var AH = { fechaRadicado: 'Usamos la fecha de hoy.', radEntrada: 'Tomamos el siguiente radicado disponible; cámbialo si es otro.', profesional: 'Te asignamos como responsable; puedes elegir a otra persona.', meses: 'Tomamos el mínimo del rango de la conducta; ajústalo según el acto.', descripcion: 'Partimos del texto base de la conducta; completa con los hechos.' };
   var CHECK = '<svg class="gf-ck" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3L13 4.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -69,7 +71,7 @@
     }).join('') + '</div>';
   }
   function section(id, letter, title, sub, body, extra) {
-    return '<section class="gi-sec" id="sec-' + id + '"' + (extra || '') + '><header class="gi-sec__head"><span class="gi-sec__tag">' + letter + '</span><div class="gf-sec__txt"><h2>' + title + '</h2>' + (sub ? '<p>' + sub + '</p>' : '') + '</div>' +
+    return '<section class="gi-sec" id="sec-' + id + '"' + (extra || '') + '><header class="gi-sec__head"><span class="gi-sec__tag">' + letter + '</span><div class="gf-sec__txt"><p class="gf-kicker" data-kicker="' + id + '"></p><h2 tabindex="-1">' + title + '</h2>' + (sub ? '<p>' + sub + '</p>' : '') + '</div>' +
       '<div class="gf-sec__st"><span class="gf-count" data-count="' + id + '" hidden></span><span class="gf-done" data-done="' + id + '" hidden>' + CHECK + 'Completado</span></div></header><div class="gi-grid12">' + body + '</div></section>';
   }
 
@@ -120,7 +122,7 @@
 
   function build() {
     var f = '', PROF = UI.PROFESIONALES;
-    f += section('ctrl', 'A', 'Control del registro', '', fld('1', 'Fecha de registro', '<strong class="gf-val">' + U.fmt(editId ? GI.get(editId).fechaRegistro : U.today()) + '</strong>', { c: 4, calc: 1 }));
+    f += section('ctrl', 'A', 'Control del registro', 'Lo genera el sistema; no hay nada que completar aquí.', fld('1', 'Fecha de registro', '<strong class="gf-val">' + U.fmt(editId ? GI.get(editId).fechaRegistro : U.today()) + '</strong>', { c: 4, calc: 1 }));
     f += section('inf', 'B', 'Identificación y contacto del infractor', '', personHtml('i', 2));
     f += section('rep', 'C', 'Identificación y contacto del representante o tutor', 'Aplica cuando el infractor es menor de edad (Ley 1098 de 2006).', personHtml('r', 18), ' hidden');
     f += section('hec', 'D', 'Hechos y conducta', '',
@@ -161,22 +163,37 @@
 
     var back = editId ? UI.BASE + '/' + editId : UI.BASE;
     view.innerHTML = '<div class="page-inner gi-page gi-form">' +
-      '<a class="gi-back" href="' + back + '">' + UI.svg('back') + ' ' + (editId ? 'Volver a la ficha' : 'Volver a la bandeja') + '</a>' +
-      '<header class="gi-head"><div class="page-title-block"><h1 class="page-title">' + (editId ? 'Editar registro ' + editId : 'Registrar infractor') + '</h1>' +
-      '<p class="page-subtitle">Registra una decisión en firme. El sistema valida la forma del registro, no reabre la decisión de la autoridad.</p></div></header>' +
+      '<a class="gi-back" href="' + back + '">' + UI.svg('back') + ' Volver</a>' +
+      '<header class="gi-head"><div class="page-title-block"><h1 class="page-title">' + (editId ? 'Editar registro ' + editId : 'Registrar infractores') + '</h1>' +
+      '<p class="page-subtitle">' + (editId ? 'Actualiza los datos de la decisión en firme registrada.' : 'Registra decisiones en firme una por una o con la carga masiva.') + '</p></div>' +
+      (editId ? '' : '<div class="gi-head__actions"><a class="naowee-btn naowee-btn--loud" href="' + UI.BASE + '/carga-masiva">' + UI.svg('upload') + ' Carga masiva</a></div>') + '</header>' +
       '<div class="gi-banner gi-banner--danger" id="errSum" hidden></div>' +
       '<div class="gi-layout"><nav class="gi-steps" aria-label="Bloques del formulario">' +
       '<div class="gf-total"><div class="gf-total__pct"><strong id="gfPct">0 %</strong><span>completo</span></div>' +
       '<div class="gf-bar" id="gfTotBar" role="progressbar" aria-label="Avance total del formulario" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0 % completo"><i></i></div>' +
       '<small id="gfTotCnt">0 de 0 campos obligatorios</small></div>' +
       SECS.map(function (id, i) {
-        return '<a href="#" data-go="sec-' + id + '" class="gi-step' + (i === 0 ? ' is-on' : '') + '" id="go-' + id + '"><span>' + 'ABCDEF'[i] + '</span><div><b>' + TITLES[id] + '</b><small data-scount="' + id + '">—</small>' +
-          '<div class="gf-bar" data-sbar="' + id + '" role="progressbar" aria-label="' + TITLES[id] + ': campos obligatorios completados" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0"><i></i></div></div>' + CHECK + '</a>';
-      }).join('') + '</nav><form class="gi-formcol" id="giForm" novalidate>' + f + '</form></div>' +
-      '<div class="gi-bar"><div class="gi-bar__inner"><span class="gi-bar__hint"><span class="gf-hintlong">Los campos con <b class="gi-star">*</b> son obligatorios. </span><b id="gfBarPct">0 % completo</b></span><div>' +
-      '<a class="naowee-btn naowee-btn--mute" href="' + back + '">Cancelar</a>' +
-      '<button type="button" class="naowee-btn naowee-btn--loud" id="giSave">' + (editId ? 'Guardar cambios' : 'Guardar registro') + '</button></div></div></div></div>';
+        return '<a href="#" data-go="' + id + '" class="gi-step" id="go-' + id + '"><span>' + 'ABCDEF'[i] + '</span><div><b>' + TITLES[id] + '</b>' +
+          '<div class="gf-srow" data-srow="' + id + '"><div class="gf-bar" data-sbar="' + id + '" role="progressbar" aria-label="' + TITLES[id] + ': campos obligatorios completados" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0"><i></i></div>' +
+          '<small class="gf-badge" data-scount="' + id + '" aria-hidden="true">—</small></div></div>' + CHECK + '</a>';
+      }).join('') + '</nav><form class="gi-formcol" id="giForm" novalidate>' + (editId ? '' : startHtml()) + f + '</form></div>' +
+      '<div class="gi-bar" id="gfBar"><div class="gi-bar__inner"><span class="gi-bar__hint"><span class="gf-hintlong">Los campos con <b class="gi-star">*</b> son obligatorios.</span></span><div>' +
+      '<a class="naowee-btn naowee-btn--mute gf-cancel" href="' + back + '">Cancelar</a>' +
+      (editId ? '' : '<button type="button" class="naowee-btn naowee-btn--loud" id="gfStart">Comenzar</button>') +
+      '<button type="button" class="naowee-btn naowee-btn--mute" id="gfBack">' + UI.svg('back') + ' Atrás</button>' +
+      '<button type="button" class="naowee-btn naowee-btn--loud" id="gfNext">Siguiente ' + NEXT + '</button>' +
+      '<button type="button" class="naowee-btn naowee-btn--loud" id="giSave" hidden>' + (editId ? 'Guardar cambios' : 'Guardar registro') + '</button></div></div></div></div>';
     labelControls();
+  }
+  /* Solo el alta lo trae: al editar los datos ya existen y se abre directo en el primer bloque. */
+  function startHtml() {
+    var rows = SECS.map(function (id, i) {
+      var cnt = id === 'ctrl' ? '<small class="gf-badge">Automático</small>' : id === 'rep' ? '<small class="gf-badge">Si aplica</small>' : '<small class="gf-badge" data-startcnt="' + id + '"></small>';
+      return '<li><span class="gi-sec__tag">' + 'ABCDEF'[i] + '</span><div><b>' + TITLES[id] + '</b><span>' + HINTS[id] + '</span></div>' + cnt + '</li>';
+    }).join('');
+    return '<section class="gi-sec gf-start" id="sec-start" aria-label="Registro individual">' +
+      '<ol class="gf-start__list">' + rows + '</ol>' +
+      '</section>';
   }
   /* Une cada control con su etiqueta para lectores de pantalla. */
   function labelControls() {
@@ -317,24 +334,29 @@
     bar.firstChild.style.width = (t ? Math.round(dn * 100 / t) : 0) + '%';
     bar.classList.toggle('is-full', t > 0 && dn === t);
   }
+  /* Los bloques inactivos van en display:none, así que "visible" se decide por [hidden], no por layout. */
+  function shown(el, sec) { for (; el && el !== sec; el = el.parentNode) if (el.hidden) return false; return true; }
   function progress() {
     var tot = 0, done = 0, q = function (s) { return view.querySelector(s); };
     SECS.forEach(function (id) {
       var sec = q('#sec-' + id), t = 0, dn = 0;
-      if (!sec.hidden) sec.querySelectorAll('[data-req]').forEach(function (el) { if (!el.getClientRects().length) return; t++; if (filled(el.getAttribute('data-req'))) dn++; });
+      if (!sec.hidden) sec.querySelectorAll('[data-req]').forEach(function (el) { if (!shown(el, sec)) return; t++; if (filled(el.getAttribute('data-req'))) dn++; });
       tot += t; done += dn;
+      var bad = false; if (!sec.hidden) sec.querySelectorAll('.gi-ferr:not(:empty)').forEach(function (e) { if (shown(e, sec)) bad = true; });
+      q('#go-' + id).classList.toggle('has-err', bad);
       if (pcache[id] === t + '/' + dn) return;
       pcache[id] = t + '/' + dn;
       var full = t > 0 && dn === t, label = t ? dn + ' de ' + t + ' campos' : 'Sin campos obligatorios';
-      txt(q('[data-scount="' + id + '"]'), label);
-      var bar = q('[data-sbar="' + id + '"]'); bar.hidden = !t; setBar(bar, dn, t, label);
+      var bd = q('[data-scount="' + id + '"]'); txt(bd, dn + '/' + t); bd.title = label;
+      q('[data-srow="' + id + '"]').hidden = !t; setBar(q('[data-sbar="' + id + '"]'), dn, t, label);
+      txt(q('[data-startcnt="' + id + '"]'), t + (t === 1 ? ' campo' : ' campos'));
       q('#go-' + id).classList.toggle('is-done', full);
       var c = q('[data-count="' + id + '"]'); txt(c, label); c.hidden = full || !t;
       q('[data-done="' + id + '"]').hidden = !full;
     });
     var pct = tot ? Math.floor(done * 100 / tot) : 0;
     if (done === tot && tot) pct = 100;
-    txt(q('#gfPct'), pct + ' %'); txt(q('#gfTotCnt'), done + ' de ' + tot + ' campos obligatorios'); txt(q('#gfBarPct'), pct + ' % completo');
+    txt(q('#gfPct'), pct + ' %'); txt(q('#gfTotCnt'), done + ' de ' + tot + ' campos obligatorios'); txt(q('[data-startsum]'), String(tot));
     setBar(q('#gfTotBar'), pct, 100, pct + ' % completo');
   }
 
@@ -402,6 +424,7 @@
       mc === false && m ? 'Activado a mano: se pedirá representante o tutor.' : mc === false ? 'Es mayor de edad. Puedes activarlo a mano si hace falta un representante.' :
       m ? 'Activado a mano: se pedirá representante o tutor.' : 'Se calcula al ingresar la fecha de nacimiento.');
     q('#sec-rep').hidden = !m; q('#go-rep').hidden = !m;
+    if (lastDep.rep !== m) { lastDep.rep = m; if (cur === 'rep' && !m) cur = 'inf'; applyStep(); }
 
     /* competición y equipos */
     var comp = f.competicion, otra = comp === 'Otro';
@@ -511,27 +534,81 @@
     req('fechaRadicado', 'Fecha de radicado de entrada', f.fechaRadicado); req('radEntrada', 'Radicado de entrada', f.radEntrada.trim()); req('profesional', 'Profesional responsable', f.profesional.trim());
     return errs;
   }
-  function showErrors(errs) {
-    view.querySelectorAll('.is-invalid').forEach(function (e) { e.classList.remove('is-invalid'); });
-    view.querySelectorAll('.gi-ferr').forEach(function (e) { e.textContent = ''; });
+  function secEl(id) { return view.querySelector('#sec-' + id); }
+  /* Se lee del DOM (casilla de mensaje) para no mantener un segundo mapa campo→bloque. */
+  function secOf(path) { var slot = view.querySelector('[data-err="' + path + '"]'), s = slot && slot.closest('.gi-sec'); return s ? s.id.slice(4) : null; }
+  function blockErrors(id) { return validate().filter(function (e) { return secOf(e[0]) === id; }); }
+  /* Con root = bloque, los errores de otros bloques se conservan hasta volver a ellos. */
+  function showErrors(errs, root) {
+    root = root || view;
+    root.querySelectorAll('.is-invalid').forEach(function (e) { e.classList.remove('is-invalid'); });
+    root.querySelectorAll('.gi-ferr').forEach(function (e) { e.textContent = ''; });
     errs.forEach(function (e) {
       var slot = view.querySelector('[data-err="' + e[0] + '"]');
       if (slot) { slot.textContent = e[1]; var ctl = slot.parentNode.querySelector('.gi-in, .gi-chips, .gf-seg'); if (ctl) ctl.classList.add('is-invalid'); }
     });
+    progress();
+  }
+  function banner(errs) {
     var sum = view.querySelector('#errSum');
     sum.hidden = !errs.length;
     sum.innerHTML = errs.length ? '<strong>No se puede guardar todavía.</strong> Corrige ' + errs.length + ' punto(s):<ul>' + errs.slice(0, 6).map(function (e) { return '<li>' + esc(e[1]) + '</li>'; }).join('') + (errs.length > 6 ? '<li>… y ' + (errs.length - 6) + ' más.</li>' : '') + '</ul>' : '';
-    if (errs.length) { var first = view.querySelector('.is-invalid'); (first || sum).scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+  }
+  function firstInvalid() {
+    var bad = secEl(cur).querySelector('.is-invalid'); if (!bad) return;
+    var c = bad.matches('input, select, textarea') ? bad : bad.querySelector('input, select, textarea');
+    if (c) c.focus({ preventScroll: true });
+    bad.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  /* ───────── pasos ───────── */
+  function steps() { return SECS.filter(function (id) { return !secEl(id).hidden; }); }
+  function applyStep() {
+    var q = function (s) { return view.querySelector(s); }, list = steps(), start = cur === 'start', i = list.indexOf(cur), s0 = q('#sec-start');
+    if (s0) s0.hidden = !start;
+    q('.gi-layout').classList.toggle('is-start', start);
+    SECS.forEach(function (id) {
+      var a = q('#go-' + id), on = id === cur, n = list.indexOf(id);
+      secEl(id).classList.toggle('gf-off', !on);
+      a.classList.toggle('is-on', on); a.classList.toggle('is-locked', !on && !visited[id]);
+      if (on) a.setAttribute('aria-current', 'step'); else a.removeAttribute('aria-current');
+      if (on || visited[id]) a.removeAttribute('aria-disabled'); else a.setAttribute('aria-disabled', 'true');
+      txt(q('[data-kicker="' + id + '"]'), n >= 0 ? 'Paso ' + (n + 1) + ' de ' + list.length : '');
+    });
+    var com = q('#gfStart'); if (com) com.hidden = !start;
+    q('#gfBack').hidden = start || (i === 0 && !!editId);
+    q('#gfNext').hidden = start || i === list.length - 1;
+    q('#giSave').hidden = start || i !== list.length - 1;
+  }
+  function go(id) {
+    cur = id; if (id !== 'start') visited[id] = true;
+    view.querySelector('#errSum').hidden = true;
+    applyStep();
+    view.scrollTop = 0;
+    var s = secEl(id), h = s && s.querySelector('h2'); if (h) h.focus({ preventScroll: true });
+  }
+  /* Saltar hacia adelante por el nav no puede dejar atrás un bloque incompleto. */
+  function guard(from, to) {
+    var list = steps();
+    for (var i = from; i < to; i++) {
+      var e = blockErrors(list[i]);
+      if (!e.length) { showErrors([], secEl(list[i])); continue; }
+      if (list[i] !== cur) go(list[i]);
+      showErrors(e, secEl(list[i])); firstInvalid();
+      return false;
+    }
+    return true;
+  }
+  function fail(errs) {
+    var at = steps().filter(function (id) { return errs.some(function (e) { return secOf(e[0]) === id; }); })[0] || cur;
+    if (at !== cur) go(at);
+    showErrors(errs); banner(errs); firstInvalid();
   }
   function save() {
     var errs = validate();
-    showErrors(errs);
-    if (errs.length) return;
+    if (errs.length) return fail(errs);
     var rec = toRec(), dup = GI.duplicado(rec, editId);
-    if (dup) {
-      showErrors([['numActo', 'Ya existe un registro equivalente (' + dup.id + '): misma persona, mismo acto y misma ejecutoria.']]);
-      return;
-    }
+    if (dup) return fail([['numActo', 'Ya existe un registro equivalente (' + dup.id + '): misma persona, mismo acto y misma ejecutoria.']]);
+    showErrors([]); banner([]);
     /* Los errores de forma se muestran al instante; solo el guardado válido espera. */
     SUID.busy(view.querySelector('#giSave'), editId ? 'Guardando cambios…' : 'Guardando registro…', function () {
       var out;
@@ -601,27 +678,44 @@
       var q = norm(e.target.value.trim());
       view.querySelectorAll('[data-multi="origen"] .gi-chip').forEach(function (c) { c.hidden = !!q && norm(c.textContent).indexOf(q) < 0 && !c.querySelector('input').checked; });
     });
+    /* Solo se vuelve a bloques ya visitados; ir hacia adelante exige que los de en medio estén completos. */
     view.querySelectorAll('[data-go]').forEach(function (a) {
-      a.addEventListener('click', function (e) { e.preventDefault(); d.getElementById(a.getAttribute('data-go')).scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+      a.addEventListener('click', function (e) {
+        e.preventDefault();
+        var id = a.getAttribute('data-go'), list = steps(), from = list.indexOf(cur), to = list.indexOf(id);
+        if (id === cur || !visited[id] || to < 0) return;
+        if (to < from || guard(from, to)) go(id);
+      });
     });
+    var begin = view.querySelector('#gfStart');
+    if (begin) begin.addEventListener('click', function () { go(steps()[0]); });
+    /* Si el representante apareció detrás del paso actual (la fecha de los hechos hace menor al infractor), se pasa por él primero. */
+    view.querySelector('#gfNext').addEventListener('click', function () {
+      var list = steps(), i = list.indexOf(cur), behind = list.slice(0, i).filter(function (id) { return !visited[id]; })[0];
+      if (guard(i, i + 1)) go(behind || list[i + 1]);
+    });
+    view.querySelector('#gfBack').addEventListener('click', function () { var list = steps(), i = list.indexOf(cur); go(i > 0 ? list[i - 1] : 'start'); });
     view.querySelector('#giSave').addEventListener('click', save);
-    if (w.IntersectionObserver) {
-      io = new IntersectionObserver(function (es) {
-        es.forEach(function (en) {
-          if (!en.isIntersecting) return;
-          view.querySelectorAll('.gi-step').forEach(function (s) { s.classList.toggle('is-on', s.id === 'go-' + en.target.id.slice(4)); });
-        });
-      }, { rootMargin: '-15% 0px -70% 0px' });
-      view.querySelectorAll('.gi-sec').forEach(function (s) { io.observe(s); });
-    }
+  }
+
+  /* «Tramitar» desde Gestión deja {doc, tipo, solicitud}: rellena el infractor y se borra tras usarse. */
+  function precarga(p) {
+    var pf = null;
+    try { pf = JSON.parse(sessionStorage.getItem('suid.gi.prefill') || 'null'); sessionStorage.removeItem('suid.gi.prefill'); } catch (e) { pf = null; }
+    if (!pf) return;
+    var t = C.tiposId.filter(function (x) { return x === pf.tipo || x.indexOf('(' + pf.tipo + ')') >= 0; })[0];
+    if (t) p.tipoId = t;
+    if (pf.doc) p.numId = /CC|CE|TI/.test(p.tipoId) ? String(pf.doc).replace(/\D/g, '') : String(pf.doc);
   }
 
   w.GIForm = {
     open: function (v, ctx, id) {
-      if (io) { io.disconnect(); io = null; }
-      view = v; ctxRef = ctx; editId = id; lastDep = {}; auto = {}; touched = {}; pcache = {};
+      view = v; ctxRef = ctx; editId = id; lastDep = {}; auto = {}; touched = {}; pcache = {}; visited = {};
       var rec = id ? GI.get(id) : null;
       if (id && !rec) { location.hash = UI.BASE; return; }
+      /* Editar abre en el primer bloque con todo desbloqueado: los datos ya existen. */
+      cur = id ? 'ctrl' : 'start';
+      if (id) SECS.forEach(function (s) { visited[s] = true; });
       st = { i: blankPerson(), r: blankPerson(), f: blankFlat(), ui: { menorOn: false, mismaDir: false, agrOn: false, multaOn: false, profOtro: false, paisOtro: { i: false, r: false } } };
       evs = buildEvents();
       if (rec) {
@@ -638,6 +732,7 @@
         st.f.profesional = pr; auto.profesional = 1;
         auto.fechaRadicado = 1;
         st.f.radEntrada = nextRad(); auto.radEntrada = 1;
+        precarga(st.i);
       }
       var u = st.ui;
       u.paisOtro.i = st.i.pais !== 'Colombia'; u.paisOtro.r = st.r.pais !== 'Colombia';

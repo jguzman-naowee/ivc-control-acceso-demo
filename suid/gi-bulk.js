@@ -111,14 +111,15 @@
     function pinta(foco) {
       var p = S.paso, pct = Math.round(p * 100 / TOTAL), P = PASOS[p - 1];
       view.innerHTML = '<div class="page-inner gi-page gb-wiz">' +
+        '<button type="button" class="gi-back gb-exit" id="bkExit">' + UI.svg('back') + ' Volver</button>' +
         '<div class="gb-top"><div class="gb-prog"><div class="gb-prog__row"><span style="color:var(--text-primary)">Paso ' + p + ' de ' + TOTAL + '</span><span>' + pct + '%</span></div>' +
-        '<div class="gb-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '" aria-label="Paso ' + p + ' de ' + TOTAL + '"><i style="width:' + pct + '%"></i></div></div>' +
-        '<button type="button" class="gb-exit" id="bkExit">' + UI.svg('back') + ' Volver a la bandeja</button></div>' +
+        '<div class="gb-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '" aria-label="Paso ' + p + ' de ' + TOTAL + '"><i style="width:' + pct + '%"></i></div></div></div>' +
         '<div class="gb-stage"><section class="gb-step"><span class="gb-eyebrow">Carga masiva de infractores</span>' +
         '<h1 class="gb-title" id="bkT" tabindex="-1">' + P.t + '</h1>' + (P.l ? '<p class="gb-lead">' + P.l + '</p>' : '') + cuerpo() + '</section></div>' +
-        '<div class="gb-foot"><div>' + (p > 1 && p < TOTAL ? '<button type="button" class="naowee-btn naowee-btn--mute gb-btn" id="bkBack">Atrás</button>' : '') + '</div>' +
-        '<div>' + (p === TOTAL ? '<button type="button" class="naowee-btn naowee-btn--mute gb-btn" id="bkNew">Cargar otro archivo</button><button type="button" class="naowee-btn naowee-btn--loud gb-btn" id="bkDone">Volver a la bandeja</button>'
-          : '<button type="button" class="naowee-btn naowee-btn--loud gb-btn" id="bkNext"' + (listo() ? '' : ' disabled') + '>' + P.next + '</button>') + '</div></div></div>';
+        '</div><div class="gi-bar"><div class="gi-bar__inner"><span class="gi-bar__hint">Paso ' + p + ' de ' + TOTAL + '</span><div>' +
+        (p > 1 && p < TOTAL ? '<button type="button" class="naowee-btn naowee-btn--mute" id="bkBack">Atrás</button>' : '') +
+        (p === TOTAL ? '<button type="button" class="naowee-btn naowee-btn--mute" id="bkNew">Cargar otro archivo</button><button type="button" class="naowee-btn naowee-btn--loud" id="bkDone">Volver a la bandeja</button>'
+          : '<button type="button" class="naowee-btn naowee-btn--loud" id="bkNext"' + (listo() ? '' : ' disabled') + '>' + P.next + '</button>') + '</div></div></div>';
       enlaza();
       if (foco) d.getElementById('bkT').focus({ preventScroll: true });
     }

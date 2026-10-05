@@ -1,9 +1,9 @@
 /* Estados de carga de la demo: esqueletos, tiempos simulados por vista y estado ocupado de los botones. */
 (function (w, d) {
   'use strict';
-  /* Una sola velocidad: el doble de la base, entre la «normal» (×1) y la «lenta» (×3) que se probaron antes. */
+  /* Una sola velocidad: la base (×1), el doble de rápida que la ×2 anterior (DC-140); la vista más corta queda en 350 ms. */
   var BASE = { busqueda: 500, lista: 1000, ficha: 750, form: 700, masiva: 450, solicitudes: 900, ph: 350 };
-  var FACTOR = 2, timer = 0;
+  var FACTOR = 1, timer = 0;
 
   function escala(ms) { return Math.round(ms * FACTOR); }
 

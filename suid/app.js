@@ -39,8 +39,8 @@
       { id: 'actos-coord', label: 'Aprobación de actos', icon: img('icon-actos'), ph: 1 }
     ] },
     { sec: 'Control de acceso', items: [
-      { id: 'consulta', label: 'Búsqueda', icon: img('icon-busqueda'), href: '#/control-acceso/consulta' },
-      { id: 'infractores', label: 'Gestión', icon: img('icon-acceso'), href: '#/control-acceso/infractores' },
+      { id: 'consulta', label: 'Búsqueda y novedades', icon: img('icon-busqueda'), href: '#/control-acceso/consulta' },
+      { id: 'infractores', label: 'Gestión de sanciones', icon: img('icon-acceso'), href: '#/control-acceso/infractores' },
       { id: 'solicitudes', label: 'Solicitudes', icon: img('icon-solicitudes'), href: '#/control-acceso/solicitudes' }
     ] },
     { sec: 'Configuración', items: [{ id: 'equipo-coord', label: 'Usuarios y áreas', icon: img('icon-equipo'), ph: 1 }] },
@@ -116,6 +116,7 @@
     d.getElementById('topHeader').innerHTML =
       '<nav class="suid-bc" aria-label="Migas de pan">' + bc + '</nav>' +
       '<div class="top-header__right">' +
+        '<span class="suid-demo">Demostración con datos ficticios</span>' +
         '<button class="suid-bell" type="button" aria-label="Notificaciones">' + I.bell + '</button>' +
         '<div class="suid-avatar"><span class="suid-avatar__ring">' + SUID.user.initials + '</span>' + I.chevD + '</div>' +
       '</div>';
@@ -130,15 +131,18 @@
     Object.keys(SUID.views).sort(function (a, b) { return b.length - a.length; }).some(function (k) {
       if (r.path === k || r.path.indexOf(k + '/') === 0) { match = k; return true; }
     });
-    /* Entrada por defecto: la primera del menú (DC-280). */
-    if (!r.path) { location.replace('#/control-acceso/consulta'); return; }
+    /* Sin ruta: inicio en blanco con la marca de agua del IVC (DC-001). */
+    var inicio = !r.path;
     var ctx = { route: r, rest: match ? r.path.slice(match.length).replace(/^\//, '').split('/').filter(Boolean) : [] };
     var ITEM = { 'control-acceso/consulta': 'consulta', 'control-acceso/solicitudes': 'solicitudes' };
     /* Registrar, editar, carga masiva y la ficha son acciones de Gestión, no ítems del menú. */
     renderSidebar({ parent: '', item: match ? (ITEM[match] || 'infractores') : '' });
 
     function pinta() {
-      if (match) {
+      if (inicio) {
+        view.innerHTML = '<div class="suid-home"><h1 class="sk-sr">Inicio</h1><span class="suid-home__wm" aria-hidden="true">IVC</span></div>';
+        ctx.crumbs = [{ label: 'Inicio' }];
+      } else if (match) {
         SUID.views[match](view, ctx);
       } else {
         view.innerHTML = '<div class="page-inner suid-ph"><h1 class="page-title">En construcción</h1>' +
@@ -151,7 +155,7 @@
     }
 
     var mine = ++tok, L = SUID.load;
-    var ms = quiet === true || !L ? 0 : L.delay(match, ctx);
+    var ms = quiet === true || !L || inicio ? 0 : L.delay(match, ctx);
     if (!ms) { pinta(); return; }
     var cr = L.crumbs(match, ctx);
     renderHeader(cr);

@@ -2,7 +2,7 @@
 (function (w, d) {
   'use strict';
   var GI = w.GI, U = GI.util, D = GI.derive, UI = w.GIUI, esc = SUID.esc;
-  var KEY = 'suid.gs.v3';
+  var KEY = 'suid.gs.v4';
   var ESTADOS = [['enviado', 'Enviado'], ['recibido', 'Recibido'], ['tramite', 'En trámite'], ['derivo', 'Derivó en medida'], ['archivado', 'Archivado']];
   var BADGE = { enviado: 'informative', recibido: 'neutral', tramite: 'caution', derivo: 'negative', archivado: 'neutral' };
   var MOTIVOS = ['La autoridad no abrió procedimiento', 'No se pudo identificar a la persona', 'Duplicado de otra solicitud', 'Falta de evidencia', 'Otro'];
@@ -30,10 +30,10 @@
         evento: 'Millonarios vs. Medellín · 15 ago 2026 · Estadio El Campín', hechos: '15 ago 2026', autoridad: 'Inspección de Policía 9 de Bogotá', conductas: ['Violencia contra la fuerza pública (art. 97, 3)'], evid: '2 fotos · 1 video',
         descripcion: 'Golpeó a un agente de policía durante el desalojo de la tribuna Sur.',
         hist: [h('17 ago 2026', 'Enviado por la entidad', 'Millonarios · Seguridad', 'azul'), h('18 ago 2026', 'Recibido por el IVC', 'Natalia Suárez Pineda'), h('25 ago 2026', 'La autoridad abrió procedimiento · oficio 2026-E-032977', 'Natalia Suárez Pineda', 'amarillo')] },
-      { id: 'R-2026-0391', estado: 'derivo', medida: 'MC-2026-0412', tipo: 'Club de fútbol', origen: 'Independiente Medellín', iso: '2026-08-03', fecha: '3 ago 2026 · 13:35', nombre: 'Fabio Nelson Gaviria Londoño', doc: 'CC 70.325.114',
+      { id: 'R-2026-0391', estado: 'derivo', medida: 'INF-2026-0002', tipo: 'Club de fútbol', origen: 'Independiente Medellín', iso: '2026-08-03', fecha: '3 ago 2026 · 13:35', nombre: 'Fabio Nelson Gaviria Londoño', doc: 'CC 70.325.114',
         evento: 'Medellín vs. Junior · 1 ago 2026 · Estadio Atanasio Girardot', hechos: '1 ago 2026', autoridad: 'Inspección de Policía 14 de Medellín', conductas: ['Agresión física (art. 98, a)'], evid: '1 foto · 1 video',
         descripcion: 'Agredió a otro aficionado en la tribuna Sur al terminar el partido.',
-        hist: [h('3 ago 2026', 'Enviado por la entidad', 'Independiente Medellín · Seguridad', 'azul'), h('4 ago 2026', 'Recibido por el IVC', 'Carolina Vélez Ortiz'), h('11 ago 2026', 'La autoridad abrió procedimiento', 'Carolina Vélez Ortiz', 'amarillo'), h('15 sep 2026', 'Derivó en la medida MC-2026-0412', 'Carolina Vélez Ortiz', 'rojo')] },
+        hist: [h('3 ago 2026', 'Enviado por la entidad', 'Independiente Medellín · Seguridad', 'azul'), h('4 ago 2026', 'Recibido por el IVC', 'Carolina Vélez Ortiz'), h('11 ago 2026', 'La autoridad abrió procedimiento', 'Carolina Vélez Ortiz', 'amarillo'), h('15 sep 2026', 'Derivó en la medida INF-2026-0002', 'Carolina Vélez Ortiz', 'rojo')] },
       { id: 'R-2026-0366', estado: 'archivado', motivoArchivo: 'Duplicado de otra solicitud', notaArchivo: 'Ya existe una solicitud con los mismos hechos.', tipo: 'Inspección de Policía', origen: 'Inspección de Policía 3 de Envigado', iso: '2026-07-14', fecha: '14 jul 2026 · 09:05', nombre: 'Leidy Johana Restrepo Vélez', doc: 'CC 1.040.750.226',
         evento: 'Envigado vs. Medellín · 12 jul 2026 · Estadio Polideportivo Sur', hechos: '12 jul 2026', autoridad: 'Inspección de Policía 3 de Envigado', conductas: ['Agresión verbal (art. 98, b)'], evid: 'Sin evidencia adjunta',
         descripcion: 'Insultó a un árbitro desde la tribuna Occidental.',
@@ -71,10 +71,10 @@
         evento: 'Nacional vs. Pereira · 10 ago 2026 · Estadio Atanasio Girardot', hechos: '10 ago 2026', autoridad: 'Inspección de Policía 14 de Medellín', conductas: ['Armas u objetos peligrosos (art. 97, 1)'], evid: '2 fotos',
         descripcion: 'En la requisa de la Puerta 6 · Sur se le encontró un arma cortopunzante.',
         hist: [h('11 ago 2026', 'Enviado por la entidad', 'Atlético Nacional · Jefe de logística', 'azul'), h('11 ago 2026', 'Recibido por el IVC', 'Jaime Pardo Ruiz'), h('19 ago 2026', 'La autoridad abrió procedimiento · oficio 2026-E-032410', 'Jaime Pardo Ruiz', 'amarillo')] },
-      { id: 'R-2025-0288', estado: 'derivo', medida: 'MC-2025-0831', tipo: 'Club de fútbol', origen: 'Atlético Nacional', iso: '2025-10-20', fecha: '20 oct 2025', nombre: 'Julián Andrés Posada', doc: 'CC 71.894.4471',
+      { id: 'R-2025-0288', estado: 'derivo', medida: 'INF-2026-0005', tipo: 'Club de fútbol', origen: 'Atlético Nacional', iso: '2025-10-20', fecha: '20 oct 2025', nombre: 'Julián Andrés Posada', doc: 'CC 71.894.4471',
         evento: 'Nacional vs. Medellín · 19 oct 2025 · Estadio Atanasio Girardot', hechos: '19 oct 2025', autoridad: 'Inspección de Policía 14 de Medellín', conductas: ['Agresión física (art. 98, a)'], evid: '2 fotos · 1 video',
         descripcion: 'Agredió a otro aficionado en la tribuna Oriental Baja durante el segundo tiempo.',
-        hist: [h('20 oct 2025', 'Enviado por la entidad', 'Atlético Nacional · Jefe de logística', 'azul'), h('21 oct 2025', 'Recibido por el IVC', 'Carolina Vélez Ortiz'), h('28 oct 2025', 'La autoridad abrió procedimiento', 'Carolina Vélez Ortiz', 'amarillo'), h('4 dic 2025', 'Derivó en la medida MC-2025-0831', 'Carolina Vélez Ortiz', 'rojo')] },
+        hist: [h('20 oct 2025', 'Enviado por la entidad', 'Atlético Nacional · Jefe de logística', 'azul'), h('21 oct 2025', 'Recibido por el IVC', 'Carolina Vélez Ortiz'), h('28 oct 2025', 'La autoridad abrió procedimiento', 'Carolina Vélez Ortiz', 'amarillo'), h('4 dic 2025', 'Derivó en la medida INF-2026-0005', 'Carolina Vélez Ortiz', 'rojo')] },
       { id: 'R-2026-0379', estado: 'archivado', motivoArchivo: 'La autoridad no abrió procedimiento', notaArchivo: 'Oficio de la Inspección de Policía 9 de Bogotá, radicado 2026-E-029904.', tipo: 'Club de fútbol', origen: 'Millonarios', iso: '2026-07-27', fecha: '27 jul 2026 · 14:52', nombre: 'Óscar Iván Rincón Pulido', doc: 'CC 80.556.214',
         evento: 'Millonarios vs. Nacional · 26 jul 2026 · Estadio El Campín', hechos: '26 jul 2026', autoridad: 'Inspección de Policía 9 de Bogotá', conductas: ['Agresión física (art. 98, a)'], evid: 'Sin evidencia adjunta',
         descripcion: 'Riña en la tribuna Norte; el informe no identifica quién inició la agresión.',
@@ -109,177 +109,163 @@
   function evento(r) { var p = r.evento.split(' · '); return esc(p[0]) + ' <span class="gs-evf">· ' + esc(p[1] || r.hechos) + '</span>'; }
   function persona(r) { return r.menor ? '<strong>Menor de edad</strong><small>' + esc(r.iniciales) + ' · ' + esc(r.doc) + '</small>' : '<strong>' + esc(r.nombre) + '</strong><small>' + esc(r.doc) + '</small>'; }
 
-  /* Selector gráfico reutilizable: listbox con avatar, nombre y tag; flechas, Inicio/Fin, Enter y Esc.
-     o = { host, id, label, items: [{ v, n, t?, av?, tag? }], value?, onPick(v) }; av/tag = HTML propio ('' = nada). */
-  GI.selectGrafico = function (o) {
-    var host = o.host, bid = o.id || 'gsSel', items = o.items;
-    var cur = Math.max(0, items.map(function (x) { return x.v; }).indexOf(o.value || '')), act = cur, abierto = false;
-    var TODOS = '<span class="gi-av gi-av--all" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="7" height="7" rx="1.500"/><rect x="13" y="4" width="7" height="7" rx="1.500"/><rect x="4" y="13" width="7" height="7" rx="1.500"/><rect x="13" y="13" width="7" height="7" rx="1.500"/></svg></span>';
-    function cara(x) { return (x.av !== undefined ? x.av : x.v ? GI.origenAvatar(x.n) : TODOS) + '<span class="gs-opt__t"><strong>' + esc(x.n) + '</strong>' + (x.tag !== undefined ? x.tag : x.t ? GI.origenTag(x.t) : '') + '</span>'; }
-    host.innerHTML = '<button type="button" class="gs-pick__btn" id="' + bid + '" aria-haspopup="listbox" aria-expanded="false" aria-controls="' + bid + 'Lb"></button>' +
-      '<ul class="gs-pick__list" id="' + bid + 'Lb" role="listbox" tabindex="-1" aria-label="' + esc(o.label) + '" hidden>' + items.map(function (x, i) { return '<li role="option" id="' + bid + 'Opt' + i + '" data-i="' + i + '">' + cara(x) + '</li>'; }).join('') + '</ul>';
-    var btn = host.querySelector('button'), lb = host.querySelector('ul'), ops = lb.querySelectorAll('[role=option]');
-    function pinta() {
-      btn.innerHTML = '<span class="gs-pick__lbl">' + esc(o.label) + '</span>' + cara(items[cur]) + '<span class="gs-pick__car" aria-hidden="true"></span>';
-      ops.forEach(function (op, i) { op.setAttribute('aria-selected', i === cur); op.classList.toggle('is-act', abierto && i === act); });
-      if (abierto) { lb.setAttribute('aria-activedescendant', bid + 'Opt' + act); ops[act].scrollIntoView({ block: 'nearest' }); }
-    }
-    function abrir(v) { abierto = v; lb.hidden = !v; btn.setAttribute('aria-expanded', v); if (v) { act = cur; lb.focus(); } pinta(); }
-    function elegir(i) { cur = i; abrir(false); btn.focus(); o.onPick(items[i].v); }
-    btn.addEventListener('click', function () { abrir(!abierto); });
-    btn.addEventListener('keydown', function (e) { if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); abrir(true); } });
-    lb.addEventListener('click', function (e) { var op = e.target.closest('[role=option]'); if (op) elegir(+op.getAttribute('data-i')); });
-    lb.addEventListener('keydown', function (e) {
-      var k = e.key, n = items.length;
-      if (k === 'ArrowDown') act = (act + 1) % n; else if (k === 'ArrowUp') act = (act + n - 1) % n; else if (k === 'Home') act = 0; else if (k === 'End') act = n - 1;
-      else if (k === 'Enter' || k === ' ') { e.preventDefault(); return elegir(act); }
-      else if (k === 'Escape') { e.preventDefault(); abrir(false); return btn.focus(); }
-      else if (k === 'Tab') return abrir(false);
-      else return;
-      e.preventDefault(); pinta();
-    });
-    d.addEventListener('click', function f(e) { if (!d.body.contains(host)) return d.removeEventListener('click', f); if (abierto && e.target.isConnected && !host.contains(e.target)) abrir(false); });
-    pinta();
-    return { get: function () { return items[cur].v; } };
-  };
   function pickOrigen(host, orig, onPick) {
-    GI.selectGrafico({ host: host, id: 'gsOri', label: 'Origen', value: filt.ori, onPick: onPick,
-      items: [{ v: '', n: 'Todos los orígenes' }].concat(orig.map(function (r) { return { v: r.origen, n: r.origen, t: r.tipo }; })) });
+    GI.selectGrafico({ host: host, id: 'gsOri', label: 'Origen', prefijo: 'Origen', value: filt.ori, onPick: onPick,
+      items: [{ v: '', n: 'Todos' }].concat(orig.map(function (r) { return { v: r.origen, n: r.origen, t: r.tipo }; })) });
   }
 
   function open(view, ctx) {
     ctx.crumbs = [{ label: 'Inicio', href: '#/' }, { label: 'Control de acceso' }, { label: 'Solicitudes' }];
     var all = load();
     var orig = all.filter(function (r, i, a) { return a.map(function (x) { return x.origen; }).indexOf(r.origen) === i; }).sort(function (a, b) { return a.origen.localeCompare(b.origen, 'es'); });
-    view.innerHTML = '<div class="page-inner gi-page">' +
+    var RESET = '<svg class="gi-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 4 3 9 8 9"/></svg>';
+    view.innerHTML = '<div class="page-inner gi-page gs-page">' +
       '<header class="gi-head"><div class="page-title-block"><h1 class="page-title">Solicitudes de control</h1>' +
-      '<p class="page-subtitle">Reportes que llegan de las entidades deportivas y de las inspecciones. Un reporte nunca bloquea por sí solo: solo la medida lo hace.</p></div></header>' +
-      '<section class="naowee-table-card"><div class="gs-bar"><div class="gs-chips" id="gsChips" role="group" aria-label="Filtrar por estado"></div>' +
-      '<div class="gs-pick" id="gsPick"></div>' +
-      '<div class="gs-find"><div class="gi-search gs-search">' + UI.svg('search') + '<input id="gsQ" type="search" aria-label="Buscar solicitud" placeholder="Buscar solicitud" value="' + esc(filt.q) + '"></div></div></div>' +
-      '<div class="gi-table-wrap"><table class="gi-table"><thead><tr><th>Radicado</th><th>Origen</th><th>Persona</th><th>Evento y conducta</th><th>Estado</th></tr></thead><tbody id="gsBody"></tbody></table></div>' +
-      '<nav class="gs-pag" id="gsPag" aria-label="Paginación" hidden></nav></section></div>';
+      '<p class="page-subtitle">Reportes que llegan de las entidades deportivas y de las inspecciones. Un reporte nunca bloquea por sí solo: solo la medida lo hace.</p></div>' +
+      '<div class="gs-total" role="status" aria-label="Total de solicitudes" title="Total de solicitudes"><span class="gt-count gs-total__n" id="gsTN">' + all.length + '</span></div></header>' +
+      '<section class="gt-card gs-card" aria-label="Solicitudes de control">' +
+      '<div class="gt-toolbar"><div class="gt-search">' + UI.svg('search') + '<input id="gsQ" type="search" aria-label="Buscar solicitud" placeholder="Buscar solicitud" value="' + esc(filt.q) + '"></div>' +
+      '<div id="gsEstH"></div><div id="gsPick"></div>' +
+      '<button type="button" class="gs-reset" id="gsReset" aria-label="Reiniciar filtros" title="Reiniciar filtros" disabled>' + RESET + '</button></div>' +
+      '<div class="gt-wrap"><table class="gt-table"><thead><tr><th>Origen</th><th>Radicado</th><th>Persona</th><th>Evento y conducta</th><th>Estado</th></tr></thead><tbody id="gsBody"></tbody></table></div>' +
+      '<nav id="gsPag"></nav></section></div>';
 
     function paint() {
       var rows = load(), cnt = { '': rows.length };
       ESTADOS.forEach(function (e) { cnt[e[0]] = rows.filter(function (r) { return r.estado === e[0]; }).length; });
-      d.getElementById('gsChips').innerHTML = [['', 'Todas']].concat(ESTADOS).map(function (e) {
-        return '<button type="button" class="gi-qchip" data-k="' + e[0] + '" aria-pressed="' + (filt.est === e[0]) + '">' + e[1] + ' <b>' + cnt[e[0]] + '</b></button>';
-      }).join('');
+      pickEstado(cnt);
       var q = filt.q.trim().toLowerCase();
       var list = rows.filter(function (r) {
         return (!filt.est || r.estado === filt.est) && (!filt.ori || r.origen === filt.ori) &&
           (!q || (r.id + ' ' + (r.menor ? r.iniciales : r.nombre) + ' ' + r.doc + ' ' + r.origen + ' ' + r.tipo + ' ' + r.conductas.join(' ')).toLowerCase().indexOf(q) >= 0);
       });
       list.sort(function (a, b) { return a.iso < b.iso ? 1 : a.iso > b.iso ? -1 : a.id < b.id ? 1 : -1; });
-      var pages = Math.max(1, Math.ceil(list.length / PAGE)); filt.pag = Math.min(Math.max(1, filt.pag), pages);
+      /* El contador de arriba es el total general; el filtrado lo da el paginador. */
+      GI.tablaTotal('gsT', rows.length);
+      d.getElementById('gsReset').disabled = !(filt.q.trim() || filt.est || filt.ori);
+      filt.pag = GI.pager(d.getElementById('gsPag'), { total: list.length, page: filt.pag, size: PAGE, label: 'Paginación de solicitudes', onPage: function (p) { filt.pag = p; paint(); } });
       var ini = (filt.pag - 1) * PAGE, vis = list.slice(ini, ini + PAGE);
       d.getElementById('gsBody').innerHTML = list.length ? vis.map(function (r) {
-        return '<tr class="gs-row" tabindex="0" data-id="' + r.id + '"><td><strong>' + esc(r.id) + '</strong><small>' + esc(r.fecha) + '</small></td>' +
-          '<td>' + origen(r) + '</td><td>' + persona(r) + '</td>' +
+        return '<tr tabindex="0" data-id="' + r.id + '"><td>' + origen(r) + '</td>' +
+          '<td><strong>' + esc(r.id) + '</strong><small>' + esc(r.fecha) + '</small></td><td>' + persona(r) + '</td>' +
           '<td>' + evento(r) + '<small>' + esc(r.conductas.join('; ')) + '</small></td><td>' + badge(r.estado) + '</td></tr>';
-      }).join('') : '<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text-secondary)">No hay solicitudes con esos filtros.</td></tr>';
-      d.querySelectorAll('#gsChips [data-k]').forEach(function (b) { b.addEventListener('click', function () { filt.est = b.getAttribute('data-k'); filt.pag = 1; paint(); }); });
-      pager(list.length, pages, ini, vis.length);
+      }).join('') : '<tr><td colspan="5" class="gt-empty">No hay solicitudes con esos filtros.</td></tr>';
+      GI.panel.sincronizar();
     }
-    /* Paginador: Anterior, números (con puntos si son muchos) y Siguiente; la página actual lleva aria-current. */
-    function pager(total, pages, ini, n) {
-      var nav = d.getElementById('gsPag'); nav.hidden = !total; if (!total) return;
-      var nums = [], i;
-      for (i = 1; i <= pages; i++) if (pages <= 7 || i === 1 || i === pages || Math.abs(i - filt.pag) <= 1) nums.push(i); else if (nums[nums.length - 1] !== 0) nums.push(0);
-      nav.innerHTML = '<p class="gs-pag__n" aria-live="polite">' + (ini + 1) + '–' + (ini + n) + ' de ' + total + '</p><div class="gs-pag__b">' +
-        '<button type="button" class="gs-pg gs-pg--t" data-p="' + (filt.pag - 1) + '"' + (filt.pag === 1 ? ' disabled' : '') + '>Anterior</button>' +
-        nums.map(function (k) { return k ? '<button type="button" class="gs-pg" data-p="' + k + '" aria-label="Página ' + k + '"' + (k === filt.pag ? ' aria-current="page"' : '') + '>' + k + '</button>' : '<span class="gs-pg__gap" aria-hidden="true">…</span>'; }).join('') +
-        '<button type="button" class="gs-pg gs-pg--t" data-p="' + (filt.pag + 1) + '"' + (filt.pag === pages ? ' disabled' : '') + '>Siguiente</button></div>';
+    /* Estado con conteo por opción; se rearma solo cuando cambian los conteos (tras mover una solicitud). */
+    var estSig = '';
+    function pickEstado(cnt) {
+      var sig = JSON.stringify(cnt) + '|' + filt.est; if (sig === estSig) return;
+      estSig = sig;
+      function n(k) { return '<span class="gs-est__n">' + k + '</span>'; }
+      GI.selectGrafico({ host: d.getElementById('gsEstH'), id: 'gsEst', label: 'Filtrar por estado', prefijo: 'Estado', value: filt.est,
+        onPick: function (v) { filt.est = v; filt.pag = 1; paint(); },
+        items: [{ v: '', n: 'Todas', av: '', tag: n(cnt['']) }].concat(ESTADOS.map(function (e) {
+          return { v: e[0], n: e[1], av: '<span class="gs-dot gs-dot--' + BADGE[e[0]] + '" aria-hidden="true"></span>', tag: n(cnt[e[0]]) };
+        })) });
     }
-    d.getElementById('gsPag').addEventListener('click', function (e) {
-      var b = e.target.closest('[data-p]'); if (!b || b.disabled) return;
-      filt.pag = +b.getAttribute('data-p'); paint();
-      var k = d.querySelector('#gsPag [aria-current]'); if (k) k.focus();
-      var sc = d.querySelector('.main-scroll'), card = d.querySelector('.gs-bar').parentNode;
-      if (sc) { var dy = card.getBoundingClientRect().top - sc.getBoundingClientRect().top; if (dy < 0) sc.scrollTop += dy; }
-    });
     d.getElementById('gsQ').addEventListener('input', function (e) { filt.q = e.target.value; filt.pag = 1; paint(); });
     pickOrigen(d.getElementById('gsPick'), orig, function (v) { filt.ori = v; filt.pag = 1; paint(); });
-    /* La barra se fija arriba al hacer scroll; al pegarse gana sombra (en angosto se fija solo el buscador). */
-    var sc2 = d.querySelector('.main-scroll'), bar = d.querySelector('.gs-bar'), find = d.querySelector('.gs-find');
-    function pega() {
-      if (!d.body.contains(bar)) return sc2.removeEventListener('scroll', pega);
-      var el = getComputedStyle(bar).position === 'sticky' ? bar : find, top = sc2.getBoundingClientRect().top;
-      var pegado = el.getBoundingClientRect().top <= top + 1 && sc2.scrollTop > 0;
-      bar.classList.toggle('is-stuck', pegado && el === bar); find.classList.toggle('is-stuck', pegado && el === find);
-    }
-    /* En angosto el buscador sale de la barra para poder fijarse solo; en ancho vuelve a ella. */
-    var mq = w.matchMedia('(max-width: 700px)');
-    function acomoda() { if (!d.body.contains(bar)) return mq.removeListener(acomoda); if (mq.matches) bar.parentNode.insertBefore(find, bar.nextSibling); else bar.appendChild(find); pega(); }
-    mq.addListener(acomoda); acomoda();
-    if (sc2) { sc2.addEventListener('scroll', pega, { passive: true }); w.addEventListener('resize', pega); }
-    function abrir(tr) { if (tr) detalle(tr.getAttribute('data-id'), paint); }
-    d.getElementById('gsBody').addEventListener('click', function (e) { abrir(e.target.closest('tr[data-id]')); });
-    d.getElementById('gsBody').addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrir(e.target.closest('tr[data-id]')); } });
+    d.getElementById('gsReset').addEventListener('click', function () {
+      filt.q = ''; filt.est = ''; filt.ori = ''; filt.pag = 1; estSig = '';
+      var q = d.getElementById('gsQ'); q.value = '';
+      pickOrigen(d.getElementById('gsPick'), orig, function (v) { filt.ori = v; filt.pag = 1; paint(); });
+      paint(); q.focus();
+    });
+    GI.filasClicables(d.getElementById('gsBody'), function (id, tr) { detalle(id, paint, tr); });
     paint();
   }
 
-  function detalle(id, repaint) {
+  /* Acciones de estado: las mismas en el panel y en la vista interna; cada botón lleva data-gs. */
+  var LISTA = '#/control-acceso/solicitudes';
+  function ruta(r) { return LISTA + '/' + encodeURIComponent(r.id); }
+  function cerrada(r) { return r.estado === 'archivado' || r.estado === 'derivo'; }
+  function bt(a, t, cls) { return '<button type="button" class="naowee-btn naowee-btn--' + (cls || 'mute') + '" data-gs="' + a + '">' + t + '</button>'; }
+  function paso(r) {
+    return r.estado === 'enviado' ? bt('rec', 'Marcar como recibida', 'quiet') : r.estado === 'recibido' ? bt('tra', 'Pasar a trámite', 'quiet') : r.estado === 'tramite' ? bt('enl', 'Enlazar a medida', 'quiet') : '';
+  }
+  function accionesPanel(r) { return '<a class="naowee-btn naowee-btn--loud" href="' + ruta(r) + '">Abrir expediente</a>' + (cerrada(r) ? '' : bt('arc', 'Archivar')); }
+  function accionesInterno(r) {
+    var ficha = r.medida && GI.get(r.medida) ? '<a class="naowee-btn naowee-btn--mute" href="' + UI.BASE + '/' + esc(r.medida) + '">Abrir la ficha en Gestión</a>' : '';
+    return ficha + (cerrada(r) ? '' : bt('arc', 'Archivar') + (paso(r) ? paso(r).replace('naowee-btn--quiet', 'naowee-btn--loud') : ''));
+  }
+  function modelo(r) { return GI.expediente.deSolicitud(r, { acciones: accionesPanel(r), siguiente: cerrada(r) ? '' : '<a class="naowee-btn naowee-btn--loud" href="' + ruta(r) + '">Abrir expediente</a>' }); }
+  /* Contenido del panel; se vuelve a pedir tras cada cambio de estado y el panel no se cierra. */
+  function compacto(r, repaint) {
+    var o = GI.expediente.compacto(modelo(r)), propio = o.onPintar;
+    o.onPintar = function (el) { if (propio) propio(el); atar(el, r, function () { if (GI.panel.id() === r.id) GI.panel.actualizar(compacto(r, repaint)); repaint(); }); };
+    return o;
+  }
+  function detalle(id, repaint, origen) {
     var r = load().filter(function (x) { return x.id === id; })[0];
     if (!r) return;
-    var flow = '<p class="gs-flow" aria-label="Flujo de la solicitud">' + ESTADOS.slice(0, 4).map(function (e) { return '<span class="' + (r.estado === e[0] ? 'is-on' : '') + '">' + e[1] + '</span>'; }).join('<span aria-hidden="true">›</span>') + '<span aria-hidden="true">·</span><span class="' + (r.estado === 'archivado' ? 'is-on' : '') + '">Archivado</span></p>';
-    var body = flow +
-      (r.menor ? '<p class="gs-note"><strong>Reserva reforzada.</strong> La persona es menor de edad: no se muestra su nombre.</p>' : '') +
-      (r.estado === 'archivado' ? '<p class="gs-note"><strong>Archivada: ' + esc(r.motivoArchivo) + '.</strong> ' + esc(r.notaArchivo || '') + '</p>' : '') +
-      (r.estado === 'derivo' ? '<p class="gs-note">Derivó en la medida <strong>' + (GI.get(r.medida) ? '<a href="' + UI.BASE + '/' + esc(r.medida) + '" data-x>' + esc(r.medida) + '</a>' : esc(r.medida)) + '</strong>.' + (GI.get(r.medida) ? ' Abre su ficha en Gestión.' : '') + '</p>' : '') +
-      '<dl class="gs-det"><div><dt>Persona</dt><dd>' + (r.menor ? 'Menor de edad · ' + esc(r.iniciales) : esc(r.nombre)) + '</dd></div><div><dt>Documento</dt><dd>' + esc(r.doc) + '</dd></div>' +
-      '<div><dt>Origen</dt><dd>' + origen(r) + '</dd></div><div><dt>Autoridad competente</dt><dd>' + esc(r.autoridad) + '</dd></div>' +
-      '<div class="gs-wide"><dt>Evento</dt><dd>' + esc(r.evento) + '</dd></div><div class="gs-wide"><dt>Conductas</dt><dd>' + esc(r.conductas.join('; ')) + '</dd></div>' +
-      '<div class="gs-wide"><dt>Relato</dt><dd>' + esc(r.descripcion) + '</dd></div><div><dt>Evidencia</dt><dd>' + esc(r.evid) + '</dd></div></dl>' +
-      '<div class="gs-act" id="gsAct" hidden></div><h3 class="gs-sub">Historial</h3><ol class="gi-timeline">' + r.hist.slice().reverse().map(function (x) {
-        return '<li><span class="gi-timeline__dot"></span><div><strong>' + esc(x.texto) + '</strong><small>' + esc(x.fecha) + ' · ' + esc(x.quien) + '</small></div></li>'; }).join('') + '</ol>' +
-      '<div class="gs-act" id="gsAct" hidden></div>';
-    var btns = '<button class="naowee-btn naowee-btn--mute" data-x>Cerrar</button>';
-    if (r.estado === 'enviado') btns += '<button class="naowee-btn naowee-btn--loud" id="gsRec">Marcar como recibida</button>';
-    if (r.estado === 'recibido') btns += '<button class="naowee-btn naowee-btn--mute" id="gsArc">Archivar con motivo</button><button class="naowee-btn naowee-btn--loud" id="gsTra">Pasar a en trámite</button>';
-    if (r.estado === 'tramite') btns += '<button class="naowee-btn naowee-btn--mute" id="gsArc">Archivar con motivo</button><button class="naowee-btn naowee-btn--loud" id="gsEnl">Enlazar a medida</button>';
-    var m = UI.modal({ title: r.id, sub: label(r.estado) + ' · ' + r.fecha, body: body, footer: btns, width: 640 });
-    m.el.classList.add('gs-modal');
-    var act = m.el.querySelector('#gsAct');
+    var o = compacto(r, repaint); o.origen = origen;
+    GI.panel.abrir(o);
+  }
 
+  /* Vista interna de la solicitud: #/control-acceso/solicitudes/<id>. */
+  function interno(view, ctx, id) {
+    var r = load().filter(function (x) { return x.id === id; })[0];
+    if (!r) { location.hash = LISTA; return; }
+    ctx.crumbs = [{ label: 'Inicio', href: '#/' }, { label: 'Control de acceso' }, { label: 'Solicitudes', href: LISTA }, { label: r.id }];
+    var nombre = r.menor ? 'Menor de edad · ' + r.iniciales : r.nombre;
+    view.innerHTML = '<div class="page-inner gi-page gs-page gs-int"><a class="gi-back" href="' + LISTA + '">' + UI.svg('back') + ' Volver</a>' +
+      '<header class="gi-head"><div class="page-title-block"><h1 class="page-title">' + esc(nombre) + ' ' + badge(r.estado) + '</h1>' +
+      '<p class="page-subtitle"><span class="gi-mono">' + esc(r.id) + '</span> · ' + esc(r.doc) + ' · reportado por ' + esc(r.origen) + '</p></div>' +
+      '<div class="gi-head__actions">' + accionesInterno(r) + '</div></header>' +
+      GI.expediente.interno(modelo(r)) + '</div>';
+    atar(view, r, function () { interno(view, ctx, id); });
+  }
+
+  /* Ata los botones data-gs de un contenedor; el panel y la vista interna llaman aquí tras cada pintura. */
+  function atar(el, r, refrescar) {
     function mover(a, texto, cambios, toast) {
       var f = stamp();
       Object.assign(r, cambios, { estado: a });
       r.hist.push(h(f, texto, USER, a === 'derivo' ? 'rojo' : a === 'tramite' ? 'amarillo' : 'gris'));
-      save(); m.close(); UI.toast(toast); repaint();
+      save(); UI.toast(toast); refrescar();
     }
-    function on(sel, fn) { var b = m.el.querySelector(sel); if (b) b.addEventListener('click', fn); }
-    on('#gsRec', function () { SUID.busy(m.el.querySelector('#gsRec'), 'Guardando…', function () { mover('recibido', 'Recibido por el IVC', {}, 'Solicitud ' + r.id + ' marcada como recibida.'); }, 600); });
-    on('#gsTra', function () { SUID.busy(m.el.querySelector('#gsTra'), 'Guardando…', function () { mover('tramite', 'La autoridad abrió procedimiento', {}, 'Solicitud ' + r.id + ' en trámite.'); }, 600); });
-    on('#gsEnl', function () {
-      var mismas = GI.all().filter(function (x) { return D.estadoRestriccion(x) !== 'Inactiva'; });
-      var digs = r.doc.replace(/\D/g, '');
-      mismas.sort(function (a, b) { return (b.numId === digs) - (a.numId === digs); });
-      act.hidden = false; setTimeout(function () { act.scrollIntoView({ block: 'nearest' }); }, 0);
-      act.innerHTML = '<label>Medida a enlazar<select id="gsMed"><option value="">Selecciona una medida</option>' + mismas.slice(0, 14).map(function (x) {
-        return '<option value="' + x.id + '">' + x.id + ' · ' + (D.esMenor(x) ? 'Menor de edad' : esc(D.nombreCompleto(x))) + (x.numId === digs ? ' (misma persona)' : '') + '</option>'; }).join('') + '</select></label>' +
-        '<p class="gi-err" id="gsErr" hidden>Selecciona la medida a enlazar.</p><button class="naowee-btn naowee-btn--loud gs-btn" id="gsEnlOk">Confirmar enlace</button>';
-      act.querySelector('#gsEnlOk').addEventListener('click', function () {
-        var v = act.querySelector('#gsMed').value;
-        if (!v) { act.querySelector('#gsErr').hidden = false; return; }
-        SUID.busy(act.querySelector('#gsEnlOk'), 'Enlazando…', function () { mover('derivo', 'Derivó en la medida ' + v, { medida: v }, 'Solicitud enlazada a la medida ' + v + '.'); }, 700);
+    function on(a, fn) { [].forEach.call(el.querySelectorAll('[data-gs="' + a + '"]'), function (b) { b.addEventListener('click', function () { fn(b); }); }); }
+    on('rec', function (b) { SUID.busy(b, 'Guardando…', function () { mover('recibido', 'Recibido por el IVC', {}, 'Solicitud ' + r.id + ' marcada como recibida.'); }, 600); });
+    on('tra', function (b) { SUID.busy(b, 'Guardando…', function () { mover('tramite', 'La autoridad abrió procedimiento', {}, 'Solicitud ' + r.id + ' en trámite.'); }, 600); });
+    on('enl', function () {
+      var digs = r.doc.replace(/\D/g, ''), med = '';
+      var mismas = GI.all().filter(function (x) { return D.estadoRestriccion(x) !== 'Inactiva'; }).sort(function (a, b) { return (b.numId === digs) - (a.numId === digs); });
+      var m = UI.modal({ title: 'Enlazar a una medida', sub: r.id, body: '<div class="gs-field"><label class="gs-field__l gs-field__l--req">Medida a enlazar</label><div id="gsMedH"></div></div><p class="gi-err" id="gsErr" hidden>Selecciona la medida a enlazar.</p>',
+        footer: '<button class="naowee-btn naowee-btn--mute" data-x>Cancelar</button><button type="button" class="naowee-btn naowee-btn--loud" id="gsEnlOk">Confirmar enlace</button>' });
+      GI.selectGrafico({ host: m.el.querySelector('#gsMedH'), id: 'gsMed', label: 'Medida a enlazar', campo: true,
+        onPick: function (v) { med = v; if (v) m.el.querySelector('#gsErr').hidden = true; },
+        items: [{ v: '', n: 'Selecciona una medida', av: '' }].concat(mismas.slice(0, 14).map(function (x) {
+          return { v: x.id, av: '', n: x.id + ' · ' + (D.esMenor(x) ? 'Menor de edad' : D.nombreCompleto(x)) + (x.numId === digs ? ' (misma persona)' : '') };
+        })) });
+      m.el.querySelector('#gsEnlOk').addEventListener('click', function () {
+        if (!med) { m.el.querySelector('#gsErr').hidden = false; return; }
+        var v = med;
+        SUID.busy(m.el.querySelector('#gsEnlOk'), 'Enlazando…', function () { m.close(); mover('derivo', 'Derivó en la medida ' + v, { medida: v }, 'Solicitud enlazada a la medida ' + v + '.'); }, 700);
       });
     });
-    on('#gsArc', function () {
-      act.hidden = false; setTimeout(function () { act.scrollIntoView({ block: 'nearest' }); }, 0);
-      act.innerHTML = '<label>Motivo del archivo<select id="gsMot"><option value="">Selecciona un motivo</option>' + MOTIVOS.map(function (x) { return '<option>' + esc(x) + '</option>'; }).join('') + '</select></label>' +
-        '<label>Nota (opcional)<textarea id="gsNota" rows="2"></textarea></label><p class="gi-err" id="gsErr" hidden>Selecciona un motivo para archivar.</p>' +
-        '<button class="naowee-btn naowee-btn--loud gs-btn" id="gsArcOk">Archivar solicitud</button>';
-      act.querySelector('#gsArcOk').addEventListener('click', function () {
-        var v = act.querySelector('#gsMot').value;
-        if (!v) { act.querySelector('#gsErr').hidden = false; return; }
-        SUID.busy(act.querySelector('#gsArcOk'), 'Archivando…', function () { mover('archivado', 'Archivado · ' + v.charAt(0).toLowerCase() + v.slice(1), { motivoArchivo: v, notaArchivo: act.querySelector('#gsNota').value.trim() }, 'Solicitud archivada.'); }, 700);
+    on('arc', function () {
+      var mot = '';
+      var m = UI.modal({ title: 'Archivar solicitud', sub: r.id, body: '<div class="gs-mform"><div class="gs-field"><label class="gs-field__l gs-field__l--req">Motivo del archivo</label><div id="gsMotH"></div></div>' +
+        '<label class="gs-field__l" for="gsNota">Nota (opcional)</label><textarea id="gsNota" rows="2"></textarea><p class="gi-err" id="gsErr" hidden>Selecciona un motivo para archivar.</p></div>',
+        footer: '<button class="naowee-btn naowee-btn--mute" data-x>Cancelar</button><button type="button" class="naowee-btn naowee-btn--loud" id="gsArcOk">Archivar solicitud</button>' });
+      GI.selectGrafico({ host: m.el.querySelector('#gsMotH'), id: 'gsMot', label: 'Motivo del archivo', campo: true,
+        onPick: function (v) { mot = v; if (v) m.el.querySelector('#gsErr').hidden = true; },
+        items: [{ v: '', n: 'Selecciona un motivo', av: '' }].concat(MOTIVOS.map(function (x) { return { v: x, n: x, av: '' }; })) });
+      m.el.querySelector('#gsArcOk').addEventListener('click', function () {
+        if (!mot) { m.el.querySelector('#gsErr').hidden = false; return; }
+        var v = mot, nota = m.el.querySelector('#gsNota').value.trim();
+        SUID.busy(m.el.querySelector('#gsArcOk'), 'Archivando…', function () { m.close(); mover('archivado', 'Archivado · ' + v.charAt(0).toLowerCase() + v.slice(1), { motivoArchivo: v, notaArchivo: nota }, 'Solicitud archivada.'); }, 700);
       });
     });
   }
 
-  SUID.views['control-acceso/solicitudes'] = open;
+  /* La ruta con id abre la vista interna; sin id, la bandeja. */
+  SUID.views['control-acceso/solicitudes'] = function (view, ctx) { return ctx.rest[0] ? interno(view, ctx, decodeURIComponent(ctx.rest[0])) : open(view, ctx); };
   /* La ficha de Gestión consulta aquí qué solicitudes derivaron en su medida. */
-  w.GS = { porMedida: function (id) { return load().filter(function (x) { return x.medida === id; }); } };
+  w.GS = {
+    lista: function () { return load().slice().sort(function (a, b) { return a.iso < b.iso ? 1 : a.iso > b.iso ? -1 : a.id < b.id ? 1 : -1; }).map(function (x) { return { id: x.id, fecha: x.fecha, origen: x.origen, nombre: x.menor ? (x.iniciales || 'Persona menor de edad') : x.nombre, doc: x.doc, menor: !!x.menor, estado: label(x.estado), medida: x.medida || '' }; }); },
+    porMedida: function (id) { return load().filter(function (x) { return x.medida === id; }); },
+    enTramite: function () { return load().filter(function (x) { return x.estado === 'tramite'; }).map(function (x) { return { id: x.id, nombre: x.nombre, doc: x.doc, origen: x.origen, menor: !!x.menor, iniciales: x.iniciales || '' }; }); }
+  };
 })(window, document);

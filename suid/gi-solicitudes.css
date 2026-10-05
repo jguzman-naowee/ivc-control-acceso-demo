@@ -1,0 +1,42 @@
+/* Solicitudes: contador general, filtros de 311 px, botón de reinicio y panel derecho. */
+.gi-head .gs-total { flex: none; align-self: flex-start; }
+.gs-total__n { min-width: 80px; min-height: 60px; padding: 0 25px; justify-content: center; text-align: center; font-size: 32px; line-height: 1; }
+
+.gs-card .gt-toolbar { align-items: center; }
+.gs-card #gsEstH, .gs-card #gsPick { flex: 0 0 311px; width: 311px; min-width: 311px; max-width: 311px; }
+.gs-card #gsEstH .gs-pick__btn, .gs-card #gsPick .gs-pick__btn { width: 100%; justify-content: space-between; }
+/* Cara cerrada simplificada: solo texto con elipsis, sin punto, conteo, escudo ni etiqueta (la lista conserva todo). */
+#gsEst .gs-dot, #gsEst .gs-est__n, #gsOri .gi-av, #gsOri .naowee-badge { display: none; }
+#gsEst .gs-opt__t, #gsOri .gs-opt__t { flex: 1 1 auto; min-width: 0; display: block; }
+#gsEst .gs-opt__t strong, #gsOri .gs-opt__t strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#gsEst .gs-pick__pre, #gsOri .gs-pick__pre { flex: none; }
+#gsEst .gs-pick__car, #gsOri .gs-pick__car { flex: none; }
+#gsEst .gs-opt__t, #gsOri .gs-opt__t { text-align: right; }
+
+.gs-reset { margin-left: auto; flex: none; width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 1px solid var(--border-dark); border-radius: 8px; background: #fff; color: var(--text-primary); cursor: pointer; }
+.gs-reset .gi-ico { margin: 0; vertical-align: 0; }
+.gs-reset:hover:not(:disabled) { background: var(--bg-soft); }
+.gs-reset:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.gs-reset:disabled { color: var(--text-muted); background: var(--bg-soft); border-color: var(--border); cursor: not-allowed; }
+
+/* Listas de Estado y Origen: sin saltos de línea y con cebra en las opciones. */
+#gsEstLb li, #gsOriLb li { white-space: nowrap; }
+#gsEstLb li .gs-opt__t, #gsOriLb li .gs-opt__t { flex-wrap: nowrap; gap: 16px; }
+#gsEstLb li .gs-opt__t strong, #gsOriLb li .gs-opt__t strong { white-space: nowrap; }
+#gsEstLb li:nth-child(even), #gsOriLb li:nth-child(even) { background: #f7f8fc; }
+#gsEstLb li.is-act, #gsEstLb li:hover, #gsOriLb li.is-act, #gsOriLb li:hover { background: var(--accent-bg); }
+
+/* Con el panel abierto el encabezado (y el contador) queda a su izquierda, como la barra de filtros. */
+@media (min-width: 768px) { body.has-gpn .gs-page .gi-head { padding-right: calc(var(--gpn-w) - 20px); } }
+@media (min-width: 768px) { .gs-page .gi-head { flex-wrap: nowrap; } .gs-page .gi-head .page-title-block { flex: 1 1 auto; min-width: 0; } }
+
+/* Con el panel abierto la barra no hace wrap: el buscador cede y los selects se estrechan. */
+@media (min-width: 768px) {
+  body.has-gpn .gs-card .gt-toolbar { flex-wrap: nowrap; }
+  body.has-gpn .gs-card .gt-search { flex: 1 1 0; min-width: 96px; }
+  body.has-gpn .gs-card #gsEstH, body.has-gpn .gs-card #gsPick { flex: 0 1 200px; width: auto; min-width: 120px; max-width: 311px; }
+}
+
+/* Encabezado pegado bajo la barra (DC-144), como Gestión; -28px = padding del scroller. */
+.gs-card .gt-wrap { overflow-x: clip; }
+.gs-card .gt-table thead th { position: sticky; top: -28px; z-index: 3; box-shadow: 0 3px 6px -3px rgba(20, 20, 40, .22); }
