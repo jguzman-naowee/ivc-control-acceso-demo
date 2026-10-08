@@ -96,7 +96,7 @@
       });
     });
     // Publicado dentro del SVN (/ivc/), cerrar sesión vuelve al inicio del sitio; suelto, al login.
-    var salida = /\/ivc\//.test(location.pathname) ? location.pathname.replace(/\/ivc\/.*$/, '/') : '../index.html';
+    var salida = /\/ivc\//.test(location.pathname) ? location.pathname.replace(/\/ivc\/.*$/, '/index.html') : '../index.html';
     html += '</nav><div class="sidebar-bottom"><a class="nav-row" href="' + salida + '"><div class="icon">' + I.out + '</div><span class="lbl">Cerrar sesión</span></a></div>';
     d.getElementById('sidebar').innerHTML = html;
     d.querySelectorAll('#sidebar [data-toggle]').forEach(function (a) {

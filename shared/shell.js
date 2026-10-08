@@ -166,7 +166,7 @@
   function pathPrefix() { return inSubdir() ? '../' : ''; }
   /* Dentro del SVN (/ivc/) cerrar sesión vuelve al inicio del sitio; suelto, al login. */
   function salidaSesion() {
-    return /\/ivc\//.test(location.pathname) ? location.pathname.replace(/\/ivc\/.*$/, '/') : pathPrefix() + 'index.html';
+    return /\/ivc\//.test(location.pathname) ? location.pathname.replace(/\/ivc\/.*$/, '/index.html') : pathPrefix() + 'index.html';
   }
   function sharedPath() { return pathPrefix() + 'shared/'; }
 
