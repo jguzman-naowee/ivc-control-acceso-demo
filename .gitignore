@@ -1,2 +1,10 @@
 .DS_Store
 *.bak
+
+# Herramienta de video (remotion, guion, capturas, salidas): vive solo en local
+remotion/
+guion/
+guion*.html
+capturas/
+videos/
+node_modules/
