@@ -164,6 +164,10 @@
     return null;
   }
   function pathPrefix() { return inSubdir() ? '../' : ''; }
+  /* Dentro del SVN (/ivc/) cerrar sesión vuelve al inicio del sitio; suelto, al login. */
+  function salidaSesion() {
+    return /\/ivc\//.test(location.pathname) ? location.pathname.replace(/\/ivc\/.*$/, '/') : pathPrefix() + 'index.html';
+  }
   function sharedPath() { return pathPrefix() + 'shared/'; }
 
   function getCollapsed() {
@@ -247,7 +251,7 @@
         navHtml +
       '</nav>' +
       '<div class="sidebar-bottom">' +
-        '<a class="nav-row" href="' + pathPrefix() + 'index.html" data-action="logout" data-lbl="Cerrar sesión">' +
+        '<a class="nav-row" href="' + salidaSesion() + '" data-action="logout" data-lbl="Cerrar sesión">' +
           '<div class="icon">' + ICONS.logout + '</div>' +
           '<span class="lbl">Cerrar sesión</span>' +
         '</a>' +
@@ -593,7 +597,7 @@
     document.querySelectorAll('[data-action="logout"]').forEach(function (link) {
       link.addEventListener('click', function (e) {
         e.preventDefault();
-        window.location.href = pathPrefix() + 'index.html';
+        window.location.href = salidaSesion();
       });
     });
 
